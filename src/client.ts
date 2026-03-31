@@ -53,8 +53,15 @@ export async function guestyFetch<T = unknown>(path: string, options: FetchOptio
     headers["Content-Type"] = "application/json";
   }
 
+  let tokenRefreshed = false;
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     await enforceRateLimit();
+
+    // Re-fetch token if it was invalidated on a previous attempt
+    if (tokenRefreshed) {
+      headers.Authorization = `Bearer ${await getToken()}`;
+    }
 
     const res = await fetch(url, {
       method,
@@ -66,9 +73,10 @@ export async function guestyFetch<T = unknown>(path: string, options: FetchOptio
       return undefined as T;
     }
 
-    if (res.status === 401 && attempt < MAX_RETRIES) {
+    if (res.status === 401 && !tokenRefreshed) {
       process.stderr.write(`Token expired (401). Refreshing...\n`);
       invalidateToken();
+      tokenRefreshed = true;
       continue;
     }
 

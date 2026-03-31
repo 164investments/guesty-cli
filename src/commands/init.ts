@@ -4,6 +4,9 @@ import { writeFileSync, mkdirSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
+const CONFIG_DIR_INIT = join(homedir(), ".guesty-cli");
+const TOKEN_FILE_INIT = join(CONFIG_DIR_INIT, "token.json");
+
 const CONFIG_DIR = join(homedir(), ".guesty-cli");
 const ENV_FILE = join(CONFIG_DIR, ".env");
 
@@ -49,7 +52,13 @@ function prompt(question: string, mask = false): Promise<string> {
   });
 }
 
-async function testCredentials(clientId: string, clientSecret: string): Promise<boolean> {
+interface VerifyResult {
+  ok: boolean;
+  access_token?: string;
+  expires_in?: number;
+}
+
+async function testCredentials(clientId: string, clientSecret: string): Promise<VerifyResult> {
   try {
     const res = await fetch("https://open-api.guesty.com/oauth2/token", {
       method: "POST",
@@ -61,9 +70,11 @@ async function testCredentials(clientId: string, clientSecret: string): Promise<
         client_secret: clientSecret,
       }),
     });
-    return res.ok;
+    if (!res.ok) return { ok: false };
+    const data = await res.json();
+    return { ok: true, access_token: data.access_token, expires_in: data.expires_in };
   } catch {
-    return false;
+    return { ok: false };
   }
 }
 
@@ -99,8 +110,8 @@ export const init = new Command("init")
 
     process.stdout.write("\n  Verifying credentials...");
 
-    const valid = await testCredentials(clientId, clientSecret);
-    if (!valid) {
+    const result = await testCredentials(clientId, clientSecret);
+    if (!result.ok) {
       process.stdout.write(" failed.\n\n");
       process.stderr.write("  Error: Invalid credentials. Check your Client ID and Secret.\n");
       process.stderr.write("  Note: This uses 1 of your 5 daily token requests for verification.\n\n");
@@ -109,12 +120,25 @@ export const init = new Command("init")
 
     process.stdout.write(" verified.\n");
 
-    if (!existsSync(CONFIG_DIR)) {
-      mkdirSync(CONFIG_DIR, { recursive: true });
+    if (!existsSync(CONFIG_DIR_INIT)) {
+      mkdirSync(CONFIG_DIR_INIT, { recursive: true });
     }
 
+    // Save credentials
     const envContent = `GUESTY_CLIENT_ID=${clientId}\nGUESTY_CLIENT_SECRET=${clientSecret}\n`;
     writeFileSync(ENV_FILE, envContent);
+
+    // Cache the token we already got so the first command doesn't burn another
+    if (result.access_token) {
+      const tokenFileData = {
+        token: {
+          access_token: result.access_token,
+          expires_at: Date.now() + (result.expires_in ?? 3600) * 1000,
+        },
+        issued_timestamps: [Date.now()],
+      };
+      writeFileSync(TOKEN_FILE_INIT, JSON.stringify(tokenFileData, null, 2));
+    }
 
     process.stdout.write(`\n  Configuration saved to ${ENV_FILE}\n`);
     process.stdout.write("  You're all set! Try: guesty res list --limit 1\n\n");
