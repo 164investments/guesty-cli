@@ -1,0 +1,41 @@
+{
+  "name": "guesty-cli",
+  "version": "1.0.0",
+  "description": "CLI for the Guesty property management API with built-in OAuth token caching and rate limiting",
+  "type": "module",
+  "bin": {
+    "guesty": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "link": "npm run build && npm link",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "guesty",
+    "property-management",
+    "vacation-rental",
+    "cli",
+    "api"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/164investments/guesty-cli.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
