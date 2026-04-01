@@ -78,8 +78,13 @@ integrations
 integrations
   .command("views")
   .description("List all views")
-  .action(async () => {
-    const data = await guestyFetch("/v1/views");
+  .requiredOption("--section <section>", "Section: listings or reservations")
+  .option("--limit <n>", "Max results", "25")
+  .option("--skip <n>", "Offset", "0")
+  .action(async (opts) => {
+    const data = await guestyFetch("/v1/views", {
+      params: { section: opts.section, limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
+    });
     print(data);
   });
 
