@@ -250,22 +250,14 @@ reservations
 // ─── reservations-v3 endpoints ───────────────────────────────────────────────
 
 reservations
-  .command("v3-list")
-  .description("Retrieve reservations (v3)")
-  .option("--limit <n>", "Max results", "25")
-  .option("--skip <n>", "Offset", "0")
+  .command("v3-get <ids...>")
+  .description("Retrieve reservations by ID (v3, up to 10 IDs)")
   .option("--fields <fields>", "Comma-separated fields to return")
-  .option("--sort <field>", "Sort field")
-  .option("--filters <filters>", "Comma-separated filters")
-  .action(async (opts) => {
-    const params: Record<string, string | number> = {
-      limit: parseInt(opts.limit),
-      skip: parseInt(opts.skip),
-    };
-    if (opts.fields) params.fields = opts.fields;
-    if (opts.sort) params.sort = opts.sort;
-    if (opts.filters) params.filters = opts.filters;
-    const data = await guestyFetch("/v1/reservations-v3", { params });
+  .action(async (ids: string[], opts) => {
+    const idParams: Record<string, string> = {};
+    ids.forEach((id, i) => { idParams[`reservationIds[${i}]`] = id; });
+    if (opts.fields) idParams.fields = opts.fields;
+    const data = await guestyFetch("/v1/reservations-v3", { params: idParams });
     print(data);
   });
 

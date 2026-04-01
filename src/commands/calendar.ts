@@ -15,7 +15,7 @@ calendar
   .action(async (listingId: string, opts) => {
     const data = await guestyFetch(
       `/v1/availability-pricing/api/calendar/listings/${listingId}`,
-      { params: { from: opts.from, to: opts.to } }
+      { params: { startDate: opts.from, endDate: opts.to } }
     );
     print(data);
   });
@@ -37,8 +37,8 @@ calendar
   .action(async (opts) => {
     const params: Record<string, string | string[]> = {};
     if (opts.listing.length > 0) params.listingId = opts.listing;
-    if (opts.from) params.from = opts.from;
-    if (opts.to) params.to = opts.to;
+    if (opts.from) params.startDate = opts.from;
+    if (opts.to) params.endDate = opts.to;
     const data = await guestyFetch("/v1/availability-pricing/api/calendar/listings", { params });
     print(data);
   });

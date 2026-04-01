@@ -11,12 +11,14 @@ conversations
   .description("List conversations")
   .option("--reservation <id>", "Filter by reservation ID")
   .option("--limit <n>", "Max results", "25")
-  .option("--skip <n>", "Offset", "0")
+  .option("--cursor-after <cursor>", "Pagination cursor (forward)")
+  .option("--cursor-before <cursor>", "Pagination cursor (backward)")
   .action(async (opts) => {
     const params: Record<string, string | number> = {
       limit: parseInt(opts.limit),
-      skip: parseInt(opts.skip),
     };
+    if (opts.cursorAfter) params.cursorAfter = opts.cursorAfter;
+    if (opts.cursorBefore) params.cursorBefore = opts.cursorBefore;
     if (opts.reservation) params.reservationId = opts.reservation;
     const data = await guestyFetch("/v1/communication/conversations", { params });
     print(data);

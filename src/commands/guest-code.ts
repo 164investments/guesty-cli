@@ -8,7 +8,7 @@ export const guestCode = new Command("guest-code")
 guestCode
   .command("get")
   .description("Get guest codes")
-  .option("--reservation <id>", "Filter by reservation ID")
+  .requiredOption("--reservation <id>", "Reservation ID")
   .action(async (opts) => {
     const params: Record<string, string> = {};
     if (opts.reservation) params.reservationId = opts.reservation;

@@ -12,8 +12,11 @@ export const icalendar = new Command("icalendar")
 icalendar
   .command("list-exported")
   .description("List exported calendars")
-  .action(async () => {
-    const data = await guestyFetch("/v1/icalendar-api/exported-calendars");
+  .requiredOption("--listing <id>", "Listing ID")
+  .action(async (opts) => {
+    const data = await guestyFetch("/v1/icalendar-api/exported-calendars", {
+      params: { listingId: opts.listing },
+    });
     print(data);
   });
 
@@ -58,8 +61,11 @@ icalendar
 icalendar
   .command("list-imported")
   .description("List imported calendars")
-  .action(async () => {
-    const data = await guestyFetch("/v1/icalendar-api/imported-calendars");
+  .requiredOption("--listing <id>", "Listing ID")
+  .action(async (opts) => {
+    const data = await guestyFetch("/v1/icalendar-api/imported-calendars", {
+      params: { listingId: opts.listing },
+    });
     print(data);
   });
 

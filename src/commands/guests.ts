@@ -10,10 +10,12 @@ guests
   .command("list")
   .description("List/search guests")
   .option("--q <query>", "Search query (name, email, phone)")
+  .option("--columns <cols>", "Columns to return (space-separated)", "fullName email phone")
   .option("--limit <n>", "Max results", "25")
   .option("--skip <n>", "Offset", "0")
   .action(async (opts) => {
     const params: Record<string, string | number> = {
+      columns: opts.columns,
       limit: parseInt(opts.limit),
       skip: parseInt(opts.skip),
     };

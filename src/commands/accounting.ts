@@ -18,11 +18,16 @@ accounting
 accounting
   .command("journal-entries")
   .description("Get recognized journal entries")
+  .option("--days <n>", "Past N days", "30")
+  .option("--date-filter <json>", 'Custom date filter JSON (e.g. \'{"operator":"@between","value":["2026-01-01","2026-03-31"]}\')')
   .option("--limit <n>", "Max results", "100")
   .option("--skip <n>", "Offset", "0")
   .action(async (opts) => {
+    const dateFilter = opts.dateFilter
+      ? opts.dateFilter
+      : JSON.stringify({ operator: "@in_past_days", value: parseInt(opts.days) });
     const data = await guestyFetch("/v1/accounting-api/journal-entries", {
-      params: { limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
+      params: { transactionDate: dateFilter, limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
     });
     print(data);
   });
@@ -30,11 +35,16 @@ accounting
 accounting
   .command("journal-entries-all")
   .description("Get all journal entries (including unrecognized)")
+  .option("--days <n>", "Past N days", "30")
+  .option("--date-filter <json>", 'Custom date filter JSON (e.g. \'{"operator":"@between","value":["2026-01-01","2026-03-31"]}\')')
   .option("--limit <n>", "Max results", "100")
   .option("--skip <n>", "Offset", "0")
   .action(async (opts) => {
+    const dateFilter = opts.dateFilter
+      ? opts.dateFilter
+      : JSON.stringify({ operator: "@in_past_days", value: parseInt(opts.days) });
     const data = await guestyFetch("/v1/accounting-api/journal-entries/all", {
-      params: { limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
+      params: { transactionDate: dateFilter, limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
     });
     print(data);
   });

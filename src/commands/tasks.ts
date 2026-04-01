@@ -11,10 +11,12 @@ tasks
   .description("List tasks")
   .option("--status <status>", "Filter by status")
   .option("--listing <id>", "Filter by listing ID")
-  .option("--limit <n>", "Max results", "25")
+  .option("--columns <cols>", "Columns to return (space-separated)", "status title listingId assigneeId dueDate")
+  .option("--limit <n>", "Max results (min 25)", "25")
   .option("--skip <n>", "Offset", "0")
   .action(async (opts) => {
     const params: Record<string, string | number> = {
+      columns: opts.columns,
       limit: parseInt(opts.limit),
       skip: parseInt(opts.skip),
     };

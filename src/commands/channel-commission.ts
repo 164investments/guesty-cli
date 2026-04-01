@@ -28,8 +28,11 @@ channelCommission
 channelCommission
   .command("listings")
   .description("Get listings channel commission")
-  .action(async () => {
-    const data = await guestyFetch("/v1/channel-commission/listings");
+  .requiredOption("--listing-ids <ids>", "Comma-separated listing IDs")
+  .action(async (opts) => {
+    const data = await guestyFetch("/v1/channel-commission/listings", {
+      params: { listingIds: opts.listingIds.split(",") },
+    });
     print(data);
   });
 
