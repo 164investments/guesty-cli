@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
@@ -180,7 +181,15 @@ owners
 owners
   .command("download-document <ownerId> <documentId>")
   .description("Download a document for an owner")
-  .action(async (ownerId: string, documentId: string) => {
-    const data = await guestyFetch(`/v1/owners/${ownerId}/documents/${documentId}/download`);
+  .option("--output <path>", "Write the downloaded document to a file")
+  .action(async (ownerId: string, documentId: string, opts) => {
+    const data = await guestyFetch<Buffer>(`/v1/owners/${ownerId}/documents/${documentId}/download`, {
+      responseType: "buffer",
+    });
+    if (opts.output) {
+      writeFileSync(opts.output, data);
+      process.stderr.write(`Saved document to ${opts.output}\n`);
+      return;
+    }
     print(data);
   });

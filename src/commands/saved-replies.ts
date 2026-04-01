@@ -47,7 +47,10 @@ savedReplies
   .command("delete <replyId>")
   .description("Delete a saved reply")
   .action(async (replyId: string) => {
-    const data = await guestyFetch(`/v1/saved-replies/${replyId}`, { method: "DELETE" });
+    const data = await guestyFetch<string>(`/v1/saved-replies/${replyId}`, {
+      method: "DELETE",
+      responseType: "text",
+    });
     print(data);
   });
 

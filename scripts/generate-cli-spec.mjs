@@ -8,6 +8,7 @@ const OUTPUT_FILE = join(ROOT, "guesty-cli-spec.json");
 const PACKAGE_FILE = join(ROOT, "package.json");
 const OPTIONAL_REFERENCE_FILE = join(ROOT, "api-spec.json");
 const OPTIONAL_SCHEMAS_FILE = join(ROOT, "schemas.json");
+const EXISTING_CONTRACT_FILE = join(ROOT, "guesty-cli-spec.json");
 
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
@@ -134,13 +135,44 @@ function unwrapChain(node) {
   return null;
 }
 
-function loadSchemas() {
-  if (!existsSync(OPTIONAL_SCHEMAS_FILE)) return new Map();
+function loadExistingContractSchemas() {
+  if (!existsSync(EXISTING_CONTRACT_FILE)) return new Map();
+
   try {
-    const raw = readJson(OPTIONAL_SCHEMAS_FILE);
-    return new Map(Object.entries(raw));
+    const contract = readJson(EXISTING_CONTRACT_FILE);
+    const fallbackSchemas = new Map();
+    for (const operation of contract.operations ?? []) {
+      for (const request of operation.requests ?? []) {
+        for (const reference of request.reference ?? []) {
+          if (!reference.slug) continue;
+          const schema = {};
+          if (reference.parameters) schema.parameters = reference.parameters;
+          if (reference.requestBody) schema.requestBody = reference.requestBody;
+          if (reference.responses) schema.responses = reference.responses;
+          if (Object.keys(schema).length > 0) {
+            fallbackSchemas.set(reference.slug, schema);
+          }
+        }
+      }
+    }
+    return fallbackSchemas;
   } catch {
     return new Map();
+  }
+}
+
+function loadSchemas() {
+  const schemas = loadExistingContractSchemas();
+  if (!existsSync(OPTIONAL_SCHEMAS_FILE)) return schemas;
+
+  try {
+    const raw = readJson(OPTIONAL_SCHEMAS_FILE);
+    for (const [slug, schema] of Object.entries(raw)) {
+      schemas.set(slug, schema);
+    }
+    return schemas;
+  } catch {
+    return schemas;
   }
 }
 
@@ -511,13 +543,29 @@ function summarizeCoverage(operations, reference) {
 
   coveredGroups.sort((a, b) => b.implementedEndpoints - a.implementedEndpoints || b.referenceEndpoints - a.referenceEndpoints);
 
+  const missingImplementedEndpoints = [];
+  for (const [group, endpoints] of reference.byGroup.entries()) {
+    for (const endpoint of endpoints) {
+      const key = `${endpoint.method} ${endpoint.normalizedPath}`;
+      if (!implementedKeys.has(key)) {
+        missingImplementedEndpoints.push({
+          group,
+          method: endpoint.method,
+          path: endpoint.path,
+          title: endpoint.title,
+          slug: endpoint.slug,
+        });
+      }
+    }
+  }
+
   return {
     referenceFile: reference.file,
     implementedUniqueEndpoints: implementedKeys.size,
     referenceEndpoints: reference.totalEndpoints,
     implementedGroups: coveredGroups.filter((group) => group.implementedEndpoints > 0).length,
     referenceGroups: coveredGroups.length,
-    missingImplementedEndpoints: [],
+    missingImplementedEndpoints,
     groups: coveredGroups,
   };
 }

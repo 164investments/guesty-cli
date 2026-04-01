@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { Command } from "commander";
 import { guestyFetch, paginateAll } from "../client.js";
 import { print } from "../output.js";
@@ -570,14 +571,21 @@ reservations
   .command("export-csv")
   .description("Export reservations as CSV (--data or stdin)")
   .option("--data <json>", "JSON body")
+  .option("--output <path>", "Write CSV output to a file")
   .action(async (opts) => {
     const body = opts.data
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/reservations.csv", {
+    const data = await guestyFetch<string>("/v1/reservations.csv", {
       method: "POST",
       body,
+      responseType: "text",
     });
+    if (opts.output) {
+      writeFileSync(opts.output, data);
+      process.stderr.write(`Saved CSV to ${opts.output}\n`);
+      return;
+    }
     print(data);
   });
 

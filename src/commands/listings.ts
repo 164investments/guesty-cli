@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { Command } from "commander";
 import { guestyFetch, paginateAll } from "../client.js";
 import { print } from "../output.js";
@@ -114,9 +115,7 @@ listings
   .command("payment-provider <id>")
   .description("Get a listing payment provider ID")
   .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/listings/${id}`, {
-      params: { fields: "paymentProviderId" },
-    });
+    const data = await guestyFetch(`/v1/listings/${id}?fields=paymentProviderId`);
     print(data);
   });
 
@@ -184,9 +183,7 @@ listings
   .command("get-payment-provider <id>")
   .description("Get the payment provider ID for a listing")
   .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/listings/${id}`, {
-      params: { fields: "paymentProviderId" },
-    });
+    const data = await guestyFetch(`/v1/listings/${id}?fields=paymentProviderId`);
     print(data);
   });
 
@@ -194,9 +191,19 @@ listings
   .command("export-csv")
   .description("Export listings as CSV (--data or stdin)")
   .option("--data <json>", "JSON body")
+  .option("--output <path>", "Write CSV output to a file")
   .action(async (opts) => {
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/listings.csv", { method: "POST", body });
+    const data = await guestyFetch<string>("/v1/listings.csv", {
+      method: "POST",
+      body,
+      responseType: "text",
+    });
+    if (opts.output) {
+      writeFileSync(opts.output, data);
+      process.stderr.write(`Saved CSV to ${opts.output}\n`);
+      return;
+    }
     print(data);
   });
 

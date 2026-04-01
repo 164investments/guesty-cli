@@ -51,8 +51,8 @@ guesty ls get <listingId>
 # Search guests
 guesty guests list --q "John Smith"
 
-# Update calendar pricing
-guesty cal update-pricing <listingId> --data '{"dateFrom":"2026-04-01","dateTo":"2026-04-30","price":200}'
+# Update calendar data
+guesty cal update <listingId> --data '{"dateFrom":"2026-04-01","dateTo":"2026-04-30","price":200}'
 
 # Create a reservation (v3 API)
 guesty res v3-create --data '{"listingId":"...","checkIn":"...","checkOut":"..."}'
@@ -64,6 +64,9 @@ guesty ical import --data '{"url":"https://...","listingId":"..."}'
 # Raw API call for any endpoint
 guesty raw GET /v1/listings --params '{"limit":5}'
 guesty raw POST /v1/reservations.csv --accept text/csv --output reservations.csv
+
+# Download an owner document
+guesty owners download-document <ownerId> <documentId> --output owner-doc.pdf
 ```
 
 ## Commands

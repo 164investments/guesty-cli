@@ -3,6 +3,22 @@ export function print(data: unknown): void {
     process.stdout.write("null\n");
     return;
   }
+
+  if (typeof data === "string") {
+    process.stdout.write(data.endsWith("\n") ? data : `${data}\n`);
+    return;
+  }
+
+  if (Buffer.isBuffer(data)) {
+    process.stdout.write(data);
+    return;
+  }
+
+  if (data instanceof Uint8Array) {
+    process.stdout.write(Buffer.from(data));
+    return;
+  }
+
   process.stdout.write(JSON.stringify(data, null, 2) + "\n");
 }
 
