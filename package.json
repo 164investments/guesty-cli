@@ -1,6 +1,6 @@
 {
   "name": "guesty-cli",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "CLI for the Guesty property management API with built-in OAuth token caching and rate limiting",
   "type": "module",
   "bin": {
