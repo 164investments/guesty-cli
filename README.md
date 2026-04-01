@@ -85,3 +85,20 @@ guesty raw GET /v1/listings --header 'X-Debug: 1'
 - Named commands cover common Guesty workflows, not every documented endpoint.
 - `guesty raw` is intended to cover the remaining API surface, including endpoints that return non-JSON data.
 - The CLI targets Node.js 18+.
+
+## Machine-Readable Contract
+
+The repo includes [`guesty-cli-spec.json`](./guesty-cli-spec.json) as the machine-readable reference for:
+
+- top-level commands and subcommands
+- CLI options and arguments
+- the Guesty endpoint calls made by each command
+- reference coverage when `api-spec.json` is available during generation
+
+Regenerate it with:
+
+```bash
+npm run generate:cli-spec
+```
+
+This file is intended to be easy for coding agents and other tooling to inspect directly.
