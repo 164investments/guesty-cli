@@ -7,6 +7,7 @@ const COMMANDS_DIR = join(ROOT, "src", "commands");
 const OUTPUT_FILE = join(ROOT, "guesty-cli-spec.json");
 const PACKAGE_FILE = join(ROOT, "package.json");
 const OPTIONAL_REFERENCE_FILE = join(ROOT, "api-spec.json");
+const OPTIONAL_SCHEMAS_FILE = join(ROOT, "schemas.json");
 
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
@@ -133,12 +134,23 @@ function unwrapChain(node) {
   return null;
 }
 
+function loadSchemas() {
+  if (!existsSync(OPTIONAL_SCHEMAS_FILE)) return new Map();
+  try {
+    const raw = readJson(OPTIONAL_SCHEMAS_FILE);
+    return new Map(Object.entries(raw));
+  } catch {
+    return new Map();
+  }
+}
+
 function parseReference() {
   if (!existsSync(OPTIONAL_REFERENCE_FILE)) {
-    return { byKey: new Map(), byGroup: new Map(), totalEndpoints: 0, file: null };
+    return { byKey: new Map(), byGroup: new Map(), totalEndpoints: 0, file: null, schemas: new Map() };
   }
 
   const raw = readJson(OPTIONAL_REFERENCE_FILE);
+  const schemas = loadSchemas();
   const byKey = new Map();
   const byGroup = new Map();
   let totalEndpoints = 0;
@@ -168,6 +180,7 @@ function parseReference() {
     byGroup,
     totalEndpoints,
     file: relative(ROOT, OPTIONAL_REFERENCE_FILE),
+    schemas,
   };
 }
 
@@ -287,11 +300,23 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
   function matchReference(method, path) {
     if (!path) return null;
     const matches = reference.byKey.get(`${method} ${normalizePath(path)}`) ?? [];
-    return matches.map((match) => ({
-      group: match.group,
-      title: match.title,
-      slug: match.slug,
-    }));
+    return matches.map((match) => {
+      const entry = {
+        group: match.group,
+        title: match.title,
+        slug: match.slug,
+        docsUrl: match.slug ? `https://open-api-docs.guesty.com/reference/${match.slug}` : null,
+      };
+      if (match.slug) {
+        const schema = reference.schemas.get(match.slug);
+        if (schema) {
+          if (schema.parameters) entry.parameters = schema.parameters;
+          if (schema.requestBody) entry.requestBody = schema.requestBody;
+          if (schema.responses) entry.responses = schema.responses;
+        }
+      }
+      return entry;
+    });
   }
 
   function visit(node) {

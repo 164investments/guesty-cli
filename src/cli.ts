@@ -20,8 +20,28 @@ import { quotes } from "./commands/quotes.js";
 import { webhooks } from "./commands/webhooks.js";
 import { users } from "./commands/users.js";
 import { integrations } from "./commands/integrations.js";
+import { marketing } from "./commands/marketing.js";
 import { raw } from "./commands/raw.js";
+import { taxes } from "./commands/taxes.js";
+import { paymentProviders } from "./commands/payment-providers.js";
+import { channelCommission } from "./commands/channel-commission.js";
+import { rateStrategies } from "./commands/rate-strategies.js";
 import { init } from "./commands/init.js";
+import { contacts } from "./commands/contacts.js";
+import { icalendar } from "./commands/icalendar.js";
+import { savedReplies } from "./commands/saved-replies.js";
+import { ratePlans } from "./commands/rate-plans.js";
+import { additionalFees } from "./commands/additional-fees.js";
+import { address } from "./commands/address.js";
+import { promotions } from "./commands/promotions.js";
+import { priceAdjustments } from "./commands/price-adjustments.js";
+import { userScope } from "./commands/user-scope.js";
+import { guestApp } from "./commands/guest-app.js";
+import { guestCode } from "./commands/guest-code.js";
+import { blockLogs } from "./commands/block-logs.js";
+import { airbnb } from "./commands/airbnb.js";
+import { invoiceItems } from "./commands/invoice-items.js";
+import { accounts } from "./commands/accounts.js";
 
 function getCliVersion(): string {
   try {
@@ -53,6 +73,26 @@ program.addCommand(quotes);
 program.addCommand(webhooks);
 program.addCommand(users);
 program.addCommand(integrations);
+program.addCommand(marketing);
+program.addCommand(taxes);
+program.addCommand(paymentProviders);
+program.addCommand(channelCommission);
+program.addCommand(rateStrategies);
+program.addCommand(contacts);
+program.addCommand(icalendar);
+program.addCommand(savedReplies);
+program.addCommand(ratePlans);
+program.addCommand(additionalFees);
+program.addCommand(address);
+program.addCommand(promotions);
+program.addCommand(priceAdjustments);
+program.addCommand(userScope);
+program.addCommand(guestApp);
+program.addCommand(guestCode);
+program.addCommand(blockLogs);
+program.addCommand(airbnb);
+program.addCommand(invoiceItems);
+program.addCommand(accounts);
 program.addCommand(raw);
 
 program.parseAsync().catch((err: Error) => {

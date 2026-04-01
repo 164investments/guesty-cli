@@ -220,3 +220,21 @@ accounting
     });
     print(data);
   });
+
+accounting
+  .command("add-expense-attachment <id>")
+  .description("Add an attachment to an expense (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/expenses-api/expenses/${id}/attachments`, { method: "POST", body });
+    print(data);
+  });
+
+accounting
+  .command("delete-expense-attachment <id> <attachmentId>")
+  .description("Delete an attachment from an expense")
+  .action(async (id: string, attachmentId: string) => {
+    const data = await guestyFetch(`/v1/expenses-api/expenses/${id}/attachments/${attachmentId}`, { method: "DELETE" });
+    print(data);
+  });

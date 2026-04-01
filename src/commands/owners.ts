@@ -122,3 +122,65 @@ owners
     });
     print(data);
   });
+
+owners
+  .command("create-guest <ownerId>")
+  .description("Create a guest for an owner")
+  .option("--data <json>", "JSON body")
+  .action(async (ownerId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/owners/${ownerId}/guest`, { method: "POST", body });
+    print(data);
+  });
+
+owners
+  .command("list-documents <ownerId>")
+  .description("List documents for an owner")
+  .action(async (ownerId: string) => {
+    const data = await guestyFetch(`/v1/owners/${ownerId}/documents`);
+    print(data);
+  });
+
+owners
+  .command("create-document <ownerId>")
+  .description("Create a document for an owner (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (ownerId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/owners/${ownerId}/documents`, { method: "POST", body });
+    print(data);
+  });
+
+owners
+  .command("get-document <ownerId> <documentId>")
+  .description("Get a document for an owner")
+  .action(async (ownerId: string, documentId: string) => {
+    const data = await guestyFetch(`/v1/owners/${ownerId}/documents/${documentId}`);
+    print(data);
+  });
+
+owners
+  .command("update-document <ownerId> <documentId>")
+  .description("Update a document for an owner (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (ownerId: string, documentId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/owners/${ownerId}/documents/${documentId}`, { method: "PATCH", body });
+    print(data);
+  });
+
+owners
+  .command("delete-document <ownerId> <documentId>")
+  .description("Delete a document for an owner")
+  .action(async (ownerId: string, documentId: string) => {
+    const data = await guestyFetch(`/v1/owners/${ownerId}/documents/${documentId}`, { method: "DELETE" });
+    print(data);
+  });
+
+owners
+  .command("download-document <ownerId> <documentId>")
+  .description("Download a document for an owner")
+  .action(async (ownerId: string, documentId: string) => {
+    const data = await guestyFetch(`/v1/owners/${ownerId}/documents/${documentId}/download`);
+    print(data);
+  });

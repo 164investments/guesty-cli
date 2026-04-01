@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
@@ -354,6 +355,153 @@ properties
     const data = await guestyFetch(`/v1/properties-api/room-photos/photos/${photoId}/unassign`, {
       method: "PUT",
       body,
+    });
+    print(data);
+  });
+
+properties
+  .command("create-group")
+  .description("Create a property group (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/properties-api/groups/group", { method: "POST", body });
+    print(data);
+  });
+
+properties
+  .command("list-groups")
+  .description("List property groups")
+  .option("--limit <n>", "Max results", "25")
+  .option("--skip <n>", "Offset", "0")
+  .action(async (opts) => {
+    const data = await guestyFetch("/v1/properties-api/groups/group", {
+      params: { limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
+    });
+    print(data);
+  });
+
+properties
+  .command("get-group <id>")
+  .description("Get a property group by ID")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/properties-api/groups/group/${id}`);
+    print(data);
+  });
+
+properties
+  .command("delete-group <id>")
+  .description("Delete a property group")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/properties-api/groups/group/${id}`, { method: "DELETE" });
+    print(data);
+  });
+
+properties
+  .command("update-group <id>")
+  .description("Update a property group (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/properties-api/groups/group/${id}`, { method: "PATCH", body });
+    print(data);
+  });
+
+properties
+  .command("list-external-links <propertyId>")
+  .description("List external links for a property")
+  .action(async (propertyId: string) => {
+    const data = await guestyFetch(`/v1/properties-api/listing-settings/external-links/${propertyId}`);
+    print(data);
+  });
+
+properties
+  .command("create-external-link <propertyId>")
+  .description("Create an external link for a property (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (propertyId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/properties-api/listing-settings/external-links/${propertyId}`, { method: "POST", body });
+    print(data);
+  });
+
+properties
+  .command("reorder-external-links <propertyId>")
+  .description("Reorder external links for a property (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (propertyId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/properties-api/listing-settings/external-links/${propertyId}/order`, { method: "PUT", body });
+    print(data);
+  });
+
+properties
+  .command("update-external-link <propertyId> <linkId>")
+  .description("Update an external link (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (propertyId: string, linkId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/properties-api/listing-settings/external-links/${propertyId}/${linkId}`, { method: "PUT", body });
+    print(data);
+  });
+
+properties
+  .command("delete-external-link <propertyId> <linkId>")
+  .description("Delete an external link")
+  .action(async (propertyId: string, linkId: string) => {
+    const data = await guestyFetch(`/v1/properties-api/listing-settings/external-links/${propertyId}/${linkId}`, { method: "DELETE" });
+    print(data);
+  });
+
+properties
+  .command("get-virtual-tour <propertyId>")
+  .description("Get virtual tour for a property")
+  .action(async (propertyId: string) => {
+    const data = await guestyFetch(`/v1/properties-api/property-media/virtual-tour/${propertyId}`);
+    print(data);
+  });
+
+properties
+  .command("create-virtual-tour <propertyId>")
+  .description("Create a virtual tour for a property (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (propertyId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/properties-api/property-media/virtual-tour/${propertyId}`, { method: "POST", body });
+    print(data);
+  });
+
+properties
+  .command("update-virtual-tour <propertyId>")
+  .description("Update a virtual tour for a property (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (propertyId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/properties-api/property-media/virtual-tour/${propertyId}`, { method: "PUT", body });
+    print(data);
+  });
+
+properties
+  .command("delete-virtual-tour <propertyId>")
+  .description("Delete a virtual tour for a property")
+  .action(async (propertyId: string) => {
+    const data = await guestyFetch(`/v1/properties-api/property-media/virtual-tour/${propertyId}`, { method: "DELETE" });
+    print(data);
+  });
+
+properties
+  .command("upload-photo <propertyId>")
+  .description("Upload a photo blob to a property (--data-file <path>)")
+  .option("--data-file <path>", "Path to the image file to upload")
+  .action(async (propertyId: string, opts) => {
+    if (!opts.dataFile) {
+      throw new Error("--data-file is required for upload-photo");
+    }
+    const body = readFileSync(opts.dataFile);
+    const data = await guestyFetch(`/v1/properties-api/property-photos/property-photos/${propertyId}/upload/blob`, {
+      method: "POST",
+      body,
+      headers: { "Content-Type": "application/octet-stream" },
     });
     print(data);
   });

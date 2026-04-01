@@ -179,3 +179,41 @@ listings
     });
     print(data);
   });
+
+listings
+  .command("get-payment-provider <id>")
+  .description("Get the payment provider ID for a listing")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/listings/${id}`, {
+      params: { fields: "paymentProviderId" },
+    });
+    print(data);
+  });
+
+listings
+  .command("export-csv")
+  .description("Export listings as CSV (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/listings.csv", { method: "POST", body });
+    print(data);
+  });
+
+listings
+  .command("export-email")
+  .description("Export listings via email (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/listings.email", { method: "POST", body });
+    print(data);
+  });
+
+listings
+  .command("get-brand <propertyId>")
+  .description("Get brand by property ID")
+  .action(async (propertyId: string) => {
+    const data = await guestyFetch(`/v1/account-brands/properties/${propertyId}`);
+    print(data);
+  });

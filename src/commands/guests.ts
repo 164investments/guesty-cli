@@ -59,3 +59,21 @@ guests
     });
     print(data);
   });
+
+guests
+  .command("add-payment-method <id>")
+  .description("Add a payment method to a guest (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/guests/${id}/payment-methods`, { method: "POST", body });
+    print(data);
+  });
+
+guests
+  .command("payment-methods <id>")
+  .description("List payment methods for a guest")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/guests/${id}/payment-methods`);
+    print(data);
+  });
