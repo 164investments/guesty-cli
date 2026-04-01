@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
+import { readStdin } from "../stdin.js";
 
 export const integrations = new Command("integrations")
   .alias("int")
@@ -15,10 +16,30 @@ integrations
   });
 
 integrations
+  .command("create")
+  .description("Create an integration (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/integrations", { method: "POST", body });
+    print(data);
+  });
+
+integrations
   .command("get <id>")
   .description("Get an integration by ID")
   .action(async (id: string) => {
     const data = await guestyFetch(`/v1/integrations/${id}`);
+    print(data);
+  });
+
+integrations
+  .command("update <id>")
+  .description("Update an integration (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/integrations/${id}`, { method: "PUT", body });
     print(data);
   });
 
@@ -63,9 +84,37 @@ integrations
   });
 
 integrations
+  .command("create-view")
+  .description("Create a view (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/views", { method: "POST", body });
+    print(data);
+  });
+
+integrations
   .command("view <id>")
   .description("Get a view by ID")
   .action(async (id: string) => {
     const data = await guestyFetch(`/v1/views/${id}`);
+    print(data);
+  });
+
+integrations
+  .command("update-view <id>")
+  .description("Update a view (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/views/${id}`, { method: "PUT", body });
+    print(data);
+  });
+
+integrations
+  .command("delete-view <id>")
+  .description("Delete a view")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/views/${id}`, { method: "DELETE" });
     print(data);
   });

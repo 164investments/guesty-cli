@@ -7,6 +7,16 @@ export const owners = new Command("owners")
   .description("Manage owners and ownerships");
 
 owners
+  .command("bulk-create")
+  .description("Create multiple owners with assigned listings (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/owners/bulk", { method: "POST", body });
+    print(data);
+  });
+
+owners
   .command("list")
   .description("List all owners")
   .option("--limit <n>", "Max results", "25")
@@ -73,6 +83,14 @@ owners
   });
 
 owners
+  .command("owner-ownerships <ownerId>")
+  .description("Get listing ownerships for an owner")
+  .action(async (ownerId: string) => {
+    const data = await guestyFetch(`/v1/owners/${ownerId}/ownerships`);
+    print(data);
+  });
+
+owners
   .command("reservations")
   .description("List owner reservations")
   .option("--limit <n>", "Max results", "25")
@@ -80,6 +98,27 @@ owners
   .action(async (opts) => {
     const data = await guestyFetch("/v1/owners-reservations", {
       params: { limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
+    });
+    print(data);
+  });
+
+owners
+  .command("reservation <id>")
+  .description("Get an owner reservation by ID")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/owners-reservations/${id}`);
+    print(data);
+  });
+
+owners
+  .command("update-reservation <id>")
+  .description("Update an owner reservation (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/owners-reservations/${id}`, {
+      method: "PUT",
+      body,
     });
     print(data);
   });

@@ -56,10 +56,88 @@ accounting
   });
 
 accounting
+  .command("set-working-capital <ownerId>")
+  .description("Update owner working capital (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (ownerId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/accounting-api/owners/${ownerId}/working-capital`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+accounting
   .command("business-models")
   .description("Get business models")
   .action(async () => {
     const data = await guestyFetch("/v1/business-models-api/light-business-models");
+    print(data);
+  });
+
+accounting
+  .command("assign-business-model <businessModelId>")
+  .description("Assign listings to a business model (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (businessModelId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/business-models-api/assignment/${businessModelId}`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+accounting
+  .command("create-owner-charge")
+  .description("Create an owner charge (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/business-models-api/transactions/owner-charges", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+accounting
+  .command("create-owner-charge-by-listing")
+  .description("Create owner charges by listing (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/business-models-api/transactions/owner-charges-by-listing", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+accounting
+  .command("create-business-expense")
+  .description("Create a business-model expense (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/business-models-api/transactions/expenses", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+accounting
+  .command("create-business-expense-by-listing")
+  .description("Create a business-model expense by listing (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/business-models-api/transactions/expenses-by-listing", {
+      method: "POST",
+      body,
+    });
     print(data);
   });
 
@@ -94,10 +172,28 @@ accounting
   });
 
 accounting
+  .command("cancel-expense <id>")
+  .description("Cancel an expense")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/expenses-api/expenses/${id}/cancel`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+accounting
   .command("vendors")
   .description("List vendors")
   .action(async () => {
     const data = await guestyFetch("/v1/vendors");
+    print(data);
+  });
+
+accounting
+  .command("vendor <id>")
+  .description("Get a vendor by ID")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/vendors/${id}`);
     print(data);
   });
 
@@ -108,6 +204,18 @@ accounting
   .option("--skip <n>", "Offset", "0")
   .action(async (opts) => {
     const data = await guestyFetch("/v1/payment-transactions/reports", {
+      params: { limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
+    });
+    print(data);
+  });
+
+accounting
+  .command("payouts-reconciliation")
+  .description("Get payouts reconciliation data from Guesty Pay")
+  .option("--limit <n>", "Max results", "25")
+  .option("--skip <n>", "Offset", "0")
+  .action(async (opts) => {
+    const data = await guestyFetch("/v1/payment-transactions/reports/payouts-reconciliation", {
       params: { limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
     });
     print(data);

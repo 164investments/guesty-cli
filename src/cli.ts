@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { readFileSync } from "node:fs";
 import { loadEnv } from "./env.js";
 loadEnv();
 
@@ -22,10 +23,19 @@ import { integrations } from "./commands/integrations.js";
 import { raw } from "./commands/raw.js";
 import { init } from "./commands/init.js";
 
+function getCliVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version?: string };
+    return pkg.version ?? "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
 const program = new Command()
   .name("guesty")
-  .version("1.0.0")
-  .description("Guesty API CLI — authenticates via OAuth with disk-cached tokens. Use 'raw' for any endpoint not covered by named commands.");
+  .version(getCliVersion())
+  .description("Guesty API CLI with OAuth token caching. Named commands cover common workflows, and 'raw' handles the rest of the API surface.");
 
 program.addCommand(init);
 program.addCommand(reservations);

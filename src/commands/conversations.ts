@@ -24,9 +24,29 @@ conversations
 
 conversations
   .command("get <id>")
-  .description("Get a conversation and its posts")
+  .description("Get a conversation by ID")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/communication/conversations/${id}`);
+    print(data);
+  });
+
+conversations
+  .command("posts <id>")
+  .description("Get posts for a conversation")
   .action(async (id: string) => {
     const data = await guestyFetch(`/v1/communication/conversations/${id}/posts`);
+    print(data);
+  });
+
+conversations
+  .command("post <conversationId>")
+  .description("Create a post in a conversation without sending it")
+  .requiredOption("--body <text>", "Message body")
+  .action(async (conversationId: string, opts) => {
+    const data = await guestyFetch(`/v1/communication/conversations/${conversationId}/posts`, {
+      method: "POST",
+      body: { body: opts.body },
+    });
     print(data);
   });
 

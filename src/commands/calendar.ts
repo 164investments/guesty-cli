@@ -21,6 +21,29 @@ calendar
   });
 
 calendar
+  .command("minified <listingId>")
+  .description("Get the optimized calendar for a listing")
+  .action(async (listingId: string) => {
+    const data = await guestyFetch(`/v1/availability-pricing/api/calendar/listings/minified/${listingId}`);
+    print(data);
+  });
+
+calendar
+  .command("list")
+  .description("Get calendars for multiple listings")
+  .option("--listing <id>", "Listing ID", (value: string, previous: string[]) => [...previous, value], [])
+  .option("--from <date>", "Start date (YYYY-MM-DD)")
+  .option("--to <date>", "End date (YYYY-MM-DD)")
+  .action(async (opts) => {
+    const params: Record<string, string | string[]> = {};
+    if (opts.listing.length > 0) params.listingId = opts.listing;
+    if (opts.from) params.from = opts.from;
+    if (opts.to) params.to = opts.to;
+    const data = await guestyFetch("/v1/availability-pricing/api/calendar/listings", { params });
+    print(data);
+  });
+
+calendar
   .command("update <listingId>")
   .description("Update calendar (--data or stdin)")
   .option("--data <json>", "JSON body")
@@ -32,6 +55,21 @@ calendar
       `/v1/availability-pricing/api/calendar/listings/${listingId}`,
       { method: "PUT", body }
     );
+    print(data);
+  });
+
+calendar
+  .command("update-many")
+  .description("Update calendar for multiple listings (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/availability-pricing/api/calendar/listings", {
+      method: "PUT",
+      body,
+    });
     print(data);
   });
 
@@ -54,21 +92,5 @@ calendar
         },
       }
     );
-    print(data);
-  });
-
-calendar
-  .command("check <listingId>")
-  .description("Check availability for dates")
-  .requiredOption("--checkin <date>", "Check-in date (YYYY-MM-DD)")
-  .requiredOption("--checkout <date>", "Check-out date (YYYY-MM-DD)")
-  .action(async (listingId: string, opts) => {
-    const data = await guestyFetch("/v1/reservations/check-availability", {
-      params: {
-        listingId,
-        checkIn: opts.checkin,
-        checkOut: opts.checkout,
-      },
-    });
     print(data);
   });

@@ -33,3 +33,13 @@ quotes
     const data = await guestyFetch("/v1/quotes/multiple", { method: "POST", body });
     print(data);
   });
+
+quotes
+  .command("add-coupons <quoteId>")
+  .description("Add coupons to an existing quote (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (quoteId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/quotes/${quoteId}/coupons`, { method: "POST", body });
+    print(data);
+  });

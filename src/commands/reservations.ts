@@ -124,3 +124,124 @@ reservations
     });
     print(data);
   });
+
+reservations
+  .command("add-invoice-item <id>")
+  .description("Create an invoice item on a reservation (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations/${id}/invoiceItems`, {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("update-payment <id> <paymentId>")
+  .description("Update or cancel a payment on a reservation (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, paymentId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations/${id}/payments/${paymentId}`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("refund-payment <id> <paymentId>")
+  .description("Refund a payment on a reservation (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, paymentId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations/${id}/payments/${paymentId}/refund`, {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("cancel-payment <id> <paymentId>")
+  .description("Cancel a pending or recorded payment (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, paymentId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations/${id}/payments/${paymentId}/cancel`, {
+      method: "PATCH",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("approve <id>")
+  .description("Approve a pending booking request")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/reservations/${id}/approve`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("decline <id>")
+  .description("Decline a pending booking request")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/reservations/${id}/decline`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("custom-fields <id>")
+  .description("Get custom fields for a reservation")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields`);
+    print(data);
+  });
+
+reservations
+  .command("set-custom-fields <id>")
+  .description("Update reservation custom fields (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("custom-field <id> <fieldId>")
+  .description("Get a single reservation custom field")
+  .action(async (id: string, fieldId: string) => {
+    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields/${fieldId}`);
+    print(data);
+  });
+
+reservations
+  .command("delete-custom-field <id> <fieldId>")
+  .description("Delete a reservation custom field")
+  .action(async (id: string, fieldId: string) => {
+    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields/${fieldId}`, {
+      method: "DELETE",
+    });
+    print(data);
+  });
+
+reservations
+  .command("request-cancellation-sync <id>")
+  .description("Request Airbnb reservation cancellation sync")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/reservations/${id}/request-cancellation-sync`, {
+      method: "POST",
+    });
+    print(data);
+  });

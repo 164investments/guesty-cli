@@ -59,6 +59,27 @@ users
   });
 
 users
+  .command("role <id>")
+  .description("Get assigned roles by ID")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/roles/${id}`);
+    print(data);
+  });
+
+users
+  .command("assign-roles")
+  .description("Assign roles (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/roles/assign", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+users
   .command("account")
   .description("Get current account details")
   .action(async () => {

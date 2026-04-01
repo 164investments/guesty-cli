@@ -61,3 +61,13 @@ tasks
     });
     print(data);
   });
+
+tasks
+  .command("delete <id>")
+  .description("Delete a task")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/tasks-open-api/${id}`, {
+      method: "DELETE",
+    });
+    print(data);
+  });

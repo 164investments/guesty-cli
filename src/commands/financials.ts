@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
+import { readStdin } from "../stdin.js";
 
 export const financials = new Command("financials")
   .alias("fin")
@@ -43,8 +44,8 @@ financials
   });
 
 financials
-  .command("owner-statement <listingId>")
-  .description("Get owner financial data for a listing")
+  .command("listing <listingId>")
+  .description("Get financial data for a listing")
   .option("--from <date>", "From date (YYYY-MM-DD)")
   .option("--to <date>", "To date (YYYY-MM-DD)")
   .action(async (listingId: string, opts) => {
@@ -52,5 +53,31 @@ financials
     if (opts.from) params.from = opts.from;
     if (opts.to) params.to = opts.to;
     const data = await guestyFetch(`/v1/financials/listing/${listingId}`, { params });
+    print(data);
+  });
+
+financials
+  .command("owner-statement <listingId>")
+  .description("Get financial data for a listing")
+  .option("--from <date>", "From date (YYYY-MM-DD)")
+  .option("--to <date>", "To date (YYYY-MM-DD)")
+  .action(async (listingId: string, opts) => {
+    const params: Record<string, string> = {};
+    if (opts.from) params.from = opts.from;
+    if (opts.to) params.to = opts.to;
+    const data = await guestyFetch(`/v1/financials/listing/${listingId}`, { params });
+    print(data);
+  });
+
+financials
+  .command("update-listing <listingId>")
+  .description("Update financial data for a listing (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (listingId: string, opts) => {
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/financials/listing/${listingId}`, {
+      method: "PUT",
+      body,
+    });
     print(data);
   });
