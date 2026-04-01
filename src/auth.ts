@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 
 const CONFIG_DIR = join(homedir(), ".guesty-cli");
 const TOKEN_FILE = join(CONFIG_DIR, "token.json");
-const MAX_TOKENS_PER_DAY = 5;
+const MAX_TOKENS_PER_DAY = 1;
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 interface TokenData {
