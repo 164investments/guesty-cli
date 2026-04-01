@@ -42,6 +42,7 @@ import { blockLogs } from "./commands/block-logs.js";
 import { airbnb } from "./commands/airbnb.js";
 import { invoiceItems } from "./commands/invoice-items.js";
 import { accounts } from "./commands/accounts.js";
+import { checkForUpdate, runSelfUpdate } from "./update-check.js";
 
 function getCliVersion(): string {
   try {
@@ -95,7 +96,14 @@ program.addCommand(invoiceItems);
 program.addCommand(accounts);
 program.addCommand(raw);
 
-program.parseAsync().catch((err: Error) => {
-  process.stderr.write(`Error: ${err.message}\n`);
-  process.exit(1);
+program
+  .command("update")
+  .description("Update guesty-cli to the latest version")
+  .action(() => runSelfUpdate());
+
+checkForUpdate().then(() => {
+  program.parseAsync().catch((err: Error) => {
+    process.stderr.write(`Error: ${err.message}\n`);
+    process.exit(1);
+  });
 });
