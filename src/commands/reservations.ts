@@ -4,9 +4,17 @@ import { guestyFetch, paginateAll } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
 
+function deprecated(name: string, replacement: string) {
+  process.stderr.write(
+    `\x1b[33m[deprecated]\x1b[0m "guesty res ${name}" uses the legacy v1 API. Use "guesty res ${replacement}" instead.\n`
+  );
+}
+
 export const reservations = new Command("reservations")
   .alias("res")
   .description("Manage reservations");
+
+// ─── list / search (v1 — no v3 equivalent) ─────────────────────────────────
 
 reservations
   .command("list")
@@ -49,17 +57,6 @@ reservations
   });
 
 reservations
-  .command("get <id>")
-  .description("Get a single reservation by ID")
-  .option("--fields <fields>", "Comma-separated fields to return")
-  .action(async (id: string, opts) => {
-    const params: Record<string, string> = {};
-    if (opts.fields) params.fields = opts.fields;
-    const data = await guestyFetch(`/v1/reservations/${id}`, { params });
-    print(data);
-  });
-
-reservations
   .command("search <query>")
   .description("Search reservations by guest name or confirmation code")
   .option("--limit <n>", "Max results", "25")
@@ -73,15 +70,133 @@ reservations
     print(data);
   });
 
+// ─── get / create (v3) ──────────────────────────────────────────────────────
+
 reservations
-  .command("update <id>")
-  .description("Update a reservation (pass JSON body via stdin or --data)")
+  .command("get <ids...>")
+  .description("Retrieve reservations by ID (up to 10 IDs)")
+  .option("--fields <fields>", "Comma-separated fields to return")
+  .action(async (ids: string[], opts) => {
+    const idParams: Record<string, string> = {};
+    ids.forEach((id, i) => { idParams[`reservationIds[${i}]`] = id; });
+    if (opts.fields) idParams.fields = opts.fields;
+    const data = await guestyFetch("/v1/reservations-v3", { params: idParams });
+    print(data);
+  });
+
+reservations
+  .command("create")
+  .description("Create reservation without quote (--data or stdin)")
   .option("--data <json>", "JSON body")
-  .action(async (id: string, opts) => {
+  .action(async (opts) => {
     const body = opts.data
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations/${id}`, {
+    const data = await guestyFetch("/v1/reservations-v3", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("create-from-quote")
+  .description("Create reservation from quote (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/reservations-v3/quote", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+// ─── reservation actions (v3) ───────────────────────────────────────────────
+
+reservations
+  .command("approve <reservationId>")
+  .description("Approve channel reservation")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/approve`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("decline <reservationId>")
+  .description("Decline channel reservation")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/decline`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("pre-approve <reservationId>")
+  .description("Pre-approve channel reservation")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/pre-approve`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("request-cancellation <reservationId>")
+  .description("Request cancellation for a reservation")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/request-cancellation`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("mid-stay")
+  .description("Create a mid-stay (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/reservations-v3/mid-stay", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("guest-stay")
+  .description("Change guest stay status (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/reservations-v3/guest-stay", {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+// ─── reservation updates (v3) ───────────────────────────────────────────────
+
+reservations
+  .command("update-source <reservationId>")
+  .description("Change reservation source (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/source`, {
       method: "PUT",
       body,
     });
@@ -89,19 +204,179 @@ reservations
   });
 
 reservations
-  .command("create")
-  .description("Create a reservation (pass JSON body via stdin or --data)")
+  .command("update-notes <reservationId>")
+  .description("Update reservation notes (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/notes`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("update-dates <reservationId>")
+  .description("Update reservation dates (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/dates`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("relocate <reservationId>")
+  .description("Update reservation listing (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/relocate`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("update-status <reservationId>")
+  .description("Update reservation status (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/status`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("update-confirmation-code <reservationId>")
+  .description("Update confirmation code (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/confirmation-code`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("update-guests <reservationId>")
+  .description("Update guests breakdown (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/guests`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+// ─── custom fields (v3) ─────────────────────────────────────────────────────
+
+reservations
+  .command("update-custom-fields <reservationId>")
+  .description("Update custom fields (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/custom-fields`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("custom-fields <reservationId>")
+  .description("Get custom fields for a reservation")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/custom-fields`);
+    print(data);
+  });
+
+reservations
+  .command("custom-field <reservationId> <fieldId>")
+  .description("Get a specific custom field")
+  .action(async (reservationId: string, fieldId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/custom-fields/${fieldId}`);
+    print(data);
+  });
+
+reservations
+  .command("delete-custom-field <reservationId> <fieldId>")
+  .description("Delete a custom field")
+  .action(async (reservationId: string, fieldId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/custom-fields/${fieldId}`, {
+      method: "DELETE",
+    });
+    print(data);
+  });
+
+// ─── groups & owner reservations (v3) ───────────────────────────────────────
+
+reservations
+  .command("group-get <groupId>")
+  .description("Get group reservation")
+  .action(async (groupId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/group/${groupId}`);
+    print(data);
+  });
+
+reservations
+  .command("group-create")
+  .description("Create a group reservation (--data or stdin)")
   .option("--data <json>", "JSON body")
   .action(async (opts) => {
     const body = opts.data
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/reservations", {
+    const data = await guestyFetch("/v1/reservations-v3/group", {
       method: "POST",
       body,
     });
     print(data);
   });
+
+reservations
+  .command("owner-reservation")
+  .description("Create confirmed owner reservation (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/reservations-v3/owner/confirmed", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+// ─── payments & invoices (v1 — no v3 equivalent) ───────────────────────────
 
 reservations
   .command("balance <id>")
@@ -120,19 +395,6 @@ reservations
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/reservations/${id}/payments`, {
-      method: "POST",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("add-invoice-item <id>")
-  .description("Create an invoice item on a reservation (--data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (id: string, opts) => {
-    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations/${id}/invoiceItems`, {
       method: "POST",
       body,
     });
@@ -179,385 +441,36 @@ reservations
   });
 
 reservations
-  .command("approve <id>")
-  .description("Approve a pending booking request")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/reservations/${id}/approve`, {
-      method: "POST",
-    });
-    print(data);
-  });
-
-reservations
-  .command("decline <id>")
-  .description("Decline a pending booking request")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/reservations/${id}/decline`, {
-      method: "POST",
-    });
-    print(data);
-  });
-
-reservations
-  .command("custom-fields <id>")
-  .description("Get custom fields for a reservation")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields`);
-    print(data);
-  });
-
-reservations
-  .command("set-custom-fields <id>")
-  .description("Update reservation custom fields (--data or stdin)")
+  .command("add-invoice-item <id>")
+  .description("Create an invoice item on a reservation (--data or stdin)")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields`, {
+    const data = await guestyFetch(`/v1/reservations/${id}/invoiceItems`, {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+// ─── update (v1 — use granular v3 updates instead) ─────────────────────────
+
+reservations
+  .command("update <id>")
+  .description("Update a reservation (pass JSON body via stdin or --data)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations/${id}`, {
       method: "PUT",
       body,
     });
     print(data);
   });
 
-reservations
-  .command("custom-field <id> <fieldId>")
-  .description("Get a single reservation custom field")
-  .action(async (id: string, fieldId: string) => {
-    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields/${fieldId}`);
-    print(data);
-  });
-
-reservations
-  .command("delete-custom-field <id> <fieldId>")
-  .description("Delete a reservation custom field")
-  .action(async (id: string, fieldId: string) => {
-    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields/${fieldId}`, {
-      method: "DELETE",
-    });
-    print(data);
-  });
-
-reservations
-  .command("request-cancellation-sync <id>")
-  .description("Request Airbnb reservation cancellation sync")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/reservations/${id}/request-cancellation-sync`, {
-      method: "POST",
-    });
-    print(data);
-  });
-
-// ─── reservations-v3 endpoints ───────────────────────────────────────────────
-
-reservations
-  .command("v3-get <ids...>")
-  .description("Retrieve reservations by ID (v3, up to 10 IDs)")
-  .option("--fields <fields>", "Comma-separated fields to return")
-  .action(async (ids: string[], opts) => {
-    const idParams: Record<string, string> = {};
-    ids.forEach((id, i) => { idParams[`reservationIds[${i}]`] = id; });
-    if (opts.fields) idParams.fields = opts.fields;
-    const data = await guestyFetch("/v1/reservations-v3", { params: idParams });
-    print(data);
-  });
-
-reservations
-  .command("v3-create")
-  .description("Create reservation without quote (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/reservations-v3", {
-      method: "POST",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-create-from-quote")
-  .description("Create reservation from quote (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/reservations-v3/quote", {
-      method: "POST",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-group-get <groupId>")
-  .description("Get group reservation (v3)")
-  .action(async (groupId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/group/${groupId}`);
-    print(data);
-  });
-
-reservations
-  .command("v3-group-create")
-  .description("Create a group reservation (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/reservations-v3/group", {
-      method: "POST",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-owner-reservation")
-  .description("Create confirmed owner reservation (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/reservations-v3/owner/confirmed", {
-      method: "POST",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-guest-stay")
-  .description("Change guest stay status (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/reservations-v3/guest-stay", {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-update-source <reservationId>")
-  .description("Change reservation source (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/source`, {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-update-notes <reservationId>")
-  .description("Update reservation notes (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/notes`, {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-update-dates <reservationId>")
-  .description("Update reservation dates (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/dates`, {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-relocate <reservationId>")
-  .description("Update reservation listing (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/relocate`, {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-update-status <reservationId>")
-  .description("Update reservation status (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/status`, {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-update-confirmation-code <reservationId>")
-  .description("Update confirmation code (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/confirmation-code`, {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-update-guests <reservationId>")
-  .description("Update guests breakdown (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/guests`, {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-update-custom-fields <reservationId>")
-  .description("Update custom fields (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/custom-fields`, {
-      method: "PUT",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-custom-fields <reservationId>")
-  .description("Get custom fields for a reservation (v3)")
-  .action(async (reservationId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/custom-fields`);
-    print(data);
-  });
-
-reservations
-  .command("v3-custom-field <reservationId> <fieldId>")
-  .description("Get a specific custom field (v3)")
-  .action(async (reservationId: string, fieldId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/custom-fields/${fieldId}`);
-    print(data);
-  });
-
-reservations
-  .command("v3-delete-custom-field <reservationId> <fieldId>")
-  .description("Delete a custom field (v3)")
-  .action(async (reservationId: string, fieldId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/custom-fields/${fieldId}`, {
-      method: "DELETE",
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-mid-stay")
-  .description("Create a mid-stay (v3, --data or stdin)")
-  .option("--data <json>", "JSON body")
-  .action(async (opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch("/v1/reservations-v3/mid-stay", {
-      method: "POST",
-      body,
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-approve <reservationId>")
-  .description("Approve channel reservation (v3)")
-  .action(async (reservationId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/approve`, {
-      method: "POST",
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-decline <reservationId>")
-  .description("Decline channel reservation (v3)")
-  .action(async (reservationId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/decline`, {
-      method: "POST",
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-pre-approve <reservationId>")
-  .description("Pre-approve channel reservation (v3)")
-  .action(async (reservationId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/pre-approve`, {
-      method: "POST",
-    });
-    print(data);
-  });
-
-reservations
-  .command("v3-request-cancellation <reservationId>")
-  .description("Request cancellation for a reservation (v3)")
-  .action(async (reservationId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/request-cancellation`, {
-      method: "POST",
-    });
-    print(data);
-  });
-
-// ─── reservations-api endpoints ──────────────────────────────────────────────
-
-reservations
-  .command("airbnb-pre-approve <reservationId>")
-  .description("Pre-approve inquiry for Airbnb")
-  .action(async (reservationId: string) => {
-    const data = await guestyFetch(`/v1/reservations-api/reservations/${reservationId}/pre-approve`, {
-      method: "POST",
-    });
-    print(data);
-  });
-
-// ─── export / report endpoints ───────────────────────────────────────────────
+// ─── export / report ────────────────────────────────────────────────────────
 
 reservations
   .command("export-csv")
@@ -601,5 +514,122 @@ reservations
   .description("Get reservations report by view ID")
   .action(async (viewId: string) => {
     const data = await guestyFetch(`/v1/reservations-reports/${viewId}`);
+    print(data);
+  });
+
+// ─── airbnb-specific ────────────────────────────────────────────────────────
+
+reservations
+  .command("airbnb-pre-approve <reservationId>")
+  .description("Pre-approve inquiry for Airbnb")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-api/reservations/${reservationId}/pre-approve`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("request-cancellation-sync <id>")
+  .description("Request Airbnb reservation cancellation sync")
+  .action(async (id: string) => {
+    const data = await guestyFetch(`/v1/reservations/${id}/request-cancellation-sync`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+// ─── legacy v1 commands (deprecated) ────────────────────────────────────────
+
+reservations
+  .command("legacy-get <id>")
+  .description("[deprecated] Get reservation via v1 API — use 'get' instead")
+  .option("--fields <fields>", "Comma-separated fields to return")
+  .action(async (id: string, opts) => {
+    deprecated("legacy-get", "get");
+    const params: Record<string, string> = {};
+    if (opts.fields) params.fields = opts.fields;
+    const data = await guestyFetch(`/v1/reservations/${id}`, { params });
+    print(data);
+  });
+
+reservations
+  .command("legacy-create")
+  .description("[deprecated] Create reservation via v1 API — use 'create' instead")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    deprecated("legacy-create", "create");
+    const body = opts.data
+      ? JSON.parse(opts.data)
+      : JSON.parse(await readStdin());
+    const data = await guestyFetch("/v1/reservations", {
+      method: "POST",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("legacy-approve <id>")
+  .description("[deprecated] Approve via v1 API — use 'approve' instead")
+  .action(async (id: string) => {
+    deprecated("legacy-approve", "approve");
+    const data = await guestyFetch(`/v1/reservations/${id}/approve`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("legacy-decline <id>")
+  .description("[deprecated] Decline via v1 API — use 'decline' instead")
+  .action(async (id: string) => {
+    deprecated("legacy-decline", "decline");
+    const data = await guestyFetch(`/v1/reservations/${id}/decline`, {
+      method: "POST",
+    });
+    print(data);
+  });
+
+reservations
+  .command("legacy-custom-fields <id>")
+  .description("[deprecated] Get custom fields via v1 API — use 'custom-fields' instead")
+  .action(async (id: string) => {
+    deprecated("legacy-custom-fields", "custom-fields");
+    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields`);
+    print(data);
+  });
+
+reservations
+  .command("legacy-set-custom-fields <id>")
+  .description("[deprecated] Update custom fields via v1 API — use 'update-custom-fields' instead")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    deprecated("legacy-set-custom-fields", "update-custom-fields");
+    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("legacy-custom-field <id> <fieldId>")
+  .description("[deprecated] Get single custom field via v1 API — use 'custom-field' instead")
+  .action(async (id: string, fieldId: string) => {
+    deprecated("legacy-custom-field", "custom-field");
+    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields/${fieldId}`);
+    print(data);
+  });
+
+reservations
+  .command("legacy-delete-custom-field <id> <fieldId>")
+  .description("[deprecated] Delete custom field via v1 API — use 'delete-custom-field' instead")
+  .action(async (id: string, fieldId: string) => {
+    deprecated("legacy-delete-custom-field", "delete-custom-field");
+    const data = await guestyFetch(`/v1/reservations/${id}/custom-fields/${fieldId}`, {
+      method: "DELETE",
+    });
     print(data);
   });
