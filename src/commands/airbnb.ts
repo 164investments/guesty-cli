@@ -30,9 +30,15 @@ airbnb
 airbnb
   .command("resolutions <guestyReservationId>")
   .description("List Airbnb resolutions for a reservation")
-  .action(async (guestyReservationId: string) => {
+  .option("--from <date>", "From date (YYYY-MM-DD)")
+  .option("--to <date>", "To date (YYYY-MM-DD)")
+  .action(async (guestyReservationId: string, opts) => {
+    const params: Record<string, string> = {};
+    if (opts.from) params.from = opts.from;
+    if (opts.to) params.to = opts.to;
     const data = await guestyFetch(
       `/v1/airbnb-resolutions-center/reservations/${guestyReservationId}/resolutions`,
+      { params },
     );
     print(data);
   });

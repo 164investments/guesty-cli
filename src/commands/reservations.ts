@@ -512,8 +512,15 @@ reservations
 reservations
   .command("report <viewId>")
   .description("Get reservations report by view ID")
-  .action(async (viewId: string) => {
-    const data = await guestyFetch(`/v1/reservations-reports/${viewId}`);
+  .option("--timezone <tz>", "Timezone (e.g. America/Los_Angeles)")
+  .option("--limit <n>", "Max results")
+  .option("--skip <n>", "Offset")
+  .action(async (viewId: string, opts) => {
+    const params: Record<string, string | number> = {};
+    if (opts.timezone) params.timezone = opts.timezone;
+    if (opts.limit) params.limit = parseInt(opts.limit);
+    if (opts.skip) params.skip = parseInt(opts.skip);
+    const data = await guestyFetch(`/v1/reservations-reports/${viewId}`, { params });
     print(data);
   });
 

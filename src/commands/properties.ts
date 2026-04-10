@@ -276,8 +276,21 @@ properties
 properties
   .command("logs <propertyId>")
   .description("Get property logs")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/property-logs/${id}`);
+  .option("--from <date>", "From date (ISO 8601)")
+  .option("--to <date>", "To date (ISO 8601)")
+  .option("--user <userId>", "Filter by user ID")
+  .option("--fields <fields>", "Comma-separated fields")
+  .option("--limit <n>", "Max results")
+  .option("--skip <n>", "Offset")
+  .action(async (id: string, opts) => {
+    const params: Record<string, string | number> = {};
+    if (opts.from) params.from = opts.from;
+    if (opts.to) params.to = opts.to;
+    if (opts.user) params.user = opts.user;
+    if (opts.fields) params.fields = opts.fields;
+    if (opts.limit) params.limit = parseInt(opts.limit);
+    if (opts.skip) params.skip = parseInt(opts.skip);
+    const data = await guestyFetch(`/v1/property-logs/${id}`, { params });
     print(data);
   });
 
