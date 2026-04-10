@@ -17,6 +17,7 @@
     "dev": "tsc --watch",
     "generate:cli-spec": "node scripts/generate-cli-spec.mjs",
     "link": "npm run build && npm link",
+    "refresh:api-spec": "npx tsx scripts/refresh-api-spec.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
