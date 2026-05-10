@@ -2,7 +2,10 @@
 /**
  * Scrapes all Guesty API reference pages as markdown.
  * Each page at open-api-docs.guesty.com/reference/{slug}
- * has a .md variant that returns raw markdown.
+ * has a .md variant that returns raw markdown with an embedded OpenAPI 3.0.3 JSON block.
+ *
+ * Slugs are now fetched dynamically from the sitemap so we don't go stale.
+ * A hardcoded FALLBACK_SLUGS list is retained in case the sitemap is unreachable.
  *
  * Usage: npx tsx scripts/scrape-api-docs.ts
  */
@@ -14,13 +17,35 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const SITEMAP_URL = "https://open-api-docs.guesty.com/sitemap.xml";
 const BASE_URL = "https://open-api-docs.guesty.com/reference";
 const OUTPUT_DIR = join(__dirname, "..", "docs", "api-reference");
 const CONCURRENCY = 5;
 const DELAY_MS = 200; // be respectful of rate limits
 
-// All slugs scraped from the sidebar
-const SLUGS = [
+/**
+ * Pull slugs live from the Guesty docs sitemap. Returns every /reference/<slug>
+ * URL deduped and sorted. Falls back to FALLBACK_SLUGS if the fetch fails.
+ */
+async function fetchSlugsFromSitemap(): Promise<string[]> {
+  try {
+    const res = await fetch(SITEMAP_URL);
+    if (!res.ok) throw new Error(`sitemap HTTP ${res.status}`);
+    const xml = await res.text();
+    const matches = xml.match(/https:\/\/open-api-docs\.guesty\.com\/reference\/[a-z0-9_-]+/g) || [];
+    const slugs = Array.from(new Set(matches.map((u) => u.split("/reference/")[1]))).sort();
+    if (slugs.length < 50) throw new Error(`only ${slugs.length} slugs found in sitemap (suspiciously low)`);
+    console.log(`[sitemap] fetched ${slugs.length} unique reference slugs`);
+    return slugs;
+  } catch (err) {
+    console.warn(`[sitemap] fetch failed (${err}); falling back to hardcoded list of ${FALLBACK_SLUGS.length} slugs`);
+    return FALLBACK_SLUGS;
+  }
+}
+
+// Hardcoded fallback in case the sitemap is unreachable. Sourced from a prior scrape — refresh by
+// running this script when the sitemap is healthy; results overwrite docs/api-reference/.
+const FALLBACK_SLUGS = [
   "account-brands",
   "accounting-only-available-for-accounting-add-on-users",
   "accounts",
@@ -387,7 +412,8 @@ function categorizeSlug(slug: string): string {
 }
 
 async function main() {
-  console.log(`Scraping ${SLUGS.length} Guesty API doc pages...\n`);
+  const slugs = await fetchSlugsFromSitemap();
+  console.log(`Scraping ${slugs.length} Guesty API doc pages...\n`);
 
   await mkdir(OUTPUT_DIR, { recursive: true });
 
@@ -395,8 +421,8 @@ async function main() {
   let completed = 0;
 
   // Process in batches for concurrency control
-  for (let i = 0; i < SLUGS.length; i += CONCURRENCY) {
-    const batch = SLUGS.slice(i, i + CONCURRENCY);
+  for (let i = 0; i < slugs.length; i += CONCURRENCY) {
+    const batch = slugs.slice(i, i + CONCURRENCY);
     const promises = batch.map(async (slug) => {
       const { content, error } = await fetchMarkdown(slug);
       completed++;
@@ -406,8 +432,8 @@ async function main() {
         const filepath = join(OUTPUT_DIR, filename);
         await writeFile(filepath, content, "utf-8");
 
-        if (completed % 20 === 0 || completed === SLUGS.length) {
-          console.log(`  [${completed}/${SLUGS.length}] ...`);
+        if (completed % 20 === 0 || completed === slugs.length) {
+          console.log(`  [${completed}/${slugs.length}] ...`);
         }
 
         results.push({ slug, success: true, size: content.length });
@@ -429,7 +455,7 @@ async function main() {
     "# Guesty API Reference — Scraped Docs",
     "",
     `Scraped: ${new Date().toISOString()}`,
-    `Total pages: ${SLUGS.length}`,
+    `Total pages: ${results.length}`,
     `Succeeded: ${succeeded.length}`,
     `Failed: ${failed.length}`,
     "",
