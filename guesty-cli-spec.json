@@ -1,7 +1,7 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-04-10T21:15:39.892Z",
+  "generatedAt": "2026-05-10T21:43:06.147Z",
   "cliVersion": "1.1.0",
   "generatedFrom": {
     "packageFile": "package.json",
@@ -97,7 +97,7 @@
               "line": 14,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get folio balances",
                   "slug": "reservationscontroller_foliobalances",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationscontroller_foliobalances",
@@ -324,7 +324,7 @@
               "line": 29,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get recognized journal entries",
                   "slug": "journalentriescontroller_getrecognized",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/journalentriescontroller_getrecognized",
@@ -898,7 +898,7 @@
               "line": 46,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get all journal entries",
                   "slug": "journalentriescontroller_getall",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/journalentriescontroller_getall",
@@ -1437,7 +1437,7 @@
               "line": 56,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get categories list",
                   "slug": "categoriescontroller_getcategories",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/categoriescontroller_getcategories",
@@ -1691,7 +1691,7 @@
               "line": 64,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get owner working capital",
                   "slug": "ownerscontroller_retrieve",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/ownerscontroller_retrieve",
@@ -1862,7 +1862,7 @@
               "line": 74,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Update owner working capital",
                   "slug": "ownerscontroller_update",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/ownerscontroller_update",
@@ -2045,7 +2045,7 @@
               "line": 85,
               "reference": [
                 {
-                  "group": "business-models-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get Business Models",
                   "slug": "businessmodelsoacontroller_index",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/businessmodelsoacontroller_index",
@@ -2317,7 +2317,7 @@
               "line": 95,
               "reference": [
                 {
-                  "group": "business-models-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Assign listings to Business Models",
                   "slug": "assignlistingcontroller_update",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/assignlistingcontroller_update",
@@ -2549,7 +2549,7 @@
               "line": 108,
               "reference": [
                 {
-                  "group": "business-models-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Create owner charge per owner",
                   "slug": "transactionscontroller_createcharge",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/transactionscontroller_createcharge",
@@ -2908,7 +2908,7 @@
               "line": 121,
               "reference": [
                 {
-                  "group": "business-models-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Create owner charges by listing",
                   "slug": "transactionscontroller_createchargebylisting",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/transactionscontroller_createchargebylisting",
@@ -3267,7 +3267,7 @@
               "line": 134,
               "reference": [
                 {
-                  "group": "business-models-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Create expense",
                   "slug": "transactionscontroller_createexpense",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/transactionscontroller_createexpense",
@@ -3590,7 +3590,7 @@
               "line": 147,
               "reference": [
                 {
-                  "group": "business-models-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Create expense by listing",
                   "slug": "transactionscontroller_createexpensebylisting",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/transactionscontroller_createexpensebylisting",
@@ -3931,7 +3931,7 @@
               "line": 160,
               "reference": [
                 {
-                  "group": "expenses-api",
+                  "group": "expenses-only-available-for-accounting-add-on-users",
                   "title": "Get expenses with filtering",
                   "slug": "expensescontroller_getexpenses",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_getexpenses",
@@ -4414,7 +4414,7 @@
               "line": 170,
               "reference": [
                 {
-                  "group": "expenses-api",
+                  "group": "expenses-only-available-for-accounting-add-on-users",
                   "title": "Get expense by ID",
                   "slug": "expensescontroller_getexpensebyid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_getexpensebyid",
@@ -4768,7 +4768,7 @@
               "line": 180,
               "reference": [
                 {
-                  "group": "expenses-api",
+                  "group": "expenses-only-available-for-accounting-add-on-users",
                   "title": "Create expense",
                   "slug": "expensescontroller_createexpense",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_createexpense",
@@ -5377,7 +5377,7 @@
               "line": 188,
               "reference": [
                 {
-                  "group": "expenses-api",
+                  "group": "expenses-only-available-for-accounting-add-on-users",
                   "title": "Cancel expense",
                   "slug": "expensescontroller_cancelexpense",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_cancelexpense",
@@ -5596,7 +5596,7 @@
               "line": 198,
               "reference": [
                 {
-                  "group": "vendors",
+                  "group": "vendors-only-available-for-accounting-add-on-users",
                   "title": "Query vendors",
                   "slug": "vendorscontroller_getall",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/vendorscontroller_getall",
@@ -5839,7 +5839,7 @@
               "line": 206,
               "reference": [
                 {
-                  "group": "vendors",
+                  "group": "vendors-only-available-for-accounting-add-on-users",
                   "title": "Query a vendor",
                   "slug": "vendorscontroller_getbyid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/vendorscontroller_getbyid",
@@ -6732,7 +6732,7 @@
               "line": 240,
               "reference": [
                 {
-                  "group": "expenses-api",
+                  "group": "expenses-only-available-for-accounting-add-on-users",
                   "title": "Add attachments to expense",
                   "slug": "expensescontroller_addattachments",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_addattachments",
@@ -7180,7 +7180,7 @@
               "line": 248,
               "reference": [
                 {
-                  "group": "expenses-api",
+                  "group": "expenses-only-available-for-accounting-add-on-users",
                   "title": "Delete attachment from expense",
                   "slug": "expensescontroller_deleteattachment",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_deleteattachment",
@@ -9076,7 +9076,7 @@
               "line": 16,
               "reference": [
                 {
-                  "group": "additional-fees",
+                  "group": "additionalfees",
                   "title": "Get list of additional fees for account",
                   "slug": "get_additional-fees-account",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_additional-fees-account",
@@ -9678,7 +9678,7 @@
               "line": 26,
               "reference": [
                 {
-                  "group": "additional-fees",
+                  "group": "additionalfees",
                   "title": "Create additional fee on account level",
                   "slug": "post_additional-fees-account",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_additional-fees-account",
@@ -11131,7 +11131,7 @@
               "line": 36,
               "reference": [
                 {
-                  "group": "additional-fees",
+                  "group": "additionalfees",
                   "title": "Get list of additional fees for listing",
                   "slug": "get_additional-fees-listing-listingid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_additional-fees-listing-listingid",
@@ -11752,7 +11752,7 @@
               "line": 46,
               "reference": [
                 {
-                  "group": "additional-fees",
+                  "group": "additionalfees",
                   "title": "Create additional fee on listing level",
                   "slug": "post_additional-fees-listing-listingid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_additional-fees-listing-listingid",
@@ -13226,7 +13226,7 @@
               "line": 58,
               "reference": [
                 {
-                  "group": "additional-fees",
+                  "group": "additionalfees",
                   "title": "Update existing additional fee",
                   "slug": "patch_additional-fees-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/patch_additional-fees-id",
@@ -14687,7 +14687,7 @@
               "line": 66,
               "reference": [
                 {
-                  "group": "additional-fees",
+                  "group": "additionalfees",
                   "title": "Delete existing additional fee",
                   "slug": "delete_additional-fees-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/delete_additional-fees-id",
@@ -14766,7 +14766,7 @@
               "line": 78,
               "reference": [
                 {
-                  "group": "additional-fees",
+                  "group": "additionalfees",
                   "title": "Calculate additional fee amount for quote [Beta]",
                   "slug": "post_additional-fees-quotes-quoteid-amount",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_additional-fees-quotes-quoteid-amount",
@@ -14883,7 +14883,7 @@
               "line": 88,
               "reference": [
                 {
-                  "group": "additional-fees",
+                  "group": "additionalfees",
                   "title": "Add upsell fee to inquiry rate plans quotes [Beta]",
                   "slug": "post_additional-fees-inquiries-inquiryid-upsells",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_additional-fees-inquiries-inquiryid-upsells",
@@ -15719,7 +15719,7 @@
               "line": 15,
               "reference": [
                 {
-                  "group": "airbnb-resource-service",
+                  "group": "airbnb-listing-expectations",
                   "title": "Upsert Airbnb listing expectations",
                   "slug": "listingexpectationscontroller_upsertlistingexpectations",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/listingexpectationscontroller_upsertlistingexpectations",
@@ -15990,7 +15990,7 @@
               "line": 26,
               "reference": [
                 {
-                  "group": "airbnb-resource-service",
+                  "group": "airbnb-listing-expectations",
                   "title": "Retrieve Airbnb listing expectations",
                   "slug": "listingexpectationscontroller_getlistingexpectations",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/listingexpectationscontroller_getlistingexpectations",
@@ -16193,7 +16193,7 @@
               "line": 39,
               "reference": [
                 {
-                  "group": "airbnb-resolutions-center",
+                  "group": "airbnb-resolution-center",
                   "title": "List closed airbnb resolutions for reservation",
                   "slug": "airbnbresolutionscontroller_listresolutions",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/airbnbresolutionscontroller_listresolutions",
@@ -16358,7 +16358,7 @@
               "line": 25,
               "reference": [
                 {
-                  "group": "api",
+                  "group": "calendar-logs",
                   "title": "Get calendar block logs",
                   "slug": "calendarlogsopenapicontroller_getcalendarlogs",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/calendarlogsopenapicontroller_getcalendarlogs",
@@ -16734,7 +16734,7 @@
               "line": 16,
               "reference": [
                 {
-                  "group": "availability-pricing",
+                  "group": "calendar",
                   "title": "Retrieve the calendar for a single listing",
                   "slug": "get_availability-pricing-api-calendar-listings-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_availability-pricing-api-calendar-listings-id",
@@ -16983,7 +16983,7 @@
               "line": 27,
               "reference": [
                 {
-                  "group": "availability-pricing",
+                  "group": "calendar",
                   "title": "Retrieve the optimized calendar for a single listing",
                   "slug": "get_availability-pricing-api-calendar-listings-minified-listingid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_availability-pricing-api-calendar-listings-minified-listingid",
@@ -17291,7 +17291,7 @@
               "line": 42,
               "reference": [
                 {
-                  "group": "availability-pricing",
+                  "group": "calendar",
                   "title": "Retrieve calendars for multiple listings",
                   "slug": "get_availability-pricing-api-calendar-listings",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_availability-pricing-api-calendar-listings",
@@ -17548,7 +17548,7 @@
               "line": 54,
               "reference": [
                 {
-                  "group": "availability-pricing",
+                  "group": "calendar",
                   "title": "Update the calendar for a single listing",
                   "slug": "put_availability-pricing-api-calendar-listings-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/put_availability-pricing-api-calendar-listings-id",
@@ -17775,7 +17775,7 @@
               "line": 69,
               "reference": [
                 {
-                  "group": "availability-pricing",
+                  "group": "calendar",
                   "title": "Update calendar for multiple listings",
                   "slug": "put_availability-pricing-api-calendar-listings",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/put_availability-pricing-api-calendar-listings",
@@ -17999,7 +17999,7 @@
               "line": 83,
               "reference": [
                 {
-                  "group": "availability-pricing",
+                  "group": "calendar",
                   "title": "Update the calendar for a single listing",
                   "slug": "put_availability-pricing-api-calendar-listings-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/put_availability-pricing-api-calendar-listings-id",
@@ -18640,7 +18640,7 @@
               "line": 19,
               "reference": [
                 {
-                  "group": "contacts",
+                  "group": "phone-book-entries",
                   "title": "List all contacts",
                   "slug": "openapicontactscontroller_findall",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_findall",
@@ -18900,7 +18900,7 @@
               "line": 27,
               "reference": [
                 {
-                  "group": "contacts",
+                  "group": "phone-book-entries",
                   "title": "Get a specific contact",
                   "slug": "openapicontactscontroller_findone",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_findone",
@@ -19089,7 +19089,7 @@
               "line": 37,
               "reference": [
                 {
-                  "group": "contacts",
+                  "group": "phone-book-entries",
                   "title": "Create a new contact",
                   "slug": "openapicontactscontroller_create",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_create",
@@ -19339,7 +19339,7 @@
               "line": 47,
               "reference": [
                 {
-                  "group": "contacts",
+                  "group": "phone-book-entries",
                   "title": "Update a contact",
                   "slug": "openapicontactscontroller_update",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_update",
@@ -19596,7 +19596,7 @@
               "line": 55,
               "reference": [
                 {
-                  "group": "contacts",
+                  "group": "phone-book-entries",
                   "title": "Delete a contact",
                   "slug": "openapicontactscontroller_remove",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_remove",
@@ -19737,7 +19737,7 @@
               "line": 23,
               "reference": [
                 {
-                  "group": "communication",
+                  "group": "inbox-conversations",
                   "title": "Get conversations",
                   "slug": "get_communication-conversations",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_communication-conversations",
@@ -19990,7 +19990,7 @@
               "line": 31,
               "reference": [
                 {
-                  "group": "communication",
+                  "group": "inbox-conversations",
                   "title": "Get conversation by id",
                   "slug": "get_communication-conversations-conversationid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_communication-conversations-conversationid",
@@ -20216,7 +20216,7 @@
               "line": 39,
               "reference": [
                 {
-                  "group": "communication",
+                  "group": "inbox-conversations",
                   "title": "Get posts (by conversation id)",
                   "slug": "get_communication-conversations-conversationid-posts",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_communication-conversations-conversationid-posts",
@@ -20458,7 +20458,7 @@
               "line": 48,
               "reference": [
                 {
-                  "group": "communication",
+                  "group": "inbox-conversations",
                   "title": "Post msg to conversation without sending it",
                   "slug": "post_communication-conversations-conversationid-posts",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_communication-conversations-conversationid-posts",
@@ -20656,7 +20656,7 @@
               "line": 60,
               "reference": [
                 {
-                  "group": "communication",
+                  "group": "inbox-conversations",
                   "title": "Post msg(Send new msg)",
                   "slug": "post_communication-conversations-conversationid-send-message",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_communication-conversations-conversationid-send-message",
@@ -20861,7 +20861,7 @@
               "line": 14,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get folio balances",
                   "slug": "reservationscontroller_foliobalances",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationscontroller_foliobalances",
@@ -21105,7 +21105,7 @@
               "line": 34,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get recognized journal entries",
                   "slug": "journalentriescontroller_getrecognized",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/journalentriescontroller_getrecognized",
@@ -21634,7 +21634,7 @@
               "line": 42,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get categories list",
                   "slug": "categoriescontroller_getcategories",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/categoriescontroller_getcategories",
@@ -21914,7 +21914,7 @@
               "line": 55,
               "reference": [
                 {
-                  "group": "financials",
+                  "group": "listings",
                   "title": "Retrieve listing Financials",
                   "slug": "get_financials-listing-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_financials-listing-id",
@@ -22301,7 +22301,7 @@
               "line": 68,
               "reference": [
                 {
-                  "group": "financials",
+                  "group": "listings",
                   "title": "Retrieve listing Financials",
                   "slug": "get_financials-listing-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_financials-listing-id",
@@ -22670,7 +22670,7 @@
               "line": 78,
               "reference": [
                 {
-                  "group": "financials",
+                  "group": "listings",
                   "title": "Update listing Financials",
                   "slug": "put_financials-listing-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/put_financials-listing-id",
@@ -23345,7 +23345,7 @@
               "line": 12,
               "reference": [
                 {
-                  "group": "guest-app-api",
+                  "group": "guest-app",
                   "title": "Get check-in form summary by reservation id",
                   "slug": "guestappopenapicontroller_getcifsummarydetails",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/guestappopenapicontroller_getcifsummarydetails",
@@ -23464,7 +23464,7 @@
               "line": 15,
               "reference": [
                 {
-                  "group": "guest-code",
+                  "group": "guesty-locks-manager",
                   "title": "Get guest code",
                   "slug": "reservationaccesscodecontroller_getlocksandcodesbyreservation",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationaccesscodecontroller_getlocksandcodesbyreservation",
@@ -23748,7 +23748,7 @@
               "line": 23,
               "reference": [
                 {
-                  "group": "guests-crud",
+                  "group": "guests",
                   "title": "Get guests list",
                   "slug": "guestsopenapicontroller_getguestslist",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/guestsopenapicontroller_getguestslist",
@@ -23863,7 +23863,7 @@
               "line": 31,
               "reference": [
                 {
-                  "group": "guests-crud",
+                  "group": "guests",
                   "title": "Get guest by id",
                   "slug": "guestsopenapicontroller_getguest",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/guestsopenapicontroller_getguest",
@@ -24198,7 +24198,7 @@
               "line": 43,
               "reference": [
                 {
-                  "group": "guests-crud",
+                  "group": "guests",
                   "title": "Create guest",
                   "slug": "guestsopenapicontroller_createguest",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/guestsopenapicontroller_createguest",
@@ -25162,7 +25162,7 @@
               "line": 58,
               "reference": [
                 {
-                  "group": "guests-crud",
+                  "group": "guests",
                   "title": "Update guest",
                   "slug": "guestsopenapicontroller_updateguest",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/guestsopenapicontroller_updateguest",
@@ -26363,7 +26363,7 @@
               "line": 17,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-export",
                   "title": "Get active exported calendar",
                   "slug": "exportedcalendaropenapicontroller_getexportedcalendar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_getexportedcalendar",
@@ -26489,7 +26489,7 @@
               "line": 27,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-export",
                   "title": "Get a specific exported calendar",
                   "slug": "exportedcalendaropenapicontroller_getexportedcalendarbyid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_getexportedcalendarbyid",
@@ -26617,7 +26617,7 @@
               "line": 37,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-export",
                   "title": "Create exported calendar link",
                   "slug": "exportedcalendaropenapicontroller_createexportedcalendar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_createexportedcalendar",
@@ -26838,7 +26838,7 @@
               "line": 47,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-export",
                   "title": "Update exported calendar",
                   "slug": "exportedcalendaropenapicontroller_updateexportedcalendar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_updateexportedcalendar",
@@ -26997,7 +26997,7 @@
               "line": 55,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-export",
                   "title": "Delete exported calendar",
                   "slug": "exportedcalendaropenapicontroller_deleteexportedcalendar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_deleteexportedcalendar",
@@ -27081,7 +27081,7 @@
               "line": 66,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-import",
                   "title": "Get imported calendars list",
                   "slug": "importedcalendaropenapicontroller_getimportedcalendars",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_getimportedcalendars",
@@ -27222,7 +27222,7 @@
               "line": 76,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-import",
                   "title": "Get imported calendar by id",
                   "slug": "importedcalendaropenapicontroller_getimportedcalendarbyid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_getimportedcalendarbyid",
@@ -27365,7 +27365,7 @@
               "line": 86,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-import",
                   "title": "Import a calendar",
                   "slug": "importedcalendaropenapicontroller_createimportedcalendar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_createimportedcalendar",
@@ -27618,7 +27618,7 @@
               "line": 96,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-import",
                   "title": "Update imported calendar",
                   "slug": "importedcalendaropenapicontroller_updateimportedcalendar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_updateimportedcalendar",
@@ -27796,7 +27796,7 @@
               "line": 104,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-import",
                   "title": "Delete imported calendar",
                   "slug": "importedcalendaropenapicontroller_deleteimportedcalendar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_deleteimportedcalendar",
@@ -27887,7 +27887,7 @@
               "line": 112,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-import",
                   "title": "Unsync imported calendar",
                   "slug": "importedcalendaropenapicontroller_pauseimportedcaledar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_pauseimportedcaledar",
@@ -28028,7 +28028,7 @@
               "line": 120,
               "reference": [
                 {
-                  "group": "icalendar-api",
+                  "group": "calendar-sync-ical-import",
                   "title": "Resume imported calendar sync",
                   "slug": "importedcalendaropenapicontroller_resumeimportedcaledar",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_resumeimportedcaledar",
@@ -30321,7 +30321,7 @@
               "line": 50,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "Retrieve a list of supported channels.",
                   "slug": "getchannels",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getchannels",
@@ -30406,7 +30406,7 @@
               "line": 58,
               "reference": [
                 {
-                  "group": "rm-promotions",
+                  "group": "promotions-open-api",
                   "title": "Get All Promotions",
                   "slug": "promotioncontroller_getlist",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/promotioncontroller_getlist",
@@ -30654,7 +30654,7 @@
               "line": 66,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "Get All Rate Plans",
                   "slug": "rateplancontroller_getall",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_getall",
@@ -30941,7 +30941,7 @@
               "line": 74,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "Get a Rate Plan by ID",
                   "slug": "rateplancontroller_getbyid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_getbyid",
@@ -39323,7 +39323,7 @@
               "line": 165,
               "reference": [
                 {
-                  "group": "financials",
+                  "group": "listings",
                   "title": "Retrieve listing Financials",
                   "slug": "get_financials-listing-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_financials-listing-id",
@@ -39692,7 +39692,7 @@
               "line": 175,
               "reference": [
                 {
-                  "group": "financials",
+                  "group": "listings",
                   "title": "Update listing Financials",
                   "slug": "put_financials-listing-id",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/put_financials-listing-id",
@@ -40493,7 +40493,7 @@
               "line": 197,
               "reference": [
                 {
-                  "group": "listings.csv",
+                  "group": "listings",
                   "title": "Export as CSV",
                   "slug": "post_listings-csv",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_listings-csv",
@@ -40548,7 +40548,7 @@
               "line": 216,
               "reference": [
                 {
-                  "group": "listings.email",
+                  "group": "listings",
                   "title": "Send results in email",
                   "slug": "post_listings-email",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_listings-email",
@@ -40786,7 +40786,7 @@
               "line": 13,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "Get a list of translation fields",
                   "slug": "getfields",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getfields",
@@ -42468,7 +42468,7 @@
               "line": 21,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "[Beta] Get a list of translation fields per channel",
                   "slug": "getfieldsperchannel",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getfieldsperchannel",
@@ -44160,7 +44160,7 @@
               "line": 29,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "[Beta] Get a list of translation fields per description set.",
                   "slug": "getfieldsperdescriptionset",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getfieldsperdescriptionset",
@@ -45855,7 +45855,7 @@
               "line": 39,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "Upsert translation",
                   "slug": "upsertfields",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/upsertfields",
@@ -46104,7 +46104,7 @@
               "line": 47,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "Retrieve a list of supported languages.",
                   "slug": "getlanguages",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getlanguages",
@@ -46195,7 +46195,7 @@
               "line": 55,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "[Beta] Retrieve a list of supported languages for specific listing",
                   "slug": "getpropertylanguages",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getpropertylanguages",
@@ -46335,7 +46335,7 @@
               "line": 65,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "[Beta] upsert supported languages for specific listing",
                   "slug": "upsertpropertylanguages",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/upsertpropertylanguages",
@@ -46496,7 +46496,7 @@
               "line": 73,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "[Beta] Get a list of description sets.",
                   "slug": "getdescriptionsets",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getdescriptionsets",
@@ -46659,7 +46659,7 @@
               "line": 83,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "[Beta] Create Description Set.",
                   "slug": "createdescriptionset",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/createdescriptionset",
@@ -46873,7 +46873,7 @@
               "line": 93,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "[Beta] Update Description Set.",
                   "slug": "updatedescriptionset",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/updatedescriptionset",
@@ -47046,7 +47046,7 @@
               "line": 101,
               "reference": [
                 {
-                  "group": "marketing",
+                  "group": "marketing-fields",
                   "title": "[Beta] Delete Description Set.",
                   "slug": "deletedescriptionset",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/deletedescriptionset",
@@ -51673,7 +51673,7 @@
               "line": 72,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "ownerships",
                   "title": "Get listing ownerships",
                   "slug": "listingownershipsopenapicontroller_get",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/listingownershipsopenapicontroller_get",
@@ -51976,7 +51976,7 @@
               "line": 82,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "ownerships",
                   "title": "Set ownerships to listing",
                   "slug": "listingownershipsopenapicontroller_set",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/listingownershipsopenapicontroller_set",
@@ -52212,7 +52212,7 @@
               "line": 90,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "ownerships",
                   "title": "Get owner listings ownerships",
                   "slug": "ownerownershipsopenapicontroller_get",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/ownerownershipsopenapicontroller_get",
@@ -56818,7 +56818,7 @@
               "line": 141,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "owners-documents",
                   "title": "Get list of documents",
                   "slug": "documentsopenapicontroller_getall",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_getall",
@@ -57184,7 +57184,7 @@
               "line": 151,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "owners-documents",
                   "title": "Create a document",
                   "slug": "documentsopenapicontroller_create",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_create",
@@ -57467,7 +57467,7 @@
               "line": 159,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "owners-documents",
                   "title": "Get document",
                   "slug": "documentsopenapicontroller_get",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_get",
@@ -57803,7 +57803,7 @@
               "line": 169,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "owners-documents",
                   "title": "Update document",
                   "slug": "documentsopenapicontroller_update",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_update",
@@ -58168,7 +58168,7 @@
               "line": 177,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "owners-documents",
                   "title": "Delete document",
                   "slug": "documentsopenapicontroller_delete",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_delete",
@@ -58348,7 +58348,7 @@
               "line": 186,
               "reference": [
                 {
-                  "group": "owners",
+                  "group": "owners-documents",
                   "title": "Download document",
                   "slug": "documentsopenapicontroller_download",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_download",
@@ -59557,7 +59557,7 @@
               "line": 16,
               "reference": [
                 {
-                  "group": "rm-promotions",
+                  "group": "promotions-open-api",
                   "title": "Assign Properties to a Promotion.",
                   "slug": "promotioncontroller_assignlistings",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/promotioncontroller_assignlistings",
@@ -59857,7 +59857,7 @@
               "line": 29,
               "reference": [
                 {
-                  "group": "rm-promotions",
+                  "group": "promotions-open-api",
                   "title": "Unassign Properties from a Promotion.",
                   "slug": "promotioncontroller_unassignlistings",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/promotioncontroller_unassignlistings",
@@ -60149,7 +60149,7 @@
               "line": 40,
               "reference": [
                 {
-                  "group": "rm-promotions",
+                  "group": "promotions-open-api",
                   "title": "Get promotion listings",
                   "slug": "promotioncontroller_getassignedlistingids",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/promotioncontroller_getassignedlistingids",
@@ -60457,7 +60457,7 @@
               "line": 15,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "amenities",
                   "title": "Retrieve Property Amenities",
                   "slug": "amenitiescontroller_getforunittype",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/amenitiescontroller_getforunittype",
@@ -60601,7 +60601,7 @@
               "line": 25,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "amenities",
                   "title": "Set Amenities For Property",
                   "slug": "amenitiescontroller_setamenitiesforproperty",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/amenitiescontroller_setamenitiesforproperty",
@@ -60772,7 +60772,7 @@
               "line": 33,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "amenities",
                   "title": "Get a List of All Supported Amenities",
                   "slug": "getsupportedamenities",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getsupportedamenities",
@@ -60872,7 +60872,7 @@
               "line": 41,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "amenities",
                   "title": "Get a List Of All Available Amenity Groups",
                   "slug": "getamenitiesgroups",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getamenitiesgroups",
@@ -60957,7 +60957,7 @@
               "line": 49,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-photos",
                   "title": "Retrieve all photos for a given listing.",
                   "slug": "get",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get",
@@ -61115,7 +61115,7 @@
               "line": 59,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-photos",
                   "title": "Add new photos to property",
                   "slug": "uploadbyurls",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/uploadbyurls",
@@ -61295,7 +61295,7 @@
               "line": 69,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-photos",
                   "title": "Change the photo order on a property",
                   "slug": "order",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/order",
@@ -61478,7 +61478,7 @@
               "line": 79,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-photos",
                   "title": "Replace photo or edit caption without changing order or room assignment.",
                   "slug": "edit",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/edit",
@@ -61663,7 +61663,7 @@
               "line": 90,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-photos",
                   "title": "Delete a Photo",
                   "slug": "delete1",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/delete1",
@@ -61823,7 +61823,7 @@
               "line": 100,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "spaces",
                   "title": "Retrieve spaces for a unit-type",
                   "slug": "get_properties-spaces-unit-type-unittypeid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-spaces-unit-type-unittypeid",
@@ -62020,7 +62020,7 @@
               "line": 108,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "spaces",
                   "title": "Retrieve spaces for a complex",
                   "slug": "get_properties-spaces-complex-complexid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-spaces-complex-complexid",
@@ -62203,7 +62203,7 @@
               "line": 116,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "spaces",
                   "title": "List bed-types",
                   "slug": "get_properties-spaces-bed-types",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-spaces-bed-types",
@@ -62258,7 +62258,7 @@
               "line": 124,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "spaces",
                   "title": "List room-types",
                   "slug": "get_properties-spaces-room-types",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-spaces-room-types",
@@ -62327,7 +62327,7 @@
               "line": 134,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "spaces",
                   "title": "Add space to unit-type (Create Space)",
                   "slug": "post_properties-spaces-unit-type-unittypeid-add",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_properties-spaces-unit-type-unittypeid-add",
@@ -62637,7 +62637,7 @@
               "line": 144,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "spaces",
                   "title": "Edit space details",
                   "slug": "patch_properties-spaces-space-spaceid-details",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/patch_properties-spaces-space-spaceid-details",
@@ -62868,7 +62868,7 @@
               "line": 154,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "spaces",
                   "title": "Edit space beds",
                   "slug": "post_properties-spaces-space-spaceid-edit",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_properties-spaces-space-spaceid-edit",
@@ -63158,7 +63158,7 @@
               "line": 164,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "spaces",
                   "title": "Remove space from unit-type",
                   "slug": "post_properties-spaces-space-spaceid-remove",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_properties-spaces-space-spaceid-remove",
@@ -63355,7 +63355,7 @@
               "line": 172,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "house-rules",
                   "title": "Retrieve unit-type house-rules",
                   "slug": "get_properties-house-rules-unit-type-unittypeid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-house-rules-unit-type-unittypeid",
@@ -63458,7 +63458,7 @@
               "line": 180,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "house-rules",
                   "title": "List house rules",
                   "slug": "get_properties-house-rules",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-house-rules",
@@ -63579,7 +63579,7 @@
               "line": 190,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "house-rules",
                   "title": "Update unit-type house-rules",
                   "slug": "put_properties-house-rules-unit-type-unittypeid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/put_properties-house-rules-unit-type-unittypeid",
@@ -63724,7 +63724,7 @@
               "line": 200,
               "reference": [
                 {
-                  "group": "properties",
+                  "group": "house-rules",
                   "title": "Update multiple unit-type house-rules",
                   "slug": "post_properties-house-rules",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_properties-house-rules",
@@ -64113,7 +64113,7 @@
               "line": 216,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "complexes",
                   "title": "Get a list of all complexes",
                   "slug": "getallcomplexes",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getallcomplexes",
@@ -64257,7 +64257,7 @@
               "line": 226,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "complexes",
                   "title": "Create a new complex",
                   "slug": "addcomplex",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/addcomplex",
@@ -64431,7 +64431,7 @@
               "line": 234,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "complexes",
                   "title": "Get complex",
                   "slug": "complexescontroller_getcomplexbyid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_getcomplexbyid",
@@ -64581,7 +64581,7 @@
               "line": 244,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "complexes",
                   "title": "Update complex details",
                   "slug": "complexescontroller_updatecomplexdetails",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_updatecomplexdetails",
@@ -64742,7 +64742,7 @@
               "line": 252,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "complexes",
                   "title": "Delete complex",
                   "slug": "complexescontroller_removecomplex",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_removecomplex",
@@ -64877,7 +64877,7 @@
               "line": 262,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "complexes",
                   "title": "Assign propertyIds to a complex",
                   "slug": "complexescontroller_assigncomplexpropertyids",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_assigncomplexpropertyids",
@@ -65022,7 +65022,7 @@
               "line": 272,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "complexes",
                   "title": "Un-Assign propertyIds from a complex",
                   "slug": "complexescontroller_unassigncomplexpropertyids",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_unassigncomplexpropertyids",
@@ -65233,7 +65233,7 @@
               "line": 293,
               "reference": [
                 {
-                  "group": "property-logs",
+                  "group": "properties-logs",
                   "title": "Get property logs",
                   "slug": "getpropertylogs",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getpropertylogs",
@@ -65475,7 +65475,7 @@
               "line": 301,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "custom-fields",
                   "title": "List Custom Fields per Property",
                   "slug": "getall",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getall",
@@ -65643,7 +65643,7 @@
               "line": 311,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "custom-fields",
                   "title": "Update property Custom Fields",
                   "slug": "updatemany",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/updatemany",
@@ -65865,7 +65865,7 @@
               "line": 319,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "custom-fields",
                   "title": "Get Custom Field from Selected Property",
                   "slug": "getbyfieldid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getbyfieldid",
@@ -66031,7 +66031,7 @@
               "line": 327,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "custom-fields",
                   "title": "Delete Custom Field from property",
                   "slug": "delete",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/delete",
@@ -66211,7 +66211,7 @@
               "line": 337,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "room-photos",
                   "title": "List All Room Photos per Property",
                   "slug": "getroomphotosbypropertyid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getroomphotosbypropertyid",
@@ -66353,7 +66353,7 @@
               "line": 345,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "room-photos",
                   "title": "Retrieve a Room Photo by ID",
                   "slug": "get1",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get1",
@@ -66491,7 +66491,7 @@
               "line": 355,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "room-photos",
                   "title": "Assign a Photo to a Space",
                   "slug": "roomphotoscontroller_assignroomphoto",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/roomphotoscontroller_assignroomphoto",
@@ -66662,7 +66662,7 @@
               "line": 368,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "room-photos",
                   "title": "Unassign a Photo from a Space",
                   "slug": "roomphotoscontroller_unassignroomphoto",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/roomphotoscontroller_unassignroomphoto",
@@ -66822,7 +66822,7 @@
               "line": 381,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "groups-pilot",
                   "title": "Create a new group",
                   "slug": "creategroup",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/creategroup",
@@ -67011,7 +67011,7 @@
               "line": 391,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "groups-pilot",
                   "title": "List groups",
                   "slug": "listgroups",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/listgroups",
@@ -67204,7 +67204,7 @@
               "line": 401,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "groups-pilot",
                   "title": "Get group by ID",
                   "slug": "getgroup",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/getgroup",
@@ -67350,7 +67350,7 @@
               "line": 409,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "groups-pilot",
                   "title": "Delete group",
                   "slug": "deletegroup",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/deletegroup",
@@ -67475,7 +67475,7 @@
               "line": 419,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "groups-pilot",
                   "title": "Update group",
                   "slug": "updategroup",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/updategroup",
@@ -67671,7 +67671,7 @@
               "line": 427,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "listing-external-links",
                   "title": "List external links",
                   "slug": "listexternallinks",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/listexternallinks",
@@ -67780,7 +67780,7 @@
               "line": 437,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "listing-external-links",
                   "title": "Create external link",
                   "slug": "createexternallink",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/createexternallink",
@@ -67912,7 +67912,7 @@
               "line": 447,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "listing-external-links",
                   "title": "Reorder external links",
                   "slug": "reorderexternallinks",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reorderexternallinks",
@@ -68048,7 +68048,7 @@
               "line": 457,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "listing-external-links",
                   "title": "Update external link",
                   "slug": "updateexternallink",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/updateexternallink",
@@ -68186,7 +68186,7 @@
               "line": 465,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "listing-external-links",
                   "title": "Delete external link",
                   "slug": "deleteexternallink",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/deleteexternallink",
@@ -68270,7 +68270,7 @@
               "line": 473,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-media",
                   "title": "Get Virtual Tour URL",
                   "slug": "propertymediacontroller_getvirtualtour",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/propertymediacontroller_getvirtualtour",
@@ -68376,7 +68376,7 @@
               "line": 483,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-media",
                   "title": "Create Virtual Tour URL",
                   "slug": "propertymediacontroller_createvirtualtour",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/propertymediacontroller_createvirtualtour",
@@ -68516,7 +68516,7 @@
               "line": 493,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-media",
                   "title": "Update Virtual Tour URL",
                   "slug": "propertymediacontroller_upsertvirtualtour",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/propertymediacontroller_upsertvirtualtour",
@@ -68635,7 +68635,7 @@
               "line": 501,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-media",
                   "title": "Delete Virtual Tour URL",
                   "slug": "propertymediacontroller_deletevirtualtour",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/propertymediacontroller_deletevirtualtour",
@@ -68741,7 +68741,7 @@
               "line": 514,
               "reference": [
                 {
-                  "group": "properties-api",
+                  "group": "property-photos",
                   "title": "Upload a photo to property using file blob",
                   "slug": "uploadbyblob",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/uploadbyblob",
@@ -68916,7 +68916,7 @@
               "line": 13,
               "reference": [
                 {
-                  "group": "quotes",
+                  "group": "quotes-open-api-beta",
                   "title": "Retrieve a Quote by ID",
                   "slug": "quotesopenapicontroller_getquote",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/quotesopenapicontroller_getquote",
@@ -69312,7 +69312,7 @@
               "line": 23,
               "reference": [
                 {
-                  "group": "quotes",
+                  "group": "quotes-open-api-beta",
                   "title": "Create a Quote",
                   "slug": "quotesopenapicontroller_create",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/quotesopenapicontroller_create",
@@ -69780,7 +69780,7 @@
               "line": 33,
               "reference": [
                 {
-                  "group": "quotes",
+                  "group": "quotes-open-api-beta",
                   "title": "Create multiple quotes for reservation",
                   "slug": "quotesopenapicontroller_createmultiple",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/quotesopenapicontroller_createmultiple",
@@ -70290,7 +70290,7 @@
               "line": 43,
               "reference": [
                 {
-                  "group": "quotes",
+                  "group": "quotes-open-api-beta",
                   "title": "Add coupons to an existing quote",
                   "slug": "quotesopenapicontroller_changecoupons",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/quotesopenapicontroller_changecoupons",
@@ -70698,7 +70698,7 @@
               "line": 16,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "Create a Rate Plan",
                   "slug": "rateplancontroller_create",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_create",
@@ -71147,7 +71147,7 @@
               "line": 26,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "Update a Rate Plan",
                   "slug": "rateplancontroller_update",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_update",
@@ -71636,7 +71636,7 @@
               "line": 36,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "patch rate plan",
                   "slug": "rateplancontroller_patch",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_patch",
@@ -72117,7 +72117,7 @@
               "line": 44,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "Remove a Rate Plan",
                   "slug": "rateplancontroller_remove",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_remove",
@@ -72212,7 +72212,7 @@
               "line": 52,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "Get Rate Plans by Property",
                   "slug": "rateplancontroller_getbylisting",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_getbylisting",
@@ -72545,7 +72545,7 @@
               "line": 60,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-ari-calendar-v1",
                   "title": "GET Rate Plan Calendar",
                   "slug": "aricalendarcontroller_get",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/aricalendarcontroller_get",
@@ -72892,7 +72892,7 @@
               "line": 70,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-ari-calendar-v1",
                   "title": "Upsert Rate Plan ARI Calendar",
                   "slug": "aricalendarcontroller_upsert",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/aricalendarcontroller_upsert",
@@ -73173,7 +73173,7 @@
               "line": 83,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "Assign Properties to a Rate Plan",
                   "slug": "rateplancontroller_initassignlistings",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_initassignlistings",
@@ -73565,7 +73565,7 @@
               "line": 96,
               "reference": [
                 {
-                  "group": "rm-rate-plans-ext",
+                  "group": "open-api-rate-plan-crud-v1",
                   "title": "Unassign Properties from a Rate Plan",
                   "slug": "rateplancontroller_initunassignlistings",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_initunassignlistings",
@@ -73952,7 +73952,7 @@
               "line": 13,
               "reference": [
                 {
-                  "group": "rm-rate-strategies-open-api",
+                  "group": "ratestrategyopenapi",
                   "title": "Retrieve All Rate Strategies.",
                   "slug": "ratestrategycontroller_getlist",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/ratestrategycontroller_getlist",
@@ -74182,7 +74182,7 @@
               "line": 21,
               "reference": [
                 {
-                  "group": "rm-rate-strategies-open-api",
+                  "group": "ratestrategyopenapi",
                   "title": "Retrieve Property's Rate Strategy.",
                   "slug": "ratestrategycontroller_getbyunittypeid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/ratestrategycontroller_getbyunittypeid",
@@ -76993,7 +76993,7 @@
               "line": 83,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Retrieve Reservations",
                   "slug": "reservationsopenapicontroller_getreservationsbyids",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_getreservationsbyids",
@@ -77673,7 +77673,7 @@
               "line": 95,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Create a Reservation Without a Quote",
                   "slug": "reservationsopenapicontroller_quickbooking",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_quickbooking",
@@ -78079,7 +78079,7 @@
               "line": 110,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Create a reservation from quote",
                   "slug": "reservationsopenapicontroller_createreservation",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_createreservation",
@@ -78404,7 +78404,7 @@
               "line": 123,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Approve a channel reservation",
                   "slug": "reservationsopenapicontroller_approvechannelreservation",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_approvechannelreservation",
@@ -78553,7 +78553,7 @@
               "line": 133,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Decline a channel reservation",
                   "slug": "reservationsopenapicontroller_declinechannelreservation",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_declinechannelreservation",
@@ -78725,7 +78725,7 @@
               "line": 143,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Pre-approve a channel reservation",
                   "slug": "reservationsopenapicontroller_preapprovechannelreservation",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_preapprovechannelreservation",
@@ -78901,7 +78901,7 @@
               "line": 153,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Request cancellation of a channel reservation",
                   "slug": "reservationsopenapicontroller_requestcancellationchannelreservation",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_requestcancellationchannelreservation",
@@ -79112,7 +79112,7 @@
               "line": 167,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Create a mid-stay",
                   "slug": "reservationsopenapicontroller_createmidstay",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_createmidstay",
@@ -79476,7 +79476,7 @@
               "line": 182,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Change Reservation Guest Stay Status",
                   "slug": "reservationsopenapicontroller_changestay",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_changestay",
@@ -79579,7 +79579,7 @@
               "line": 199,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Change Reservation Source",
                   "slug": "reservationsopenapicontroller_updatereservationsource",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationsource",
@@ -79906,7 +79906,7 @@
               "line": 214,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Update Reservation notes",
                   "slug": "reservationsopenapicontroller_updatereservationnotes",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationnotes",
@@ -80051,7 +80051,7 @@
               "line": 229,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Update Reservation Dates",
                   "slug": "reservationsopenapicontroller_updatereservationdates",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationdates",
@@ -80420,7 +80420,7 @@
               "line": 244,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Update reservation listing",
                   "slug": "reservationsopenapicontroller_updatereservationlisting",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationlisting",
@@ -80734,7 +80734,7 @@
               "line": 259,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Update reservation status",
                   "slug": "reservationsopenapicontroller_updatereservationstatus",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationstatus",
@@ -80873,7 +80873,7 @@
               "line": 274,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Update reservation confirmation code",
                   "slug": "reservationsopenapicontroller_updatereservationconfirmationcode",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationconfirmationcode",
@@ -80979,7 +80979,7 @@
               "line": 289,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Update Reservation Guests Breakdown",
                   "slug": "reservationsopenapicontroller_updatereservationguests",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationguests",
@@ -81352,7 +81352,7 @@
               "line": 306,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Update reservation's Custom Fields",
                   "slug": "reservationsopenapicontroller_updatereservationcustomfields",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationcustomfields",
@@ -81509,7 +81509,7 @@
               "line": 317,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Get all custom fields for a reservation",
                   "slug": "reservationsopenapicontroller_getreservationallcustomfields",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_getreservationallcustomfields",
@@ -81623,7 +81623,7 @@
               "line": 325,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Get a specific custom field for a reservation",
                   "slug": "reservationsopenapicontroller_getreservationcustomfield",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_getreservationcustomfield",
@@ -81743,7 +81743,7 @@
               "line": 333,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Delete reservation's Custom Field",
                   "slug": "reservationsopenapicontroller_deletereservationcustomfield",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_deletereservationcustomfield",
@@ -81862,7 +81862,7 @@
               "line": 345,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "group-reservations-open-api-beta",
                   "title": "Get group reservation by group id",
                   "slug": "groupreservationsopenapicontroller_getgroupreservation",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/groupreservationsopenapicontroller_getgroupreservation",
@@ -81948,7 +81948,7 @@
               "line": 357,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "group-reservations-open-api-beta",
                   "title": "Create a group reservation",
                   "slug": "groupreservationsopenapicontroller_create",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/groupreservationsopenapicontroller_create",
@@ -82203,7 +82203,7 @@
               "line": 372,
               "reference": [
                 {
-                  "group": "reservations-v3",
+                  "group": "reservations-open-api-beta",
                   "title": "Create a confirmed owner reservation",
                   "slug": "reservationsopenapicontroller_createownerconfirmed",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_createownerconfirmed",
@@ -82690,7 +82690,7 @@
               "line": 385,
               "reference": [
                 {
-                  "group": "accounting-api",
+                  "group": "accounting-only-available-for-accounting-add-on-users",
                   "title": "Get folio balances",
                   "slug": "reservationscontroller_foliobalances",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationscontroller_foliobalances",
@@ -85371,7 +85371,7 @@
               "line": 484,
               "reference": [
                 {
-                  "group": "reservations.csv",
+                  "group": "reservations",
                   "title": "Export as CSV",
                   "slug": "post_reservations-csv",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_reservations-csv",
@@ -85509,7 +85509,7 @@
               "line": 505,
               "reference": [
                 {
-                  "group": "reservations.email",
+                  "group": "reservations",
                   "title": "Send results in email",
                   "slug": "post_reservations-email",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_reservations-email",
@@ -85699,7 +85699,7 @@
               "line": 523,
               "reference": [
                 {
-                  "group": "reservations-reports",
+                  "group": "reservations-reports-open-api-beta",
                   "title": "Get reservations report by view id",
                   "slug": "reservationsreportsopenapicontroller_getreportbyviewid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsreportsopenapicontroller_getreportbyviewid",
@@ -88498,7 +88498,7 @@
               "line": 13,
               "reference": [
                 {
-                  "group": "reviews",
+                  "group": "review",
                   "title": "List custom channel names",
                   "slug": "reviewcontroller_listcustomchannelnames",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_listcustomchannelnames",
@@ -88572,7 +88572,7 @@
               "line": 23,
               "reference": [
                 {
-                  "group": "reviews",
+                  "group": "review",
                   "title": "Create a custom channel",
                   "slug": "reviewcontroller_createcustomchannel",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_createcustomchannel",
@@ -88681,7 +88681,7 @@
               "line": 42,
               "reference": [
                 {
-                  "group": "reviews",
+                  "group": "review",
                   "title": "Retrieve reviews sorted descending by last update time",
                   "slug": "reviewcontroller_getreviews",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_getreviews",
@@ -88894,7 +88894,7 @@
               "line": 50,
               "reference": [
                 {
-                  "group": "reviews",
+                  "group": "review",
                   "title": "Retrieve a review",
                   "slug": "reviewcontroller_getreview",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_getreview",
@@ -89119,7 +89119,7 @@
               "line": 60,
               "reference": [
                 {
-                  "group": "reviews",
+                  "group": "review",
                   "title": "Retrieve Average reviews score by Listings IDs",
                   "slug": "reviewcontroller_getlistingsaveragereview",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_getlistingsaveragereview",
@@ -89222,7 +89222,7 @@
               "line": 70,
               "reference": [
                 {
-                  "group": "reviews",
+                  "group": "review",
                   "title": "Publish a custom-channel review",
                   "slug": "reviewcontroller_createcustomchannelreview",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_createcustomchannelreview",
@@ -89528,7 +89528,7 @@
               "line": 82,
               "reference": [
                 {
-                  "group": "reviews",
+                  "group": "review",
                   "title": "Publish review reply to channel",
                   "slug": "reviewcontroller_upsertreviewreply",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_upsertreviewreply",
@@ -91215,7 +91215,7 @@
               "line": 25,
               "reference": [
                 {
-                  "group": "tasks-open-api",
+                  "group": "tasks",
                   "title": "Get tasks list",
                   "slug": "get_tasks-open-api-tasks",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_tasks-open-api-tasks",
@@ -91450,7 +91450,7 @@
               "line": 33,
               "reference": [
                 {
-                  "group": "tasks-open-api",
+                  "group": "tasks",
                   "title": "Get a specific task",
                   "slug": "get_tasks-open-api-taskid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/get_tasks-open-api-taskid",
@@ -92072,7 +92072,7 @@
               "line": 45,
               "reference": [
                 {
-                  "group": "tasks-open-api",
+                  "group": "tasks",
                   "title": "Create a new task",
                   "slug": "post_tasks-open-api-create-single-task",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/post_tasks-open-api-create-single-task",
@@ -92948,7 +92948,7 @@
               "line": 60,
               "reference": [
                 {
-                  "group": "tasks-open-api",
+                  "group": "tasks",
                   "title": "Update a task",
                   "slug": "put_tasks-open-api-taskid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/put_tasks-open-api-taskid",
@@ -93848,7 +93848,7 @@
               "line": 71,
               "reference": [
                 {
-                  "group": "tasks-open-api",
+                  "group": "tasks",
                   "title": "Delete a task",
                   "slug": "delete_tasks-open-api-taskid",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/delete_tasks-open-api-taskid",
@@ -100112,7 +100112,7 @@
               "line": 57,
               "reference": [
                 {
-                  "group": "webhooks-v2",
+                  "group": "webhooks",
                   "title": "Get webhook secret",
                   "slug": "svixsecretapicontroller_getsecret",
                   "docsUrl": "https://open-api-docs.guesty.com/reference/svixsecretapicontroller_getsecret",
@@ -100194,7 +100194,7 @@
           "line": 240,
           "reference": [
             {
-              "group": "expenses-api",
+              "group": "expenses-only-available-for-accounting-add-on-users",
               "title": "Add attachments to expense",
               "slug": "expensescontroller_addattachments",
               "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_addattachments",
@@ -100645,7 +100645,7 @@
           "line": 95,
           "reference": [
             {
-              "group": "business-models-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Assign listings to Business Models",
               "slug": "assignlistingcontroller_update",
               "docsUrl": "https://open-api-docs.guesty.com/reference/assignlistingcontroller_update",
@@ -100875,7 +100875,7 @@
           "line": 14,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get folio balances",
               "slug": "reservationscontroller_foliobalances",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationscontroller_foliobalances",
@@ -101057,7 +101057,7 @@
           "line": 85,
           "reference": [
             {
-              "group": "business-models-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get Business Models",
               "slug": "businessmodelsoacontroller_index",
               "docsUrl": "https://open-api-docs.guesty.com/reference/businessmodelsoacontroller_index",
@@ -101321,7 +101321,7 @@
           "line": 188,
           "reference": [
             {
-              "group": "expenses-api",
+              "group": "expenses-only-available-for-accounting-add-on-users",
               "title": "Cancel expense",
               "slug": "expensescontroller_cancelexpense",
               "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_cancelexpense",
@@ -101540,7 +101540,7 @@
           "line": 56,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get categories list",
               "slug": "categoriescontroller_getcategories",
               "docsUrl": "https://open-api-docs.guesty.com/reference/categoriescontroller_getcategories",
@@ -101796,7 +101796,7 @@
           "line": 134,
           "reference": [
             {
-              "group": "business-models-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Create expense",
               "slug": "transactionscontroller_createexpense",
               "docsUrl": "https://open-api-docs.guesty.com/reference/transactionscontroller_createexpense",
@@ -102119,7 +102119,7 @@
           "line": 147,
           "reference": [
             {
-              "group": "business-models-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Create expense by listing",
               "slug": "transactionscontroller_createexpensebylisting",
               "docsUrl": "https://open-api-docs.guesty.com/reference/transactionscontroller_createexpensebylisting",
@@ -102442,7 +102442,7 @@
           "line": 180,
           "reference": [
             {
-              "group": "expenses-api",
+              "group": "expenses-only-available-for-accounting-add-on-users",
               "title": "Create expense",
               "slug": "expensescontroller_createexpense",
               "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_createexpense",
@@ -103053,7 +103053,7 @@
           "line": 108,
           "reference": [
             {
-              "group": "business-models-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Create owner charge per owner",
               "slug": "transactionscontroller_createcharge",
               "docsUrl": "https://open-api-docs.guesty.com/reference/transactionscontroller_createcharge",
@@ -103412,7 +103412,7 @@
           "line": 121,
           "reference": [
             {
-              "group": "business-models-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Create owner charges by listing",
               "slug": "transactionscontroller_createchargebylisting",
               "docsUrl": "https://open-api-docs.guesty.com/reference/transactionscontroller_createchargebylisting",
@@ -103774,7 +103774,7 @@
           "line": 248,
           "reference": [
             {
-              "group": "expenses-api",
+              "group": "expenses-only-available-for-accounting-add-on-users",
               "title": "Delete attachment from expense",
               "slug": "expensescontroller_deleteattachment",
               "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_deleteattachment",
@@ -104136,7 +104136,7 @@
           "line": 170,
           "reference": [
             {
-              "group": "expenses-api",
+              "group": "expenses-only-available-for-accounting-add-on-users",
               "title": "Get expense by ID",
               "slug": "expensescontroller_getexpensebyid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_getexpensebyid",
@@ -104508,7 +104508,7 @@
           "line": 160,
           "reference": [
             {
-              "group": "expenses-api",
+              "group": "expenses-only-available-for-accounting-add-on-users",
               "title": "Get expenses with filtering",
               "slug": "expensescontroller_getexpenses",
               "docsUrl": "https://open-api-docs.guesty.com/reference/expensescontroller_getexpenses",
@@ -105030,7 +105030,7 @@
           "line": 29,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get recognized journal entries",
               "slug": "journalentriescontroller_getrecognized",
               "docsUrl": "https://open-api-docs.guesty.com/reference/journalentriescontroller_getrecognized",
@@ -105604,7 +105604,7 @@
           "line": 46,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get all journal entries",
               "slug": "journalentriescontroller_getall",
               "docsUrl": "https://open-api-docs.guesty.com/reference/journalentriescontroller_getall",
@@ -106833,7 +106833,7 @@
           "line": 74,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Update owner working capital",
               "slug": "ownerscontroller_update",
               "docsUrl": "https://open-api-docs.guesty.com/reference/ownerscontroller_update",
@@ -107022,7 +107022,7 @@
           "line": 206,
           "reference": [
             {
-              "group": "vendors",
+              "group": "vendors-only-available-for-accounting-add-on-users",
               "title": "Query a vendor",
               "slug": "vendorscontroller_getbyid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/vendorscontroller_getbyid",
@@ -107225,7 +107225,7 @@
           "line": 198,
           "reference": [
             {
-              "group": "vendors",
+              "group": "vendors-only-available-for-accounting-add-on-users",
               "title": "Query vendors",
               "slug": "vendorscontroller_getall",
               "docsUrl": "https://open-api-docs.guesty.com/reference/vendorscontroller_getall",
@@ -107468,7 +107468,7 @@
           "line": 64,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get owner working capital",
               "slug": "ownerscontroller_retrieve",
               "docsUrl": "https://open-api-docs.guesty.com/reference/ownerscontroller_retrieve",
@@ -109161,7 +109161,7 @@
           "line": 88,
           "reference": [
             {
-              "group": "additional-fees",
+              "group": "additionalfees",
               "title": "Add upsell fee to inquiry rate plans quotes [Beta]",
               "slug": "post_additional-fees-inquiries-inquiryid-upsells",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_additional-fees-inquiries-inquiryid-upsells",
@@ -109273,7 +109273,7 @@
           "line": 78,
           "reference": [
             {
-              "group": "additional-fees",
+              "group": "additionalfees",
               "title": "Calculate additional fee amount for quote [Beta]",
               "slug": "post_additional-fees-quotes-quoteid-amount",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_additional-fees-quotes-quoteid-amount",
@@ -109384,7 +109384,7 @@
           "line": 26,
           "reference": [
             {
-              "group": "additional-fees",
+              "group": "additionalfees",
               "title": "Create additional fee on account level",
               "slug": "post_additional-fees-account",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_additional-fees-account",
@@ -110845,7 +110845,7 @@
           "line": 46,
           "reference": [
             {
-              "group": "additional-fees",
+              "group": "additionalfees",
               "title": "Create additional fee on listing level",
               "slug": "post_additional-fees-listing-listingid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_additional-fees-listing-listingid",
@@ -112311,7 +112311,7 @@
           "line": 66,
           "reference": [
             {
-              "group": "additional-fees",
+              "group": "additionalfees",
               "title": "Delete existing additional fee",
               "slug": "delete_additional-fees-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/delete_additional-fees-id",
@@ -112376,7 +112376,7 @@
           "line": 16,
           "reference": [
             {
-              "group": "additional-fees",
+              "group": "additionalfees",
               "title": "Get list of additional fees for account",
               "slug": "get_additional-fees-account",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_additional-fees-account",
@@ -112976,7 +112976,7 @@
           "line": 36,
           "reference": [
             {
-              "group": "additional-fees",
+              "group": "additionalfees",
               "title": "Get list of additional fees for listing",
               "slug": "get_additional-fees-listing-listingid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_additional-fees-listing-listingid",
@@ -113597,7 +113597,7 @@
           "line": 58,
           "reference": [
             {
-              "group": "additional-fees",
+              "group": "additionalfees",
               "title": "Update existing additional fee",
               "slug": "patch_additional-fees-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/patch_additional-fees-id",
@@ -115764,7 +115764,7 @@
           "line": 26,
           "reference": [
             {
-              "group": "airbnb-resource-service",
+              "group": "airbnb-listing-expectations",
               "title": "Retrieve Airbnb listing expectations",
               "slug": "listingexpectationscontroller_getlistingexpectations",
               "docsUrl": "https://open-api-docs.guesty.com/reference/listingexpectationscontroller_getlistingexpectations",
@@ -115967,7 +115967,7 @@
           "line": 39,
           "reference": [
             {
-              "group": "airbnb-resolutions-center",
+              "group": "airbnb-resolution-center",
               "title": "List closed airbnb resolutions for reservation",
               "slug": "airbnbresolutionscontroller_listresolutions",
               "docsUrl": "https://open-api-docs.guesty.com/reference/airbnbresolutionscontroller_listresolutions",
@@ -116063,7 +116063,7 @@
           "line": 15,
           "reference": [
             {
-              "group": "airbnb-resource-service",
+              "group": "airbnb-listing-expectations",
               "title": "Upsert Airbnb listing expectations",
               "slug": "listingexpectationscontroller_upsertlistingexpectations",
               "docsUrl": "https://open-api-docs.guesty.com/reference/listingexpectationscontroller_upsertlistingexpectations",
@@ -116402,7 +116402,7 @@
           "line": 25,
           "reference": [
             {
-              "group": "api",
+              "group": "calendar-logs",
               "title": "Get calendar block logs",
               "slug": "calendarlogsopenapicontroller_getcalendarlogs",
               "docsUrl": "https://open-api-docs.guesty.com/reference/calendarlogsopenapicontroller_getcalendarlogs",
@@ -116765,7 +116765,7 @@
           "line": 83,
           "reference": [
             {
-              "group": "availability-pricing",
+              "group": "calendar",
               "title": "Update the calendar for a single listing",
               "slug": "put_availability-pricing-api-calendar-listings-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/put_availability-pricing-api-calendar-listings-id",
@@ -117016,7 +117016,7 @@
           "line": 16,
           "reference": [
             {
-              "group": "availability-pricing",
+              "group": "calendar",
               "title": "Retrieve the calendar for a single listing",
               "slug": "get_availability-pricing-api-calendar-listings-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_availability-pricing-api-calendar-listings-id",
@@ -117297,7 +117297,7 @@
           "line": 42,
           "reference": [
             {
-              "group": "availability-pricing",
+              "group": "calendar",
               "title": "Retrieve calendars for multiple listings",
               "slug": "get_availability-pricing-api-calendar-listings",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_availability-pricing-api-calendar-listings",
@@ -117546,7 +117546,7 @@
           "line": 27,
           "reference": [
             {
-              "group": "availability-pricing",
+              "group": "calendar",
               "title": "Retrieve the optimized calendar for a single listing",
               "slug": "get_availability-pricing-api-calendar-listings-minified-listingid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_availability-pricing-api-calendar-listings-minified-listingid",
@@ -117830,7 +117830,7 @@
           "line": 54,
           "reference": [
             {
-              "group": "availability-pricing",
+              "group": "calendar",
               "title": "Update the calendar for a single listing",
               "slug": "put_availability-pricing-api-calendar-listings-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/put_availability-pricing-api-calendar-listings-id",
@@ -118057,7 +118057,7 @@
           "line": 69,
           "reference": [
             {
-              "group": "availability-pricing",
+              "group": "calendar",
               "title": "Update calendar for multiple listings",
               "slug": "put_availability-pricing-api-calendar-listings",
               "docsUrl": "https://open-api-docs.guesty.com/reference/put_availability-pricing-api-calendar-listings",
@@ -118639,7 +118639,7 @@
           "line": 37,
           "reference": [
             {
-              "group": "contacts",
+              "group": "phone-book-entries",
               "title": "Create a new contact",
               "slug": "openapicontactscontroller_create",
               "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_create",
@@ -118881,7 +118881,7 @@
           "line": 55,
           "reference": [
             {
-              "group": "contacts",
+              "group": "phone-book-entries",
               "title": "Delete a contact",
               "slug": "openapicontactscontroller_remove",
               "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_remove",
@@ -118969,7 +118969,7 @@
           "line": 27,
           "reference": [
             {
-              "group": "contacts",
+              "group": "phone-book-entries",
               "title": "Get a specific contact",
               "slug": "openapicontactscontroller_findone",
               "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_findone",
@@ -119176,7 +119176,7 @@
           "line": 19,
           "reference": [
             {
-              "group": "contacts",
+              "group": "phone-book-entries",
               "title": "List all contacts",
               "slug": "openapicontactscontroller_findall",
               "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_findall",
@@ -119444,7 +119444,7 @@
           "line": 47,
           "reference": [
             {
-              "group": "contacts",
+              "group": "phone-book-entries",
               "title": "Update a contact",
               "slug": "openapicontactscontroller_update",
               "docsUrl": "https://open-api-docs.guesty.com/reference/openapicontactscontroller_update",
@@ -119701,7 +119701,7 @@
           "line": 31,
           "reference": [
             {
-              "group": "communication",
+              "group": "inbox-conversations",
               "title": "Get conversation by id",
               "slug": "get_communication-conversations-conversationid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_communication-conversations-conversationid",
@@ -119971,7 +119971,7 @@
           "line": 23,
           "reference": [
             {
-              "group": "communication",
+              "group": "inbox-conversations",
               "title": "Get conversations",
               "slug": "get_communication-conversations",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_communication-conversations",
@@ -120232,7 +120232,7 @@
           "line": 48,
           "reference": [
             {
-              "group": "communication",
+              "group": "inbox-conversations",
               "title": "Post msg to conversation without sending it",
               "slug": "post_communication-conversations-conversationid-posts",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_communication-conversations-conversationid-posts",
@@ -120422,7 +120422,7 @@
           "line": 39,
           "reference": [
             {
-              "group": "communication",
+              "group": "inbox-conversations",
               "title": "Get posts (by conversation id)",
               "slug": "get_communication-conversations-conversationid-posts",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_communication-conversations-conversationid-posts",
@@ -120664,7 +120664,7 @@
           "line": 60,
           "reference": [
             {
-              "group": "communication",
+              "group": "inbox-conversations",
               "title": "Post msg(Send new msg)",
               "slug": "post_communication-conversations-conversationid-send-message",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_communication-conversations-conversationid-send-message",
@@ -120860,7 +120860,7 @@
           "line": 14,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get folio balances",
               "slug": "reservationscontroller_foliobalances",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationscontroller_foliobalances",
@@ -121042,7 +121042,7 @@
           "line": 42,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get categories list",
               "slug": "categoriescontroller_getcategories",
               "docsUrl": "https://open-api-docs.guesty.com/reference/categoriescontroller_getcategories",
@@ -121352,7 +121352,7 @@
           "line": 34,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get recognized journal entries",
               "slug": "journalentriescontroller_getrecognized",
               "docsUrl": "https://open-api-docs.guesty.com/reference/journalentriescontroller_getrecognized",
@@ -121913,7 +121913,7 @@
           "line": 55,
           "reference": [
             {
-              "group": "financials",
+              "group": "listings",
               "title": "Retrieve listing Financials",
               "slug": "get_financials-listing-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_financials-listing-id",
@@ -122300,7 +122300,7 @@
           "line": 68,
           "reference": [
             {
-              "group": "financials",
+              "group": "listings",
               "title": "Retrieve listing Financials",
               "slug": "get_financials-listing-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_financials-listing-id",
@@ -122669,7 +122669,7 @@
           "line": 78,
           "reference": [
             {
-              "group": "financials",
+              "group": "listings",
               "title": "Update listing Financials",
               "slug": "put_financials-listing-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/put_financials-listing-id",
@@ -123335,7 +123335,7 @@
           "line": 12,
           "reference": [
             {
-              "group": "guest-app-api",
+              "group": "guest-app",
               "title": "Get check-in form summary by reservation id",
               "slug": "guestappopenapicontroller_getcifsummarydetails",
               "docsUrl": "https://open-api-docs.guesty.com/reference/guestappopenapicontroller_getcifsummarydetails",
@@ -123445,7 +123445,7 @@
           "line": 15,
           "reference": [
             {
-              "group": "guest-code",
+              "group": "guesty-locks-manager",
               "title": "Get guest code",
               "slug": "reservationaccesscodecontroller_getlocksandcodesbyreservation",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationaccesscodecontroller_getlocksandcodesbyreservation",
@@ -123830,7 +123830,7 @@
           "line": 43,
           "reference": [
             {
-              "group": "guests-crud",
+              "group": "guests",
               "title": "Create guest",
               "slug": "guestsopenapicontroller_createguest",
               "docsUrl": "https://open-api-docs.guesty.com/reference/guestsopenapicontroller_createguest",
@@ -124786,7 +124786,7 @@
           "line": 31,
           "reference": [
             {
-              "group": "guests-crud",
+              "group": "guests",
               "title": "Get guest by id",
               "slug": "guestsopenapicontroller_getguest",
               "docsUrl": "https://open-api-docs.guesty.com/reference/guestsopenapicontroller_getguest",
@@ -125163,7 +125163,7 @@
           "line": 23,
           "reference": [
             {
-              "group": "guests-crud",
+              "group": "guests",
               "title": "Get guests list",
               "slug": "guestsopenapicontroller_getguestslist",
               "docsUrl": "https://open-api-docs.guesty.com/reference/guestsopenapicontroller_getguestslist",
@@ -125361,7 +125361,7 @@
           "line": 58,
           "reference": [
             {
-              "group": "guests-crud",
+              "group": "guests",
               "title": "Update guest",
               "slug": "guestsopenapicontroller_updateguest",
               "docsUrl": "https://open-api-docs.guesty.com/reference/guestsopenapicontroller_updateguest",
@@ -126320,7 +126320,7 @@
           "line": 37,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-export",
               "title": "Create exported calendar link",
               "slug": "exportedcalendaropenapicontroller_createexportedcalendar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_createexportedcalendar",
@@ -126533,7 +126533,7 @@
           "line": 55,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-export",
               "title": "Delete exported calendar",
               "slug": "exportedcalendaropenapicontroller_deleteexportedcalendar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_deleteexportedcalendar",
@@ -126609,7 +126609,7 @@
           "line": 104,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-import",
               "title": "Delete imported calendar",
               "slug": "importedcalendaropenapicontroller_deleteimportedcalendar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_deleteimportedcalendar",
@@ -126700,7 +126700,7 @@
           "line": 27,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-export",
               "title": "Get a specific exported calendar",
               "slug": "exportedcalendaropenapicontroller_getexportedcalendarbyid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_getexportedcalendarbyid",
@@ -126826,7 +126826,7 @@
           "line": 76,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-import",
               "title": "Get imported calendar by id",
               "slug": "importedcalendaropenapicontroller_getimportedcalendarbyid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_getimportedcalendarbyid",
@@ -126969,7 +126969,7 @@
           "line": 86,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-import",
               "title": "Import a calendar",
               "slug": "importedcalendaropenapicontroller_createimportedcalendar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_createimportedcalendar",
@@ -127222,7 +127222,7 @@
           "line": 17,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-export",
               "title": "Get active exported calendar",
               "slug": "exportedcalendaropenapicontroller_getexportedcalendar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_getexportedcalendar",
@@ -127356,7 +127356,7 @@
           "line": 66,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-import",
               "title": "Get imported calendars list",
               "slug": "importedcalendaropenapicontroller_getimportedcalendars",
               "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_getimportedcalendars",
@@ -127497,7 +127497,7 @@
           "line": 112,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-import",
               "title": "Unsync imported calendar",
               "slug": "importedcalendaropenapicontroller_pauseimportedcaledar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_pauseimportedcaledar",
@@ -127638,7 +127638,7 @@
           "line": 120,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-import",
               "title": "Resume imported calendar sync",
               "slug": "importedcalendaropenapicontroller_resumeimportedcaledar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_resumeimportedcaledar",
@@ -127787,7 +127787,7 @@
           "line": 47,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-export",
               "title": "Update exported calendar",
               "slug": "exportedcalendaropenapicontroller_updateexportedcalendar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/exportedcalendaropenapicontroller_updateexportedcalendar",
@@ -127954,7 +127954,7 @@
           "line": 96,
           "reference": [
             {
-              "group": "icalendar-api",
+              "group": "calendar-sync-ical-import",
               "title": "Update imported calendar",
               "slug": "importedcalendaropenapicontroller_updateimportedcalendar",
               "docsUrl": "https://open-api-docs.guesty.com/reference/importedcalendaropenapicontroller_updateimportedcalendar",
@@ -128156,7 +128156,7 @@
           "line": 50,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "Retrieve a list of supported channels.",
               "slug": "getchannels",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getchannels",
@@ -129837,7 +129837,7 @@
           "line": 58,
           "reference": [
             {
-              "group": "rm-promotions",
+              "group": "promotions-open-api",
               "title": "Get All Promotions",
               "slug": "promotioncontroller_getlist",
               "docsUrl": "https://open-api-docs.guesty.com/reference/promotioncontroller_getlist",
@@ -130091,7 +130091,7 @@
           "line": 74,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "Get a Rate Plan by ID",
               "slug": "rateplancontroller_getbyid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_getbyid",
@@ -130339,7 +130339,7 @@
           "line": 66,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "Get All Rate Plans",
               "slug": "rateplancontroller_getall",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_getall",
@@ -133965,7 +133965,7 @@
           "line": 197,
           "reference": [
             {
-              "group": "listings.csv",
+              "group": "listings",
               "title": "Export as CSV",
               "slug": "post_listings-csv",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_listings-csv",
@@ -134020,7 +134020,7 @@
           "line": 216,
           "reference": [
             {
-              "group": "listings.email",
+              "group": "listings",
               "title": "Send results in email",
               "slug": "post_listings-email",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_listings-email",
@@ -134086,7 +134086,7 @@
           "line": 165,
           "reference": [
             {
-              "group": "financials",
+              "group": "listings",
               "title": "Retrieve listing Financials",
               "slug": "get_financials-listing-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_financials-listing-id",
@@ -138785,7 +138785,7 @@
           "line": 175,
           "reference": [
             {
-              "group": "financials",
+              "group": "listings",
               "title": "Update listing Financials",
               "slug": "put_financials-listing-id",
               "docsUrl": "https://open-api-docs.guesty.com/reference/put_financials-listing-id",
@@ -140706,7 +140706,7 @@
           "line": 83,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "[Beta] Create Description Set.",
               "slug": "createdescriptionset",
               "docsUrl": "https://open-api-docs.guesty.com/reference/createdescriptionset",
@@ -140912,7 +140912,7 @@
           "line": 101,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "[Beta] Delete Description Set.",
               "slug": "deletedescriptionset",
               "docsUrl": "https://open-api-docs.guesty.com/reference/deletedescriptionset",
@@ -141025,7 +141025,7 @@
           "line": 55,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "[Beta] Retrieve a list of supported languages for specific listing",
               "slug": "getpropertylanguages",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getpropertylanguages",
@@ -141162,7 +141162,7 @@
           "line": 21,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "[Beta] Get a list of translation fields per channel",
               "slug": "getfieldsperchannel",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getfieldsperchannel",
@@ -142854,7 +142854,7 @@
           "line": 29,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "[Beta] Get a list of translation fields per description set.",
               "slug": "getfieldsperdescriptionset",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getfieldsperdescriptionset",
@@ -144541,7 +144541,7 @@
           "line": 73,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "[Beta] Get a list of description sets.",
               "slug": "getdescriptionsets",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getdescriptionsets",
@@ -144702,7 +144702,7 @@
           "line": 13,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "Get a list of translation fields",
               "slug": "getfields",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getfields",
@@ -146373,7 +146373,7 @@
           "line": 47,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "Retrieve a list of supported languages.",
               "slug": "getlanguages",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getlanguages",
@@ -146472,7 +146472,7 @@
           "line": 65,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "[Beta] upsert supported languages for specific listing",
               "slug": "upsertpropertylanguages",
               "docsUrl": "https://open-api-docs.guesty.com/reference/upsertpropertylanguages",
@@ -146641,7 +146641,7 @@
           "line": 93,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "[Beta] Update Description Set.",
               "slug": "updatedescriptionset",
               "docsUrl": "https://open-api-docs.guesty.com/reference/updatedescriptionset",
@@ -146822,7 +146822,7 @@
           "line": 39,
           "reference": [
             {
-              "group": "marketing",
+              "group": "marketing-fields",
               "title": "Upsert translation",
               "slug": "upsertfields",
               "docsUrl": "https://open-api-docs.guesty.com/reference/upsertfields",
@@ -148781,7 +148781,7 @@
           "line": 151,
           "reference": [
             {
-              "group": "owners",
+              "group": "owners-documents",
               "title": "Create a document",
               "slug": "documentsopenapicontroller_create",
               "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_create",
@@ -149875,7 +149875,7 @@
           "line": 177,
           "reference": [
             {
-              "group": "owners",
+              "group": "owners-documents",
               "title": "Delete document",
               "slug": "documentsopenapicontroller_delete",
               "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_delete",
@@ -150055,7 +150055,7 @@
           "line": 186,
           "reference": [
             {
-              "group": "owners",
+              "group": "owners-documents",
               "title": "Download document",
               "slug": "documentsopenapicontroller_download",
               "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_download",
@@ -150983,7 +150983,7 @@
           "line": 159,
           "reference": [
             {
-              "group": "owners",
+              "group": "owners-documents",
               "title": "Get document",
               "slug": "documentsopenapicontroller_get",
               "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_get",
@@ -152353,7 +152353,7 @@
           "line": 141,
           "reference": [
             {
-              "group": "owners",
+              "group": "owners-documents",
               "title": "Get list of documents",
               "slug": "documentsopenapicontroller_getall",
               "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_getall",
@@ -152711,7 +152711,7 @@
           "line": 90,
           "reference": [
             {
-              "group": "owners",
+              "group": "ownerships",
               "title": "Get owner listings ownerships",
               "slug": "ownerownershipsopenapicontroller_get",
               "docsUrl": "https://open-api-docs.guesty.com/reference/ownerownershipsopenapicontroller_get",
@@ -153010,7 +153010,7 @@
           "line": 72,
           "reference": [
             {
-              "group": "owners",
+              "group": "ownerships",
               "title": "Get listing ownerships",
               "slug": "listingownershipsopenapicontroller_get",
               "docsUrl": "https://open-api-docs.guesty.com/reference/listingownershipsopenapicontroller_get",
@@ -155745,7 +155745,7 @@
           "line": 82,
           "reference": [
             {
-              "group": "owners",
+              "group": "ownerships",
               "title": "Set ownerships to listing",
               "slug": "listingownershipsopenapicontroller_set",
               "docsUrl": "https://open-api-docs.guesty.com/reference/listingownershipsopenapicontroller_set",
@@ -156943,7 +156943,7 @@
           "line": 169,
           "reference": [
             {
-              "group": "owners",
+              "group": "owners-documents",
               "title": "Update document",
               "slug": "documentsopenapicontroller_update",
               "docsUrl": "https://open-api-docs.guesty.com/reference/documentsopenapicontroller_update",
@@ -159439,7 +159439,7 @@
           "line": 16,
           "reference": [
             {
-              "group": "rm-promotions",
+              "group": "promotions-open-api",
               "title": "Assign Properties to a Promotion.",
               "slug": "promotioncontroller_assignlistings",
               "docsUrl": "https://open-api-docs.guesty.com/reference/promotioncontroller_assignlistings",
@@ -159731,7 +159731,7 @@
           "line": 40,
           "reference": [
             {
-              "group": "rm-promotions",
+              "group": "promotions-open-api",
               "title": "Get promotion listings",
               "slug": "promotioncontroller_getassignedlistingids",
               "docsUrl": "https://open-api-docs.guesty.com/reference/promotioncontroller_getassignedlistingids",
@@ -160038,7 +160038,7 @@
           "line": 29,
           "reference": [
             {
-              "group": "rm-promotions",
+              "group": "promotions-open-api",
               "title": "Unassign Properties from a Promotion.",
               "slug": "promotioncontroller_unassignlistings",
               "docsUrl": "https://open-api-docs.guesty.com/reference/promotioncontroller_unassignlistings",
@@ -160338,7 +160338,7 @@
           "line": 59,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-photos",
               "title": "Add new photos to property",
               "slug": "uploadbyurls",
               "docsUrl": "https://open-api-docs.guesty.com/reference/uploadbyurls",
@@ -160518,7 +160518,7 @@
           "line": 134,
           "reference": [
             {
-              "group": "properties",
+              "group": "spaces",
               "title": "Add space to unit-type (Create Space)",
               "slug": "post_properties-spaces-unit-type-unittypeid-add",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_properties-spaces-unit-type-unittypeid-add",
@@ -161054,7 +161054,7 @@
           "line": 15,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "amenities",
               "title": "Retrieve Property Amenities",
               "slug": "amenitiescontroller_getforunittype",
               "docsUrl": "https://open-api-docs.guesty.com/reference/amenitiescontroller_getforunittype",
@@ -161184,7 +161184,7 @@
           "line": 41,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "amenities",
               "title": "Get a List Of All Available Amenity Groups",
               "slug": "getamenitiesgroups",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getamenitiesgroups",
@@ -161277,7 +161277,7 @@
           "line": 262,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "complexes",
               "title": "Assign propertyIds to a complex",
               "slug": "complexescontroller_assigncomplexpropertyids",
               "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_assigncomplexpropertyids",
@@ -161422,7 +161422,7 @@
           "line": 355,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "room-photos",
               "title": "Assign a Photo to a Space",
               "slug": "roomphotoscontroller_assignroomphoto",
               "docsUrl": "https://open-api-docs.guesty.com/reference/roomphotoscontroller_assignroomphoto",
@@ -161579,7 +161579,7 @@
           "line": 116,
           "reference": [
             {
-              "group": "properties",
+              "group": "spaces",
               "title": "List bed-types",
               "slug": "get_properties-spaces-bed-types",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-spaces-bed-types",
@@ -161640,7 +161640,7 @@
           "line": 234,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "complexes",
               "title": "Get complex",
               "slug": "complexescontroller_getcomplexbyid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_getcomplexbyid",
@@ -161782,7 +161782,7 @@
           "line": 108,
           "reference": [
             {
-              "group": "properties",
+              "group": "spaces",
               "title": "Retrieve spaces for a complex",
               "slug": "get_properties-spaces-complex-complexid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-spaces-complex-complexid",
@@ -161965,7 +161965,7 @@
           "line": 216,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "complexes",
               "title": "Get a list of all complexes",
               "slug": "getallcomplexes",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getallcomplexes",
@@ -162109,7 +162109,7 @@
           "line": 226,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "complexes",
               "title": "Create a new complex",
               "slug": "addcomplex",
               "docsUrl": "https://open-api-docs.guesty.com/reference/addcomplex",
@@ -162291,7 +162291,7 @@
           "line": 437,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "listing-external-links",
               "title": "Create external link",
               "slug": "createexternallink",
               "docsUrl": "https://open-api-docs.guesty.com/reference/createexternallink",
@@ -162417,7 +162417,7 @@
           "line": 381,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "groups-pilot",
               "title": "Create a new group",
               "slug": "creategroup",
               "docsUrl": "https://open-api-docs.guesty.com/reference/creategroup",
@@ -162594,7 +162594,7 @@
           "line": 483,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-media",
               "title": "Create Virtual Tour URL",
               "slug": "propertymediacontroller_createvirtualtour",
               "docsUrl": "https://open-api-docs.guesty.com/reference/propertymediacontroller_createvirtualtour",
@@ -162731,7 +162731,7 @@
           "line": 319,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "custom-fields",
               "title": "Get Custom Field from Selected Property",
               "slug": "getbyfieldid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getbyfieldid",
@@ -162892,7 +162892,7 @@
           "line": 301,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "custom-fields",
               "title": "List Custom Fields per Property",
               "slug": "getall",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getall",
@@ -163052,7 +163052,7 @@
           "line": 252,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "complexes",
               "title": "Delete complex",
               "slug": "complexescontroller_removecomplex",
               "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_removecomplex",
@@ -163184,7 +163184,7 @@
           "line": 327,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "custom-fields",
               "title": "Delete Custom Field from property",
               "slug": "delete",
               "docsUrl": "https://open-api-docs.guesty.com/reference/delete",
@@ -163369,7 +163369,7 @@
           "line": 465,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "listing-external-links",
               "title": "Delete external link",
               "slug": "deleteexternallink",
               "docsUrl": "https://open-api-docs.guesty.com/reference/deleteexternallink",
@@ -163453,7 +163453,7 @@
           "line": 409,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "groups-pilot",
               "title": "Delete group",
               "slug": "deletegroup",
               "docsUrl": "https://open-api-docs.guesty.com/reference/deletegroup",
@@ -163575,7 +163575,7 @@
           "line": 90,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-photos",
               "title": "Delete a Photo",
               "slug": "delete1",
               "docsUrl": "https://open-api-docs.guesty.com/reference/delete1",
@@ -163735,7 +163735,7 @@
           "line": 501,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-media",
               "title": "Delete Virtual Tour URL",
               "slug": "propertymediacontroller_deletevirtualtour",
               "docsUrl": "https://open-api-docs.guesty.com/reference/propertymediacontroller_deletevirtualtour",
@@ -163841,7 +163841,7 @@
           "line": 154,
           "reference": [
             {
-              "group": "properties",
+              "group": "spaces",
               "title": "Edit space beds",
               "slug": "post_properties-spaces-space-spaceid-edit",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_properties-spaces-space-spaceid-edit",
@@ -164131,7 +164131,7 @@
           "line": 144,
           "reference": [
             {
-              "group": "properties",
+              "group": "spaces",
               "title": "Edit space details",
               "slug": "patch_properties-spaces-space-spaceid-details",
               "docsUrl": "https://open-api-docs.guesty.com/reference/patch_properties-spaces-space-spaceid-details",
@@ -164354,7 +164354,7 @@
           "line": 401,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "groups-pilot",
               "title": "Get group by ID",
               "slug": "getgroup",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getgroup",
@@ -164500,7 +164500,7 @@
           "line": 473,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-media",
               "title": "Get Virtual Tour URL",
               "slug": "propertymediacontroller_getvirtualtour",
               "docsUrl": "https://open-api-docs.guesty.com/reference/propertymediacontroller_getvirtualtour",
@@ -164598,7 +164598,7 @@
           "line": 172,
           "reference": [
             {
-              "group": "properties",
+              "group": "house-rules",
               "title": "Retrieve unit-type house-rules",
               "slug": "get_properties-house-rules-unit-type-unittypeid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-house-rules-unit-type-unittypeid",
@@ -164707,7 +164707,7 @@
           "line": 427,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "listing-external-links",
               "title": "List external links",
               "slug": "listexternallinks",
               "docsUrl": "https://open-api-docs.guesty.com/reference/listexternallinks",
@@ -164828,7 +164828,7 @@
           "line": 391,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "groups-pilot",
               "title": "List groups",
               "slug": "listgroups",
               "docsUrl": "https://open-api-docs.guesty.com/reference/listgroups",
@@ -165015,7 +165015,7 @@
           "line": 180,
           "reference": [
             {
-              "group": "properties",
+              "group": "house-rules",
               "title": "List house rules",
               "slug": "get_properties-house-rules",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-house-rules",
@@ -165202,7 +165202,7 @@
           "line": 293,
           "reference": [
             {
-              "group": "property-logs",
+              "group": "properties-logs",
               "title": "Get property logs",
               "slug": "getpropertylogs",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getpropertylogs",
@@ -165452,7 +165452,7 @@
           "line": 69,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-photos",
               "title": "Change the photo order on a property",
               "slug": "order",
               "docsUrl": "https://open-api-docs.guesty.com/reference/order",
@@ -165622,7 +165622,7 @@
           "line": 49,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-photos",
               "title": "Retrieve all photos for a given listing.",
               "slug": "get",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get",
@@ -165780,7 +165780,7 @@
           "line": 164,
           "reference": [
             {
-              "group": "properties",
+              "group": "spaces",
               "title": "Remove space from unit-type",
               "slug": "post_properties-spaces-space-spaceid-remove",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_properties-spaces-space-spaceid-remove",
@@ -165985,7 +165985,7 @@
           "line": 447,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "listing-external-links",
               "title": "Reorder external links",
               "slug": "reorderexternallinks",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reorderexternallinks",
@@ -166108,7 +166108,7 @@
           "line": 345,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "room-photos",
               "title": "Retrieve a Room Photo by ID",
               "slug": "get1",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get1",
@@ -166238,7 +166238,7 @@
           "line": 337,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "room-photos",
               "title": "List All Room Photos per Property",
               "slug": "getroomphotosbypropertyid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getroomphotosbypropertyid",
@@ -166374,7 +166374,7 @@
           "line": 124,
           "reference": [
             {
-              "group": "properties",
+              "group": "spaces",
               "title": "List room-types",
               "slug": "get_properties-spaces-room-types",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-spaces-room-types",
@@ -166443,7 +166443,7 @@
           "line": 25,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "amenities",
               "title": "Set Amenities For Property",
               "slug": "amenitiescontroller_setamenitiesforproperty",
               "docsUrl": "https://open-api-docs.guesty.com/reference/amenitiescontroller_setamenitiesforproperty",
@@ -166628,7 +166628,7 @@
           "line": 311,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "custom-fields",
               "title": "Update property Custom Fields",
               "slug": "updatemany",
               "docsUrl": "https://open-api-docs.guesty.com/reference/updatemany",
@@ -166853,7 +166853,7 @@
           "line": 190,
           "reference": [
             {
-              "group": "properties",
+              "group": "house-rules",
               "title": "Update unit-type house-rules",
               "slug": "put_properties-house-rules-unit-type-unittypeid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/put_properties-house-rules-unit-type-unittypeid",
@@ -166998,7 +166998,7 @@
           "line": 200,
           "reference": [
             {
-              "group": "properties",
+              "group": "house-rules",
               "title": "Update multiple unit-type house-rules",
               "slug": "post_properties-house-rules",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_properties-house-rules",
@@ -167159,7 +167159,7 @@
           "line": 100,
           "reference": [
             {
-              "group": "properties",
+              "group": "spaces",
               "title": "Retrieve spaces for a unit-type",
               "slug": "get_properties-spaces-unit-type-unittypeid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_properties-spaces-unit-type-unittypeid",
@@ -167350,7 +167350,7 @@
           "line": 33,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "amenities",
               "title": "Get a List of All Supported Amenities",
               "slug": "getsupportedamenities",
               "docsUrl": "https://open-api-docs.guesty.com/reference/getsupportedamenities",
@@ -167464,7 +167464,7 @@
           "line": 272,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "complexes",
               "title": "Un-Assign propertyIds from a complex",
               "slug": "complexescontroller_unassigncomplexpropertyids",
               "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_unassigncomplexpropertyids",
@@ -167609,7 +167609,7 @@
           "line": 368,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "room-photos",
               "title": "Unassign a Photo from a Space",
               "slug": "roomphotoscontroller_unassignroomphoto",
               "docsUrl": "https://open-api-docs.guesty.com/reference/roomphotoscontroller_unassignroomphoto",
@@ -167775,7 +167775,7 @@
           "line": 244,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "complexes",
               "title": "Update complex details",
               "slug": "complexescontroller_updatecomplexdetails",
               "docsUrl": "https://open-api-docs.guesty.com/reference/complexescontroller_updatecomplexdetails",
@@ -167949,7 +167949,7 @@
           "line": 457,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "listing-external-links",
               "title": "Update external link",
               "slug": "updateexternallink",
               "docsUrl": "https://open-api-docs.guesty.com/reference/updateexternallink",
@@ -168090,7 +168090,7 @@
           "line": 419,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "groups-pilot",
               "title": "Update group",
               "slug": "updategroup",
               "docsUrl": "https://open-api-docs.guesty.com/reference/updategroup",
@@ -168299,7 +168299,7 @@
           "line": 79,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-photos",
               "title": "Replace photo or edit caption without changing order or room assignment.",
               "slug": "edit",
               "docsUrl": "https://open-api-docs.guesty.com/reference/edit",
@@ -168487,7 +168487,7 @@
           "line": 493,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-media",
               "title": "Update Virtual Tour URL",
               "slug": "propertymediacontroller_upsertvirtualtour",
               "docsUrl": "https://open-api-docs.guesty.com/reference/propertymediacontroller_upsertvirtualtour",
@@ -168614,7 +168614,7 @@
           "line": 514,
           "reference": [
             {
-              "group": "properties-api",
+              "group": "property-photos",
               "title": "Upload a photo to property using file blob",
               "slug": "uploadbyblob",
               "docsUrl": "https://open-api-docs.guesty.com/reference/uploadbyblob",
@@ -168788,7 +168788,7 @@
           "line": 43,
           "reference": [
             {
-              "group": "quotes",
+              "group": "quotes-open-api-beta",
               "title": "Add coupons to an existing quote",
               "slug": "quotesopenapicontroller_changecoupons",
               "docsUrl": "https://open-api-docs.guesty.com/reference/quotesopenapicontroller_changecoupons",
@@ -169187,7 +169187,7 @@
           "line": 23,
           "reference": [
             {
-              "group": "quotes",
+              "group": "quotes-open-api-beta",
               "title": "Create a Quote",
               "slug": "quotesopenapicontroller_create",
               "docsUrl": "https://open-api-docs.guesty.com/reference/quotesopenapicontroller_create",
@@ -169655,7 +169655,7 @@
           "line": 33,
           "reference": [
             {
-              "group": "quotes",
+              "group": "quotes-open-api-beta",
               "title": "Create multiple quotes for reservation",
               "slug": "quotesopenapicontroller_createmultiple",
               "docsUrl": "https://open-api-docs.guesty.com/reference/quotesopenapicontroller_createmultiple",
@@ -170157,7 +170157,7 @@
           "line": 13,
           "reference": [
             {
-              "group": "quotes",
+              "group": "quotes-open-api-beta",
               "title": "Retrieve a Quote by ID",
               "slug": "quotesopenapicontroller_getquote",
               "docsUrl": "https://open-api-docs.guesty.com/reference/quotesopenapicontroller_getquote",
@@ -170559,7 +170559,7 @@
           "line": 83,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "Assign Properties to a Rate Plan",
               "slug": "rateplancontroller_initassignlistings",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_initassignlistings",
@@ -170943,7 +170943,7 @@
           "line": 52,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "Get Rate Plans by Property",
               "slug": "rateplancontroller_getbylisting",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_getbylisting",
@@ -171273,7 +171273,7 @@
           "line": 16,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "Create a Rate Plan",
               "slug": "rateplancontroller_create",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_create",
@@ -171714,7 +171714,7 @@
           "line": 44,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "Remove a Rate Plan",
               "slug": "rateplancontroller_remove",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_remove",
@@ -171814,7 +171814,7 @@
           "line": 60,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-ari-calendar-v1",
               "title": "GET Rate Plan Calendar",
               "slug": "aricalendarcontroller_get",
               "docsUrl": "https://open-api-docs.guesty.com/reference/aricalendarcontroller_get",
@@ -172156,7 +172156,7 @@
           "line": 36,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "patch rate plan",
               "slug": "rateplancontroller_patch",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_patch",
@@ -172645,7 +172645,7 @@
           "line": 96,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "Unassign Properties from a Rate Plan",
               "slug": "rateplancontroller_initunassignlistings",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_initunassignlistings",
@@ -173037,7 +173037,7 @@
           "line": 26,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-rate-plan-crud-v1",
               "title": "Update a Rate Plan",
               "slug": "rateplancontroller_update",
               "docsUrl": "https://open-api-docs.guesty.com/reference/rateplancontroller_update",
@@ -173531,7 +173531,7 @@
           "line": 70,
           "reference": [
             {
-              "group": "rm-rate-plans-ext",
+              "group": "open-api-ari-calendar-v1",
               "title": "Upsert Rate Plan ARI Calendar",
               "slug": "aricalendarcontroller_upsert",
               "docsUrl": "https://open-api-docs.guesty.com/reference/aricalendarcontroller_upsert",
@@ -173804,7 +173804,7 @@
           "line": 21,
           "reference": [
             {
-              "group": "rm-rate-strategies-open-api",
+              "group": "ratestrategyopenapi",
               "title": "Retrieve Property's Rate Strategy.",
               "slug": "ratestrategycontroller_getbyunittypeid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/ratestrategycontroller_getbyunittypeid",
@@ -174025,7 +174025,7 @@
           "line": 13,
           "reference": [
             {
-              "group": "rm-rate-strategies-open-api",
+              "group": "ratestrategyopenapi",
               "title": "Retrieve All Rate Strategies.",
               "slug": "ratestrategycontroller_getlist",
               "docsUrl": "https://open-api-docs.guesty.com/reference/ratestrategycontroller_getlist",
@@ -175456,7 +175456,7 @@
           "line": 123,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Approve a channel reservation",
               "slug": "reservationsopenapicontroller_approvechannelreservation",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_approvechannelreservation",
@@ -175605,7 +175605,7 @@
           "line": 385,
           "reference": [
             {
-              "group": "accounting-api",
+              "group": "accounting-only-available-for-accounting-add-on-users",
               "title": "Get folio balances",
               "slug": "reservationscontroller_foliobalances",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationscontroller_foliobalances",
@@ -175989,7 +175989,7 @@
           "line": 95,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Create a Reservation Without a Quote",
               "slug": "reservationsopenapicontroller_quickbooking",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_quickbooking",
@@ -176395,7 +176395,7 @@
           "line": 110,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Create a reservation from quote",
               "slug": "reservationsopenapicontroller_createreservation",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_createreservation",
@@ -176725,7 +176725,7 @@
           "line": 325,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Get a specific custom field for a reservation",
               "slug": "reservationsopenapicontroller_getreservationcustomfield",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_getreservationcustomfield",
@@ -176840,7 +176840,7 @@
           "line": 317,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Get all custom fields for a reservation",
               "slug": "reservationsopenapicontroller_getreservationallcustomfields",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_getreservationallcustomfields",
@@ -176949,7 +176949,7 @@
           "line": 133,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Decline a channel reservation",
               "slug": "reservationsopenapicontroller_declinechannelreservation",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_declinechannelreservation",
@@ -177126,7 +177126,7 @@
           "line": 333,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Delete reservation's Custom Field",
               "slug": "reservationsopenapicontroller_deletereservationcustomfield",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_deletereservationcustomfield",
@@ -177254,7 +177254,7 @@
           "line": 484,
           "reference": [
             {
-              "group": "reservations.csv",
+              "group": "reservations",
               "title": "Export as CSV",
               "slug": "post_reservations-csv",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_reservations-csv",
@@ -177392,7 +177392,7 @@
           "line": 505,
           "reference": [
             {
-              "group": "reservations.email",
+              "group": "reservations",
               "title": "Send results in email",
               "slug": "post_reservations-email",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_reservations-email",
@@ -177558,7 +177558,7 @@
           "line": 83,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Retrieve Reservations",
               "slug": "reservationsopenapicontroller_getreservationsbyids",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_getreservationsbyids",
@@ -178238,7 +178238,7 @@
           "line": 357,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "group-reservations-open-api-beta",
               "title": "Create a group reservation",
               "slug": "groupreservationsopenapicontroller_create",
               "docsUrl": "https://open-api-docs.guesty.com/reference/groupreservationsopenapicontroller_create",
@@ -178491,7 +178491,7 @@
           "line": 345,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "group-reservations-open-api-beta",
               "title": "Get group reservation by group id",
               "slug": "groupreservationsopenapicontroller_getgroupreservation",
               "docsUrl": "https://open-api-docs.guesty.com/reference/groupreservationsopenapicontroller_getgroupreservation",
@@ -178577,7 +178577,7 @@
           "line": 182,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Change Reservation Guest Stay Status",
               "slug": "reservationsopenapicontroller_changestay",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_changestay",
@@ -182641,7 +182641,7 @@
           "line": 167,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Create a mid-stay",
               "slug": "reservationsopenapicontroller_createmidstay",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_createmidstay",
@@ -183005,7 +183005,7 @@
           "line": 372,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Create a confirmed owner reservation",
               "slug": "reservationsopenapicontroller_createownerconfirmed",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_createownerconfirmed",
@@ -183492,7 +183492,7 @@
           "line": 143,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Pre-approve a channel reservation",
               "slug": "reservationsopenapicontroller_preapprovechannelreservation",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_preapprovechannelreservation",
@@ -183887,7 +183887,7 @@
           "line": 244,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Update reservation listing",
               "slug": "reservationsopenapicontroller_updatereservationlisting",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationlisting",
@@ -184231,7 +184231,7 @@
           "line": 523,
           "reference": [
             {
-              "group": "reservations-reports",
+              "group": "reservations-reports-open-api-beta",
               "title": "Get reservations report by view id",
               "slug": "reservationsreportsopenapicontroller_getreportbyviewid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsreportsopenapicontroller_getreportbyviewid",
@@ -184364,7 +184364,7 @@
           "line": 153,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Request cancellation of a channel reservation",
               "slug": "reservationsopenapicontroller_requestcancellationchannelreservation",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_requestcancellationchannelreservation",
@@ -186421,7 +186421,7 @@
           "line": 274,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Update reservation confirmation code",
               "slug": "reservationsopenapicontroller_updatereservationconfirmationcode",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationconfirmationcode",
@@ -186527,7 +186527,7 @@
           "line": 306,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Update reservation's Custom Fields",
               "slug": "reservationsopenapicontroller_updatereservationcustomfields",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationcustomfields",
@@ -186692,7 +186692,7 @@
           "line": 229,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Update Reservation Dates",
               "slug": "reservationsopenapicontroller_updatereservationdates",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationdates",
@@ -187061,7 +187061,7 @@
           "line": 289,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Update Reservation Guests Breakdown",
               "slug": "reservationsopenapicontroller_updatereservationguests",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationguests",
@@ -187434,7 +187434,7 @@
           "line": 214,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Update Reservation notes",
               "slug": "reservationsopenapicontroller_updatereservationnotes",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationnotes",
@@ -187865,7 +187865,7 @@
           "line": 199,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Change Reservation Source",
               "slug": "reservationsopenapicontroller_updatereservationsource",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationsource",
@@ -188192,7 +188192,7 @@
           "line": 259,
           "reference": [
             {
-              "group": "reservations-v3",
+              "group": "reservations-open-api-beta",
               "title": "Update reservation status",
               "slug": "reservationsopenapicontroller_updatereservationstatus",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reservationsopenapicontroller_updatereservationstatus",
@@ -188325,7 +188325,7 @@
           "line": 23,
           "reference": [
             {
-              "group": "reviews",
+              "group": "review",
               "title": "Create a custom channel",
               "slug": "reviewcontroller_createcustomchannel",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_createcustomchannel",
@@ -188404,7 +188404,7 @@
           "line": 70,
           "reference": [
             {
-              "group": "reviews",
+              "group": "review",
               "title": "Publish a custom-channel review",
               "slug": "reviewcontroller_createcustomchannelreview",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_createcustomchannelreview",
@@ -188696,7 +188696,7 @@
           "line": 13,
           "reference": [
             {
-              "group": "reviews",
+              "group": "review",
               "title": "List custom channel names",
               "slug": "reviewcontroller_listcustomchannelnames",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_listcustomchannelnames",
@@ -188768,7 +188768,7 @@
           "line": 50,
           "reference": [
             {
-              "group": "reviews",
+              "group": "review",
               "title": "Retrieve a review",
               "slug": "reviewcontroller_getreview",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_getreview",
@@ -189023,7 +189023,7 @@
           "line": 42,
           "reference": [
             {
-              "group": "reviews",
+              "group": "review",
               "title": "Retrieve reviews sorted descending by last update time",
               "slug": "reviewcontroller_getreviews",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_getreviews",
@@ -189238,7 +189238,7 @@
           "line": 60,
           "reference": [
             {
-              "group": "reviews",
+              "group": "review",
               "title": "Retrieve Average reviews score by Listings IDs",
               "slug": "reviewcontroller_getlistingsaveragereview",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_getlistingsaveragereview",
@@ -189347,7 +189347,7 @@
           "line": 82,
           "reference": [
             {
-              "group": "reviews",
+              "group": "review",
               "title": "Publish review reply to channel",
               "slug": "reviewcontroller_upsertreviewreply",
               "docsUrl": "https://open-api-docs.guesty.com/reference/reviewcontroller_upsertreviewreply",
@@ -190962,7 +190962,7 @@
           "line": 45,
           "reference": [
             {
-              "group": "tasks-open-api",
+              "group": "tasks",
               "title": "Create a new task",
               "slug": "post_tasks-open-api-create-single-task",
               "docsUrl": "https://open-api-docs.guesty.com/reference/post_tasks-open-api-create-single-task",
@@ -191830,7 +191830,7 @@
           "line": 71,
           "reference": [
             {
-              "group": "tasks-open-api",
+              "group": "tasks",
               "title": "Delete a task",
               "slug": "delete_tasks-open-api-taskid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/delete_tasks-open-api-taskid",
@@ -192450,7 +192450,7 @@
           "line": 33,
           "reference": [
             {
-              "group": "tasks-open-api",
+              "group": "tasks",
               "title": "Get a specific task",
               "slug": "get_tasks-open-api-taskid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_tasks-open-api-taskid",
@@ -193126,7 +193126,7 @@
           "line": 25,
           "reference": [
             {
-              "group": "tasks-open-api",
+              "group": "tasks",
               "title": "Get tasks list",
               "slug": "get_tasks-open-api-tasks",
               "docsUrl": "https://open-api-docs.guesty.com/reference/get_tasks-open-api-tasks",
@@ -193369,7 +193369,7 @@
           "line": 60,
           "reference": [
             {
-              "group": "tasks-open-api",
+              "group": "tasks",
               "title": "Update a task",
               "slug": "put_tasks-open-api-taskid",
               "docsUrl": "https://open-api-docs.guesty.com/reference/put_tasks-open-api-taskid",
@@ -199709,7 +199709,7 @@
           "line": 57,
           "reference": [
             {
-              "group": "webhooks-v2",
+              "group": "webhooks",
               "title": "Get webhook secret",
               "slug": "svixsecretapicontroller_getsecret",
               "docsUrl": "https://open-api-docs.guesty.com/reference/svixsecretapicontroller_getsecret",
@@ -199914,12 +199914,68 @@
   "referenceCoverage": {
     "referenceFile": "api-spec.json",
     "implementedUniqueEndpoints": 308,
-    "referenceEndpoints": 308,
-    "implementedGroups": 54,
-    "referenceGroups": 55,
+    "referenceEndpoints": 316,
+    "implementedGroups": 59,
+    "referenceGroups": 61,
     "missingImplementedEndpoints": [
       {
-        "group": "reservations-api",
+        "group": "channel-commission",
+        "method": "GET",
+        "path": "/v1/channel-commissions-v2/account",
+        "title": "Get account channel commission",
+        "slug": "channelcommissioncontroller_getaccountchannelcommission1"
+      },
+      {
+        "group": "channel-commission",
+        "method": "PUT",
+        "path": "/v1/channel-commissions-v2/account",
+        "title": "Update account channel commission",
+        "slug": "channelcommissioncontroller_updateaccountchannelcommission1"
+      },
+      {
+        "group": "channel-commission",
+        "method": "GET",
+        "path": "/v1/channel-commissions-v2/listings",
+        "title": "Get listings channel commission",
+        "slug": "channelcommissioncontroller_getlistingschannelcommission1"
+      },
+      {
+        "group": "channel-commission",
+        "method": "PUT",
+        "path": "/v1/channel-commissions-v2/listings",
+        "title": "Update listings channel commission",
+        "slug": "channelcommissioncontroller_updatelistingschannelcommission1"
+      },
+      {
+        "group": "payouts",
+        "method": "GET",
+        "path": "/v1/payouts/owners/{ownerId}",
+        "title": "Get owner payout method",
+        "slug": "openapicontroller_getownerpayoutmethods"
+      },
+      {
+        "group": "payouts",
+        "method": "POST",
+        "path": "/v1/payouts/owners/{ownerId}",
+        "title": "Create owner payout method",
+        "slug": "openapicontroller_createownerpayoutmethod"
+      },
+      {
+        "group": "payouts",
+        "method": "PUT",
+        "path": "/v1/payouts/owners/{ownerId}",
+        "title": "Update owner payout method",
+        "slug": "openapicontroller_updateownerpayoutmethod"
+      },
+      {
+        "group": "payouts",
+        "method": "POST",
+        "path": "/v1/payouts/owners/bulk",
+        "title": "Bulk create owner payout methods",
+        "slug": "openapicontroller_createbulkownerpayoutmethods"
+      },
+      {
+        "group": "pre-approve-inquiry",
         "method": "X-SUMMARY",
         "path": "/v1/reservations-api/reservations/{reservationId}/pre-approve",
         "title": "post_reservations-api-reservations-reservationid-pre-approve",
@@ -199928,52 +199984,42 @@
     ],
     "groups": [
       {
-        "group": "properties-api",
-        "implementedEndpoints": 39,
-        "referenceEndpoints": 39
-      },
-      {
-        "group": "reservations-v3",
-        "implementedEndpoints": 23,
-        "referenceEndpoints": 23
-      },
-      {
-        "group": "owners",
-        "implementedEndpoints": 16,
-        "referenceEndpoints": 16
+        "group": "reservations-open-api-beta",
+        "implementedEndpoints": 21,
+        "referenceEndpoints": 21
       },
       {
         "group": "reservations",
-        "implementedEndpoints": 16,
-        "referenceEndpoints": 16
+        "implementedEndpoints": 18,
+        "referenceEndpoints": 18
       },
       {
         "group": "listings",
-        "implementedEndpoints": 13,
-        "referenceEndpoints": 13
+        "implementedEndpoints": 17,
+        "referenceEndpoints": 17
       },
       {
-        "group": "icalendar-api",
+        "group": "accounting-only-available-for-accounting-add-on-users",
         "implementedEndpoints": 12,
         "referenceEndpoints": 12
       },
       {
-        "group": "marketing",
+        "group": "marketing-fields",
         "implementedEndpoints": 12,
         "referenceEndpoints": 12
       },
       {
-        "group": "properties",
-        "implementedEndpoints": 12,
-        "referenceEndpoints": 12
+        "group": "open-api-rate-plan-crud-v1",
+        "implementedEndpoints": 9,
+        "referenceEndpoints": 9
       },
       {
-        "group": "rm-rate-plans-ext",
-        "implementedEndpoints": 11,
-        "referenceEndpoints": 11
+        "group": "additionalfees",
+        "implementedEndpoints": 8,
+        "referenceEndpoints": 8
       },
       {
-        "group": "additional-fees",
+        "group": "spaces",
         "implementedEndpoints": 8,
         "referenceEndpoints": 8
       },
@@ -199983,14 +200029,24 @@
         "referenceEndpoints": 8
       },
       {
-        "group": "reviews",
+        "group": "calendar-sync-ical-import",
         "implementedEndpoints": 7,
         "referenceEndpoints": 7
       },
       {
-        "group": "accounting-api",
-        "implementedEndpoints": 6,
-        "referenceEndpoints": 6
+        "group": "complexes",
+        "implementedEndpoints": 7,
+        "referenceEndpoints": 7
+      },
+      {
+        "group": "owners",
+        "implementedEndpoints": 7,
+        "referenceEndpoints": 7
+      },
+      {
+        "group": "review",
+        "implementedEndpoints": 7,
+        "referenceEndpoints": 7
       },
       {
         "group": "accounts",
@@ -199998,12 +200054,17 @@
         "referenceEndpoints": 6
       },
       {
-        "group": "business-models-api",
+        "group": "expenses-only-available-for-accounting-add-on-users",
         "implementedEndpoints": 6,
         "referenceEndpoints": 6
       },
       {
-        "group": "expenses-api",
+        "group": "guests",
+        "implementedEndpoints": 6,
+        "referenceEndpoints": 6
+      },
+      {
+        "group": "owners-documents",
         "implementedEndpoints": 6,
         "referenceEndpoints": 6
       },
@@ -200013,27 +200074,52 @@
         "referenceEndpoints": 6
       },
       {
+        "group": "property-photos",
+        "implementedEndpoints": 6,
+        "referenceEndpoints": 6
+      },
+      {
         "group": "saved-replies",
         "implementedEndpoints": 6,
         "referenceEndpoints": 6
       },
       {
-        "group": "availability-pricing",
+        "group": "webhooks",
+        "implementedEndpoints": 6,
+        "referenceEndpoints": 6
+      },
+      {
+        "group": "calendar",
         "implementedEndpoints": 5,
         "referenceEndpoints": 5
       },
       {
-        "group": "communication",
+        "group": "calendar-sync-ical-export",
         "implementedEndpoints": 5,
         "referenceEndpoints": 5
       },
       {
-        "group": "contacts",
+        "group": "groups-pilot",
         "implementedEndpoints": 5,
         "referenceEndpoints": 5
       },
       {
-        "group": "tasks-open-api",
+        "group": "inbox-conversations",
+        "implementedEndpoints": 5,
+        "referenceEndpoints": 5
+      },
+      {
+        "group": "listing-external-links",
+        "implementedEndpoints": 5,
+        "referenceEndpoints": 5
+      },
+      {
+        "group": "phone-book-entries",
+        "implementedEndpoints": 5,
+        "referenceEndpoints": 5
+      },
+      {
+        "group": "tasks",
         "implementedEndpoints": 5,
         "referenceEndpoints": 5
       },
@@ -200048,9 +200134,9 @@
         "referenceEndpoints": 5
       },
       {
-        "group": "webhooks",
-        "implementedEndpoints": 5,
-        "referenceEndpoints": 5
+        "group": "channel-commission",
+        "implementedEndpoints": 4,
+        "referenceEndpoints": 8
       },
       {
         "group": "address",
@@ -200058,12 +200144,17 @@
         "referenceEndpoints": 4
       },
       {
-        "group": "channel-commission",
+        "group": "amenities",
         "implementedEndpoints": 4,
         "referenceEndpoints": 4
       },
       {
-        "group": "guests-crud",
+        "group": "custom-fields",
+        "implementedEndpoints": 4,
+        "referenceEndpoints": 4
+      },
+      {
+        "group": "house-rules",
         "implementedEndpoints": 4,
         "referenceEndpoints": 4
       },
@@ -200073,12 +200164,22 @@
         "referenceEndpoints": 4
       },
       {
-        "group": "quotes",
+        "group": "promotions-open-api",
         "implementedEndpoints": 4,
         "referenceEndpoints": 4
       },
       {
-        "group": "rm-promotions",
+        "group": "property-media",
+        "implementedEndpoints": 4,
+        "referenceEndpoints": 4
+      },
+      {
+        "group": "quotes-open-api-beta",
+        "implementedEndpoints": 4,
+        "referenceEndpoints": 4
+      },
+      {
+        "group": "room-photos",
         "implementedEndpoints": 4,
         "referenceEndpoints": 4
       },
@@ -200088,22 +200189,27 @@
         "referenceEndpoints": 3
       },
       {
+        "group": "ownerships",
+        "implementedEndpoints": 3,
+        "referenceEndpoints": 3
+      },
+      {
         "group": "roles",
         "implementedEndpoints": 3,
         "referenceEndpoints": 3
       },
       {
-        "group": "airbnb-resource-service",
+        "group": "airbnb-listing-expectations",
         "implementedEndpoints": 2,
         "referenceEndpoints": 2
       },
       {
-        "group": "financials",
+        "group": "group-reservations-open-api-beta",
         "implementedEndpoints": 2,
         "referenceEndpoints": 2
       },
       {
-        "group": "guests",
+        "group": "open-api-ari-calendar-v1",
         "implementedEndpoints": 2,
         "referenceEndpoints": 2
       },
@@ -200118,7 +200224,7 @@
         "referenceEndpoints": 2
       },
       {
-        "group": "rm-rate-strategies-open-api",
+        "group": "ratestrategyopenapi",
         "implementedEndpoints": 2,
         "referenceEndpoints": 2
       },
@@ -200128,7 +200234,7 @@
         "referenceEndpoints": 2
       },
       {
-        "group": "vendors",
+        "group": "vendors-only-available-for-accounting-add-on-users",
         "implementedEndpoints": 2,
         "referenceEndpoints": 2
       },
@@ -200138,22 +200244,22 @@
         "referenceEndpoints": 1
       },
       {
-        "group": "airbnb-resolutions-center",
+        "group": "airbnb-resolution-center",
         "implementedEndpoints": 1,
         "referenceEndpoints": 1
       },
       {
-        "group": "api",
+        "group": "calendar-logs",
         "implementedEndpoints": 1,
         "referenceEndpoints": 1
       },
       {
-        "group": "guest-app-api",
+        "group": "guest-app",
         "implementedEndpoints": 1,
         "referenceEndpoints": 1
       },
       {
-        "group": "guest-code",
+        "group": "guesty-locks-manager",
         "implementedEndpoints": 1,
         "referenceEndpoints": 1
       },
@@ -200163,42 +200269,22 @@
         "referenceEndpoints": 1
       },
       {
-        "group": "listings.csv",
+        "group": "properties-logs",
         "implementedEndpoints": 1,
         "referenceEndpoints": 1
       },
       {
-        "group": "listings.email",
+        "group": "reservations-reports-open-api-beta",
         "implementedEndpoints": 1,
         "referenceEndpoints": 1
       },
       {
-        "group": "property-logs",
-        "implementedEndpoints": 1,
-        "referenceEndpoints": 1
+        "group": "payouts",
+        "implementedEndpoints": 0,
+        "referenceEndpoints": 4
       },
       {
-        "group": "reservations-reports",
-        "implementedEndpoints": 1,
-        "referenceEndpoints": 1
-      },
-      {
-        "group": "reservations.csv",
-        "implementedEndpoints": 1,
-        "referenceEndpoints": 1
-      },
-      {
-        "group": "reservations.email",
-        "implementedEndpoints": 1,
-        "referenceEndpoints": 1
-      },
-      {
-        "group": "webhooks-v2",
-        "implementedEndpoints": 1,
-        "referenceEndpoints": 1
-      },
-      {
-        "group": "reservations-api",
+        "group": "pre-approve-inquiry",
         "implementedEndpoints": 0,
         "referenceEndpoints": 1
       }
