@@ -1,0 +1,369 @@
+# Get list of documents
+
+Get list of documents
+
+# OpenAPI definition
+
+```json
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GUESTY OPEN API",
+    "description": "Guesty Open API documentation",
+    "version": "1"
+  },
+  "servers": [
+    {
+      "url": "https://open-api.guesty.com/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Owners Documents"
+    }
+  ],
+  "paths": {
+    "/owners/{ownerId}/documents": {
+      "get": {
+        "operationId": "DocumentsOpenApiController_getAll",
+        "summary": "Get list of documents",
+        "description": "Get list of documents",
+        "parameters": [
+          {
+            "name": "ownerId",
+            "required": true,
+            "in": "path",
+            "description": "Owner id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "skip",
+            "required": false,
+            "in": "query",
+            "description": "Pagination start index",
+            "schema": {
+              "minimum": 0,
+              "default": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Limit amount of results per page",
+            "schema": {
+              "minimum": 1,
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "Ordered list of field names to sort by, separated by spaces",
+            "schema": {
+              "default": "_id",
+              "example": "firstName lastName",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Filter expression",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "description": "Type of document",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "isShared",
+            "required": false,
+            "in": "query",
+            "description": "Include shared documents",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isExpired",
+            "required": false,
+            "in": "query",
+            "description": "Include expired documents",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "minEndDate",
+            "required": false,
+            "in": "query",
+            "description": "Minimum end date in YYYY-MM-DD format",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxEndDate",
+            "required": false,
+            "in": "query",
+            "description": "Maximum end date in YYYY-MM-DD format",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeDeleted",
+            "required": false,
+            "in": "query",
+            "description": "Include deleted documents, default is false",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "skip": {
+                      "type": "number",
+                      "description": "Pagination start index"
+                    },
+                    "limit": {
+                      "type": "number",
+                      "description": "Pagination limit per page"
+                    },
+                    "count": {
+                      "type": "number",
+                      "description": "Pagination results count after filtering"
+                    },
+                    "totalCount": {
+                      "type": "number",
+                      "description": "Pagination results count without filtering"
+                    },
+                    "sort": {
+                      "type": "string",
+                      "description": "Pagination sort field"
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string"
+                          },
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "ownerId": {
+                            "type": "string"
+                          },
+                          "originalFileName": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "enum": [
+                              "DOCUMENT",
+                              "CONTRACT",
+                              "OWNER1099_COPYB",
+                              "OWNER1099_COPY2"
+                            ],
+                            "type": "string",
+                            "example": "DOCUMENT"
+                          },
+                          "isShared": {
+                            "type": "boolean",
+                            "description": "Document is visible to owner in Owners Portal"
+                          },
+                          "startDate": {
+                            "type": "string",
+                            "description": "Document effective date in YYYY-MM-DD format"
+                          },
+                          "endDate": {
+                            "type": "string",
+                            "description": "Document expiration date in YYYY-MM-DD format"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "type": "string"
+                          },
+                          "deletedAt": {
+                            "format": "date-time",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "_id",
+                          "accountId",
+                          "ownerId",
+                          "originalFileName",
+                          "name",
+                          "type",
+                          "isShared",
+                          "createdAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "skip",
+                    "limit",
+                    "count",
+                    "totalCount",
+                    "sort",
+                    "results"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Validation Failed Error"
+                        },
+                        "code": {
+                          "type": "string",
+                          "example": "VALIDATION_FAILED"
+                        },
+                        "status": {
+                          "enum": [
+                            100,
+                            101,
+                            102,
+                            103,
+                            200,
+                            201,
+                            202,
+                            203,
+                            204,
+                            205,
+                            206,
+                            300,
+                            301,
+                            302,
+                            303,
+                            304,
+                            307,
+                            308,
+                            400,
+                            401,
+                            402,
+                            403,
+                            404,
+                            405,
+                            406,
+                            407,
+                            408,
+                            409,
+                            410,
+                            411,
+                            412,
+                            413,
+                            414,
+                            415,
+                            416,
+                            417,
+                            418,
+                            421,
+                            422,
+                            424,
+                            428,
+                            429,
+                            500,
+                            501,
+                            502,
+                            503,
+                            504,
+                            505
+                          ],
+                          "type": "number",
+                          "example": 400
+                        },
+                        "data": {
+                          "example": [
+                            "property1 must not be less than 0",
+                            "property1 must be an integer number"
+                          ],
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "message",
+                        "code",
+                        "status",
+                        "data"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Owners Documents"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "apiKey",
+        "name": "authorization",
+        "in": "header"
+      }
+    }
+  }
+}
+```

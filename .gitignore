@@ -3,3 +3,10 @@ dist/
 .env
 docs/api/
 schemas.json
+
+# Local backups (created by humans/agents during edits)
+*.bak
+*.bak.*
+
+# OS junk
+.DS_Store
