@@ -42,6 +42,7 @@ import { blockLogs } from "./commands/block-logs.js";
 import { airbnb } from "./commands/airbnb.js";
 import { invoiceItems } from "./commands/invoice-items.js";
 import { accounts } from "./commands/accounts.js";
+import { token } from "./commands/token.js";
 import { checkForUpdate, runSelfUpdate } from "./update-check.js";
 
 function getCliVersion(): string {
@@ -94,6 +95,7 @@ program.addCommand(blockLogs);
 program.addCommand(airbnb);
 program.addCommand(invoiceItems);
 program.addCommand(accounts);
+program.addCommand(token);
 program.addCommand(raw);
 
 program

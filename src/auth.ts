@@ -59,7 +59,7 @@ async function getTokenFromSupabase(): Promise<TokenData | null> {
 
   try {
     const res = await fetch(
-      `${url}/rest/v1/guesty_tokens?select=access_token,expires_at&order=created_at.desc&limit=1`,
+      `${url}/rest/v1/guesty_tokens?select=access_token,expires_at&token_type=eq.openapi&order=created_at.desc&limit=1`,
       {
         headers: {
           apikey: key,
@@ -98,7 +98,7 @@ async function saveTokenToSupabase(token: TokenData): Promise<void> {
         Prefer: "resolution=merge-duplicates",
       },
       body: JSON.stringify({
-        token_type: "Bearer",
+        token_type: "openapi",
         access_token: token.access_token,
         expires_at: token.expires_at,
         created_at: Date.now(),

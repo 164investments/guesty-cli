@@ -39,6 +39,17 @@ export GUESTY_CLIENT_ID=...
 export GUESTY_CLIENT_SECRET=...
 ```
 
+## Getting a raw token
+
+Need the token for an ad-hoc `curl` or a script? Use `guesty token` — never query the
+`guesty_tokens` table by hand, or you may grab a `beapi` token and get 401s on Open API calls.
+
+```bash
+TOK=$(guesty token)                 # cached Open API token (for /v1/* endpoints)
+guesty token --beapi                # cached BEAPI (booking-engine) token
+guesty token --json                 # token + expiry metadata
+```
+
 ## Examples
 
 ```bash
