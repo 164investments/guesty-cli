@@ -1,7 +1,7 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-04-10T21:15:39.892Z",
+  "generatedAt": "2026-07-14T05:32:13.479Z",
   "cliVersion": "1.1.0",
   "generatedFrom": {
     "packageFile": "package.json",
@@ -40,6 +40,7 @@
       "src/commands/saved-replies.ts",
       "src/commands/tasks.ts",
       "src/commands/taxes.ts",
+      "src/commands/token.ts",
       "src/commands/user-scope.ts",
       "src/commands/users.ts",
       "src/commands/webhooks.ts"
@@ -17946,7 +17947,7 @@
           "name": "block",
           "syntax": "block <listingId>",
           "fullCommand": "guesty calendar block <listingId>",
-          "description": "Block dates on a listing",
+          "description": "Block dates on a listing (end date is inclusive; for one night use the same date for --from and --to)",
           "arguments": [
             {
               "name": "listingId",
@@ -17960,21 +17961,28 @@
               "description": "Start date (YYYY-MM-DD)",
               "required": true,
               "defaultValue": null,
-              "line": 76
+              "line": 88
             },
             {
               "flags": "--to <date>",
-              "description": "End date (YYYY-MM-DD)",
+              "description": "End date (YYYY-MM-DD, inclusive)",
               "required": true,
               "defaultValue": null,
-              "line": 76
+              "line": 88
+            },
+            {
+              "flags": "--reason <reason>",
+              "description": "Block reason (case-sensitive): Owner block, Offboarded, Migrated unit block, Maintenance, Onboarding, Emergency out of order, Do not sell, Deactivated, Other",
+              "required": false,
+              "defaultValue": "Other",
+              "line": 88
             },
             {
               "flags": "--note <text>",
               "description": "Block note",
               "required": false,
               "defaultValue": null,
-              "line": 76
+              "line": 88
             }
           ],
           "inputCapabilities": {
@@ -17996,7 +18004,7 @@
               "resultsKey": null,
               "responseType": "auto",
               "queryParams": [],
-              "line": 83,
+              "line": 105,
               "reference": [
                 {
                   "group": "availability-pricing",
@@ -18185,7 +18193,7 @@
             }
           ],
           "sourceFile": "src/commands/calendar.ts",
-          "line": 76
+          "line": 88
         }
       ]
     },
@@ -96316,6 +96324,52 @@
       ]
     },
     {
+      "name": "token",
+      "alias": null,
+      "description": null,
+      "sourceFile": "src/commands/token.ts",
+      "line": 36,
+      "operations": [
+        {
+          "id": "guesty token",
+          "rootAction": true,
+          "name": "token",
+          "syntax": "token",
+          "fullCommand": "guesty token",
+          "description": null,
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--beapi",
+              "description": "Print the BEAPI (booking-engine scope) token instead of Open API",
+              "required": false,
+              "defaultValue": null,
+              "line": 36
+            },
+            {
+              "flags": "--json",
+              "description": "Print token metadata (access_token + expiry) as JSON instead of the bare string",
+              "required": false,
+              "defaultValue": null,
+              "line": 36
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/token.ts",
+          "line": 36
+        }
+      ]
+    },
+    {
       "name": "user-scope",
       "alias": null,
       "description": "Manage user scope assignments",
@@ -116712,7 +116766,7 @@
       "name": "block",
       "syntax": "block <listingId>",
       "fullCommand": "guesty calendar block <listingId>",
-      "description": "Block dates on a listing",
+      "description": "Block dates on a listing (end date is inclusive; for one night use the same date for --from and --to)",
       "arguments": [
         {
           "name": "listingId",
@@ -116726,21 +116780,28 @@
           "description": "Start date (YYYY-MM-DD)",
           "required": true,
           "defaultValue": null,
-          "line": 76
+          "line": 88
         },
         {
           "flags": "--to <date>",
-          "description": "End date (YYYY-MM-DD)",
+          "description": "End date (YYYY-MM-DD, inclusive)",
           "required": true,
           "defaultValue": null,
-          "line": 76
+          "line": 88
+        },
+        {
+          "flags": "--reason <reason>",
+          "description": "Block reason (case-sensitive): Owner block, Offboarded, Migrated unit block, Maintenance, Onboarding, Emergency out of order, Do not sell, Deactivated, Other",
+          "required": false,
+          "defaultValue": "Other",
+          "line": 88
         },
         {
           "flags": "--note <text>",
           "description": "Block note",
           "required": false,
           "defaultValue": null,
-          "line": 76
+          "line": 88
         }
       ],
       "inputCapabilities": {
@@ -116762,7 +116823,7 @@
           "resultsKey": null,
           "responseType": "auto",
           "queryParams": [],
-          "line": 83,
+          "line": 105,
           "reference": [
             {
               "group": "availability-pricing",
@@ -116951,7 +117012,7 @@
         }
       ],
       "sourceFile": "src/commands/calendar.ts",
-      "line": 76
+      "line": 88
     },
     {
       "id": "guesty calendar get <listingId>",
@@ -196104,6 +196165,43 @@
       ],
       "sourceFile": "src/commands/taxes.ts",
       "line": 19
+    },
+    {
+      "id": "guesty token",
+      "rootAction": true,
+      "name": "token",
+      "syntax": "token",
+      "fullCommand": "guesty token",
+      "description": null,
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--beapi",
+          "description": "Print the BEAPI (booking-engine scope) token instead of Open API",
+          "required": false,
+          "defaultValue": null,
+          "line": 36
+        },
+        {
+          "flags": "--json",
+          "description": "Print token metadata (access_token + expiry) as JSON instead of the bare string",
+          "required": false,
+          "defaultValue": null,
+          "line": 36
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/token.ts",
+      "line": 36
     },
     {
       "id": "guesty user-scope assign",

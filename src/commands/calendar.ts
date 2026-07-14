@@ -73,21 +73,44 @@ calendar
     print(data);
   });
 
+const BLOCK_REASONS = [
+  "Owner block",
+  "Offboarded",
+  "Migrated unit block",
+  "Maintenance",
+  "Onboarding",
+  "Emergency out of order",
+  "Do not sell",
+  "Deactivated",
+  "Other",
+];
+
 calendar
   .command("block <listingId>")
-  .description("Block dates on a listing")
+  .description("Block dates on a listing (end date is inclusive; for one night use the same date for --from and --to)")
   .requiredOption("--from <date>", "Start date (YYYY-MM-DD)")
-  .requiredOption("--to <date>", "End date (YYYY-MM-DD)")
+  .requiredOption("--to <date>", "End date (YYYY-MM-DD, inclusive)")
+  .option(
+    "--reason <reason>",
+    "Block reason (case-sensitive): Owner block, Offboarded, Migrated unit block, Maintenance, Onboarding, Emergency out of order, Do not sell, Deactivated, Other",
+    "Other"
+  )
   .option("--note <text>", "Block note")
   .action(async (listingId: string, opts) => {
+    if (!BLOCK_REASONS.includes(opts.reason)) {
+      throw new Error(
+        `Invalid --reason '${opts.reason}'. Must be one of (case-sensitive): ${BLOCK_REASONS.join(", ")}`
+      );
+    }
     const data = await guestyFetch(
       `/v1/availability-pricing/api/calendar/listings/${listingId}`,
       {
         method: "PUT",
         body: {
-          dateFrom: opts.from,
-          dateTo: opts.to,
+          startDate: opts.from,
+          endDate: opts.to,
           status: "unavailable",
+          blockReason: opts.reason,
           note: opts.note,
         },
       }
