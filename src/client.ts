@@ -62,8 +62,18 @@ export interface FetchOptions {
 
 export async function guestyFetch<T = unknown>(path: string, options: FetchOptions = {}): Promise<T> {
   const { method = "GET", body, params, headers: extraHeaders = {}, responseType = "auto" } = options;
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw new Error("Use an absolute Guesty Open API resource path, such as /v1/listings.");
+  }
+  const url = new URL(`${BASE_URL}${path}${params ? buildQuery(params) : ""}`);
+  const normalizedPath = decodeURIComponent(url.pathname).replace(/\\/g, "/");
+  if (/(?:^|\/)oauth2?(?:\/|$)/i.test(normalizedPath)) {
+    throw new Error("Guesty OAuth endpoints are disabled in this CLI. Use the designated server token-refresh workflow.");
+  }
+  if (Object.keys(extraHeaders).some((header) => header.toLowerCase() === "authorization")) {
+    throw new Error("The CLI supplies the cached Open API token; custom Authorization headers are not supported.");
+  }
   const token = await getToken();
-  const url = `${BASE_URL}${path}${params ? buildQuery(params) : ""}`;
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
@@ -83,13 +93,13 @@ export async function guestyFetch<T = unknown>(path: string, options: FetchOptio
     }
   }
 
-  let tokenRefreshed = false;
+  let cacheReread = false;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     await enforceRateLimit();
 
-    // Re-fetch token if it was invalidated on a previous attempt
-    if (tokenRefreshed) {
+    // Re-read the cache after a 401; CLI authentication cannot mint a token.
+    if (cacheReread) {
       headers.Authorization = `Bearer ${await getToken()}`;
     }
 
@@ -103,10 +113,13 @@ export async function guestyFetch<T = unknown>(path: string, options: FetchOptio
       return undefined as T;
     }
 
-    if (res.status === 401 && !tokenRefreshed) {
-      process.stderr.write(`Token expired (401). Refreshing...\n`);
+    if (res.status === 401) {
       invalidateToken();
-      tokenRefreshed = true;
+      if (cacheReread || attempt === MAX_RETRIES) {
+        throw new Error("Guesty rejected the cached Open API token (401). The designated server refresh workflow must restore a valid token; the CLI cannot refresh it.");
+      }
+      process.stderr.write("Guesty rejected the cached token (401). Re-reading the cache once...\n");
+      cacheReread = true;
       continue;
     }
 

@@ -1,7 +1,7 @@
 {
   "name": "guesty-cli",
-  "version": "1.1.0",
-  "description": "CLI for the Guesty property management API with built-in OAuth token caching and rate limiting",
+  "version": "1.1.1",
+  "description": "CLI for the Guesty property management API with read-only cached-token authentication and rate limiting",
   "type": "module",
   "bin": {
     "guesty": "dist/cli.js"
@@ -15,6 +15,9 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm test",
     "generate:cli-spec": "node scripts/generate-cli-spec.mjs",
     "link": "npm run build && npm link",
     "refresh:api-spec": "npx tsx scripts/refresh-api-spec.ts",

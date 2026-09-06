@@ -29,7 +29,7 @@ function parseHeaders(values: string[]): Record<string, string> {
 }
 
 export const raw = new Command("raw")
-  .description("Make a raw API call to any Guesty endpoint, including text, CSV, and binary payloads")
+  .description("Make a raw Guesty Open API resource request, including text, CSV, and binary payloads. OAuth endpoints are disabled.")
   .argument("<method>", "HTTP method (GET, POST, PUT, DELETE, PATCH)")
   .argument("<path>", "API path (e.g. /v1/listings)")
   .option("--data <json>", "JSON request body")
