@@ -57,7 +57,7 @@ function getCliVersion(): string {
 const program = new Command()
   .name("guesty")
   .version(getCliVersion())
-  .description("Guesty API CLI with OAuth token caching. Named commands cover common workflows, and 'raw' handles the rest of the API surface.");
+  .description("Guesty Open API CLI with read-only cached-token authentication. Named commands cover common workflows, and 'raw' handles other resource endpoints.");
 
 program.addCommand(init);
 program.addCommand(reservations);

@@ -1,6 +1,6 @@
 # Guesty CLI
 
-Command-line access to the [Guesty](https://guesty.com) Open API with OAuth token caching, rate limiting, and a `raw` escape hatch for any endpoint.
+Command-line access to the [Guesty](https://guesty.com) Open API with read-only cached-token authentication, rate limiting, and a `raw` escape hatch for resource endpoints.
 
 ## Quick Start
 
@@ -8,7 +8,7 @@ Command-line access to the [Guesty](https://guesty.com) Open API with OAuth toke
 npm install -g guesty-cli && guesty init
 ```
 
-This installs the CLI and walks you through entering your Guesty Open API credentials. Get them from **Guesty Dashboard > Marketplace > Open API**.
+This installs the CLI and displays shared-cache setup instructions. The CLI does not request OAuth tokens or collect Guesty client credentials.
 
 ## Install
 
@@ -30,14 +30,14 @@ npm link
 guesty init
 ```
 
-The CLI stores credentials in `~/.guesty-cli/.env` and caches tokens in `~/.guesty-cli/token.json`.
-
-You can also set environment variables directly:
+Configure the shared cache through your existing secret source. The CLI reads these environment variables, or loads them from `~/.guesty-cli/.env`:
 
 ```bash
-export GUESTY_CLIENT_ID=...
-export GUESTY_CLIENT_SECRET=...
+export SUPABASE_URL=...
+export SUPABASE_SERVICE_ROLE_KEY=...
 ```
+
+Keep secret files private and outside Git. `guesty init` prints guidance only; it does not write files, verify credentials, or refresh tokens. Existing Guesty client credentials are unused by the CLI.
 
 ## Getting a raw token
 
@@ -49,6 +49,8 @@ TOK=$(guesty token)                 # cached Open API token (for /v1/* endpoints
 guesty token --beapi                # cached BEAPI (booking-engine) token
 guesty token --json                 # token + expiry metadata
 ```
+
+Both token types must have more than five minutes remaining. Missing, expired, rejected, malformed, or incorrectly typed cache entries produce an error and no token output. Restore the cache through the designated server token-refresh workflow; the CLI cannot create a replacement.
 
 ## Examples
 
@@ -84,7 +86,8 @@ guesty owners download-document <ownerId> <documentId> --output owner-doc.pdf
 
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `init` | | Set up credentials |
+| `init` | | Show shared-cache setup instructions |
+| `token` | | Read a valid cached Open API or BEAPI token |
 | `reservations` | `res` | Reservations (v1 + v3), exports, reports |
 | `listings` | `ls` | Listings CRUD, exports |
 | `calendar` | `cal` | Calendar and availability |
@@ -160,7 +163,20 @@ guesty raw POST /v1/reservations-v3 --data-file reservation.json
 
 ## Authentication
 
-Tokens are cached to disk and auto-refresh when they expire. Guesty enforces a strict **5 tokens per 24 hours** limit — the CLI tracks this locally and will block requests rather than burn tokens.
+Authentication is read-only throughout the CLI, including `init`, normal API commands, and 401 recovery. Guesty allows only **5 OAuth tokens per 24 hours**, so token creation and refresh belong exclusively to the designated server workflow. The CLI never calls an OAuth endpoint or writes to the shared or local token cache. `raw` also rejects OAuth paths.
+
+Open API commands use `token_type=openapi`; `guesty token --beapi` reads only `token_type=beapi`. Each Supabase query filters its type and validates the returned row's type, token string, and numeric `expires_at` timestamp in milliseconds. Custom Authorization headers cannot override that scope. A 401 clears only the process's copy and permits one retry if a different valid cached token is available.
+
+For Open API only, an existing `~/.guesty-cli/token.json` may supply a token in the shape `{ "token": { "token_type": "openapi", "access_token": "...", "expires_at": 1800000000000 } }`. Legacy files without an explicit `token_type` are ignored because their API scope cannot be verified. The CLI then reads the shared cache. It retains tokens in memory for the current process but does not rewrite disk caches. BEAPI never uses the Open API disk cache.
+
+## Development checks
+
+```bash
+npm ci
+npm run check
+```
+
+The check compiles the strict TypeScript project and runs the offline authentication regression suite. Tests replace all network calls and private-cache reads with fake data, reject file writes, and prove that cache failures cannot request OAuth tokens. Never test authentication by requesting a real token or running a live `guesty init` credential verification.
 
 ## Rate Limiting
 

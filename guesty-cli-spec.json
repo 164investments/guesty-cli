@@ -1,8 +1,8 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-04-10T21:15:39.892Z",
-  "cliVersion": "1.1.0",
+  "generatedAt": "2026-09-06T19:14:55.647Z",
+  "cliVersion": "1.1.1",
   "generatedFrom": {
     "packageFile": "package.json",
     "commandFiles": [
@@ -40,6 +40,7 @@
       "src/commands/saved-replies.ts",
       "src/commands/tasks.ts",
       "src/commands/taxes.ts",
+      "src/commands/token.ts",
       "src/commands/user-scope.ts",
       "src/commands/users.ts",
       "src/commands/webhooks.ts"
@@ -28137,9 +28138,9 @@
     {
       "name": "init",
       "alias": null,
-      "description": "Set up Guesty CLI with your API credentials",
+      "description": "Show setup instructions for read-only access to cached Guesty tokens",
       "sourceFile": "src/commands/init.ts",
-      "line": 81,
+      "line": 3,
       "operations": [
         {
           "id": "guesty init",
@@ -28147,15 +28148,15 @@
           "name": "init",
           "syntax": "init",
           "fullCommand": "guesty init",
-          "description": "Set up Guesty CLI with your API credentials",
+          "description": "Show setup instructions for read-only access to cached Guesty tokens",
           "arguments": [],
           "options": [
             {
               "flags": "--force",
-              "description": "Overwrite existing configuration",
+              "description": "Show setup instructions; existing files are preserved",
               "required": false,
               "defaultValue": null,
-              "line": 81
+              "line": 3
             }
           ],
           "inputCapabilities": {
@@ -28169,7 +28170,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/init.ts",
-          "line": 81
+          "line": 3
         }
       ]
     },
@@ -74377,7 +74378,7 @@
     {
       "name": "raw",
       "alias": null,
-      "description": "Make a raw API call to any Guesty endpoint, including text, CSV, and binary payloads",
+      "description": "Make a raw Guesty Open API resource request, including text, CSV, and binary payloads. OAuth endpoints are disabled.",
       "sourceFile": "src/commands/raw.ts",
       "line": 31,
       "operations": [
@@ -74387,7 +74388,7 @@
           "name": "raw",
           "syntax": "raw",
           "fullCommand": "guesty raw",
-          "description": "Make a raw API call to any Guesty endpoint, including text, CSV, and binary payloads",
+          "description": "Make a raw Guesty Open API resource request, including text, CSV, and binary payloads. OAuth endpoints are disabled.",
           "arguments": [
             {
               "syntax": "<method>",
@@ -96312,6 +96313,52 @@
           ],
           "sourceFile": "src/commands/taxes.ts",
           "line": 71
+        }
+      ]
+    },
+    {
+      "name": "token",
+      "alias": null,
+      "description": "Print a valid cached Guesty Open API token. Use --beapi for booking-engine scope. Fails if the correct cached token is unavailable; never requests OAuth tokens.",
+      "sourceFile": "src/commands/token.ts",
+      "line": 5,
+      "operations": [
+        {
+          "id": "guesty token",
+          "rootAction": true,
+          "name": "token",
+          "syntax": "token",
+          "fullCommand": "guesty token",
+          "description": "Print a valid cached Guesty Open API token. Use --beapi for booking-engine scope. Fails if the correct cached token is unavailable; never requests OAuth tokens.",
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--beapi",
+              "description": "Print the cached BEAPI (booking-engine scope) token instead of Open API",
+              "required": false,
+              "defaultValue": null,
+              "line": 5
+            },
+            {
+              "flags": "--json",
+              "description": "Print token metadata (token_type, access_token, expires_at) as JSON",
+              "required": false,
+              "defaultValue": null,
+              "line": 5
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/token.ts",
+          "line": 5
         }
       ]
     },
@@ -128101,15 +128148,15 @@
       "name": "init",
       "syntax": "init",
       "fullCommand": "guesty init",
-      "description": "Set up Guesty CLI with your API credentials",
+      "description": "Show setup instructions for read-only access to cached Guesty tokens",
       "arguments": [],
       "options": [
         {
           "flags": "--force",
-          "description": "Overwrite existing configuration",
+          "description": "Show setup instructions; existing files are preserved",
           "required": false,
           "defaultValue": null,
-          "line": 81
+          "line": 3
         }
       ],
       "inputCapabilities": {
@@ -128123,7 +128170,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/init.ts",
-      "line": 81
+      "line": 3
     },
     {
       "id": "guesty integrations channels",
@@ -174224,7 +174271,7 @@
       "name": "raw",
       "syntax": "raw",
       "fullCommand": "guesty raw",
-      "description": "Make a raw API call to any Guesty endpoint, including text, CSV, and binary payloads",
+      "description": "Make a raw Guesty Open API resource request, including text, CSV, and binary payloads. OAuth endpoints are disabled.",
       "arguments": [
         {
           "syntax": "<method>",
@@ -196104,6 +196151,43 @@
       ],
       "sourceFile": "src/commands/taxes.ts",
       "line": 19
+    },
+    {
+      "id": "guesty token",
+      "rootAction": true,
+      "name": "token",
+      "syntax": "token",
+      "fullCommand": "guesty token",
+      "description": "Print a valid cached Guesty Open API token. Use --beapi for booking-engine scope. Fails if the correct cached token is unavailable; never requests OAuth tokens.",
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--beapi",
+          "description": "Print the cached BEAPI (booking-engine scope) token instead of Open API",
+          "required": false,
+          "defaultValue": null,
+          "line": 5
+        },
+        {
+          "flags": "--json",
+          "description": "Print token metadata (token_type, access_token, expires_at) as JSON",
+          "required": false,
+          "defaultValue": null,
+          "line": 5
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/token.ts",
+      "line": 5
     },
     {
       "id": "guesty user-scope assign",
