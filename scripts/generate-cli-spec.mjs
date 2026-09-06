@@ -354,7 +354,16 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
   function visit(node) {
     if (ts.isCallExpression(node)) {
       const helperName = ts.isIdentifier(node.expression) ? node.expression.text : null;
-      if (helperName === "guestyFetch" || helperName === "paginateAll") {
+      if (helperName === "verifyListingProviders" || helperName === "unassignListingProviders") {
+        const helperPath = join(ROOT, "src", "payment-provider-operations.ts");
+        const helperFile = ts.createSourceFile(helperPath, readFileSync(helperPath, "utf8"), ts.ScriptTarget.Latest, true);
+        const helper = helperFile.statements.find((statement) =>
+          ts.isFunctionDeclaration(statement) && statement.name?.text === helperName
+        );
+        if (helper) requests.push(...extractRequestDetails(helper, helperFile, reference));
+      }
+      const injectedRequest = helperName === "request" && sourceFile.fileName.endsWith("/payment-provider-operations.ts");
+      if (helperName === "guestyFetch" || helperName === "paginateAll" || injectedRequest) {
         const path = templateToPath(node.arguments[0]);
         let method = "GET";
         let responseType = "auto";
@@ -362,7 +371,7 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
         let paginated = helperName === "paginateAll";
         let resultsKey = helperName === "paginateAll" ? getLiteralValue(node.arguments[2]) : null;
 
-        if (helperName === "guestyFetch" && node.arguments[1] && ts.isObjectLiteralExpression(node.arguments[1])) {
+        if ((helperName === "guestyFetch" || injectedRequest) && node.arguments[1] && ts.isObjectLiteralExpression(node.arguments[1])) {
           for (const property of node.arguments[1].properties) {
             if (!ts.isPropertyAssignment(property)) continue;
             const propertyName = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
@@ -408,6 +417,7 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
           responseType,
           queryParams: params,
           line: lineForNode(node, sourceFile),
+          ...(injectedRequest ? { sourceFile: relative(ROOT, sourceFile.fileName) } : {}),
           reference: matchReference(method, path),
         });
       }
