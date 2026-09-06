@@ -123,6 +123,40 @@ guesty owners download-document <ownerId> <documentId> --output owner-doc.pdf
 
 Run `guesty <command> --help` for subcommands and options.
 
+## Payment provider reassignment
+
+Moving a listing between payment processors requires returning it to the default
+provider first. `unassign-listings` uses the Open API and its existing OAuth cache;
+it does not need Chrome or a separate web token. The endpoint
+`POST /v1/payment-providers/{id}/unassign-listings` was verified against Guesty on
+6 September 2026, although it is absent from the published Open API reference.
+It accepts the same `{ "listingIds": [...] }` body as `assign-listings`.
+
+```bash
+# listings.json contains 1-100 unique listing IDs in {"listingIds":[...]}
+guesty pp default
+guesty pp unassign-listings <sourceProviderId> --expect-default <defaultProviderId> --dry-run < listings.json
+guesty pp unassign-listings <sourceProviderId> --expect-default <defaultProviderId> < listings.json
+
+# When the default is the desired destination, the move is complete.
+# Otherwise assign the released listings to the desired provider.
+guesty pp assign-listings <targetProviderId> < listings.json
+guesty pp verify-listings <targetProviderId> --stripe-account <stripeAccountId> < listings.json
+```
+
+Unassign checks the default and current listing assignments before writing,
+skips listings already on the default, and verifies the effective provider after
+the request. Listings owned by another provider prevent the entire write.
+The verification command also checks active status and, when supplied, the
+connected Stripe account. It exits with status 1 on a mismatch. A failed or
+unverified write is not automatically retried.
+
+Explicit listing counts on the default provider omit listings falling back to
+that default. Verify effective providers rather than relying on the count.
+Existing stored cards keep their original processor; retain the old provider for
+those cards and historical payments. See
+[Guesty's reassignment guide](https://help.guesty.com/hc/en-gb/articles/9361339589277-Assigning-a-listing-to-a-payment-processing-account).
+
 ## Raw Requests
 
 `raw` supports JSON, text, CSV, and binary request/response flows.

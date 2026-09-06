@@ -1,7 +1,7 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-04-10T21:15:39.892Z",
+  "generatedAt": "2026-09-06T21:54:28.296Z",
   "cliVersion": "1.1.0",
   "generatedFrom": {
     "packageFile": "package.json",
@@ -58585,7 +58585,7 @@
       "alias": "pp",
       "description": "Manage payment providers",
       "sourceFile": "src/commands/payment-providers.ts",
-      "line": 6,
+      "line": 7,
       "operations": [
         {
           "id": "guesty payment-providers summary",
@@ -58615,7 +58615,7 @@
               "resultsKey": null,
               "responseType": "auto",
               "queryParams": [],
-              "line": 14,
+              "line": 15,
               "reference": [
                 {
                   "group": "payment-providers",
@@ -58632,7 +58632,7 @@
             }
           ],
           "sourceFile": "src/commands/payment-providers.ts",
-          "line": 10
+          "line": 11
         },
         {
           "id": "guesty payment-providers default",
@@ -58662,7 +58662,7 @@
               "resultsKey": null,
               "responseType": "auto",
               "queryParams": [],
-              "line": 22,
+              "line": 23,
               "reference": [
                 {
                   "group": "payment-providers",
@@ -58679,7 +58679,7 @@
             }
           ],
           "sourceFile": "src/commands/payment-providers.ts",
-          "line": 18
+          "line": 19
         },
         {
           "id": "guesty payment-providers stats",
@@ -58709,7 +58709,7 @@
               "resultsKey": null,
               "responseType": "auto",
               "queryParams": [],
-              "line": 30,
+              "line": 31,
               "reference": [
                 {
                   "group": "payment-providers",
@@ -58777,7 +58777,7 @@
             }
           ],
           "sourceFile": "src/commands/payment-providers.ts",
-          "line": 26
+          "line": 27
         },
         {
           "id": "guesty payment-providers get <providerId>",
@@ -58813,7 +58813,7 @@
               "resultsKey": null,
               "responseType": "auto",
               "queryParams": [],
-              "line": 38,
+              "line": 39,
               "reference": [
                 {
                   "group": "payment-providers",
@@ -58869,7 +58869,7 @@
             }
           ],
           "sourceFile": "src/commands/payment-providers.ts",
-          "line": 34
+          "line": 35
         },
         {
           "id": "guesty payment-providers by-listing",
@@ -58883,9 +58883,9 @@
             {
               "flags": "--listing <id>",
               "description": "Listing ID",
-              "required": false,
+              "required": true,
               "defaultValue": null,
-              "line": 42
+              "line": 43
             }
           ],
           "inputCapabilities": {
@@ -58913,7 +58913,7 @@
                   "cliOption": "listing"
                 }
               ],
-              "line": 49,
+              "line": 50,
               "reference": [
                 {
                   "group": "payment-providers",
@@ -58986,7 +58986,7 @@
             }
           ],
           "sourceFile": "src/commands/payment-providers.ts",
-          "line": 42
+          "line": 43
         },
         {
           "id": "guesty payment-providers assign-listings <id>",
@@ -59008,7 +59008,7 @@
               "description": "JSON body",
               "required": false,
               "defaultValue": null,
-              "line": 53
+              "line": 54
             }
           ],
           "inputCapabilities": {
@@ -59030,7 +59030,7 @@
               "resultsKey": null,
               "responseType": "auto",
               "queryParams": [],
-              "line": 59,
+              "line": 61,
               "reference": [
                 {
                   "group": "payment-providers",
@@ -59134,7 +59134,465 @@
             }
           ],
           "sourceFile": "src/commands/payment-providers.ts",
-          "line": 53
+          "line": 54
+        },
+        {
+          "id": "guesty payment-providers unassign-listings <id>",
+          "rootAction": false,
+          "name": "unassign-listings",
+          "syntax": "unassign-listings <id>",
+          "fullCommand": "guesty payment-providers unassign-listings <id>",
+          "description": "Return listings to the default payment provider and verify the result (--data or stdin)",
+          "arguments": [
+            {
+              "name": "id",
+              "required": true,
+              "variadic": false
+            }
+          ],
+          "options": [
+            {
+              "flags": "--data <json>",
+              "description": "JSON body containing listingIds",
+              "required": false,
+              "defaultValue": null,
+              "line": 65
+            },
+            {
+              "flags": "--expect-default <id>",
+              "description": "Require this default provider before changing assignments",
+              "required": false,
+              "defaultValue": null,
+              "line": 65
+            },
+            {
+              "flags": "--dry-run",
+              "description": "Read and show the proposed move without changing assignments",
+              "required": false,
+              "defaultValue": null,
+              "line": 65
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": true,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": true,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [
+            {
+              "helper": "request",
+              "method": "GET",
+              "path": "/v1/payment-providers/{param}",
+              "dynamicPath": false,
+              "paginated": false,
+              "resultsKey": null,
+              "responseType": "auto",
+              "queryParams": [],
+              "line": 54,
+              "sourceFile": "src/payment-provider-operations.ts",
+              "reference": [
+                {
+                  "group": "payment-providers",
+                  "title": "Get payment provider by id",
+                  "slug": "getpaymentprovider",
+                  "docsUrl": "https://open-api-docs.guesty.com/reference/getpaymentprovider",
+                  "parameters": [
+                    {
+                      "name": "providerId",
+                      "in": "path",
+                      "required": true,
+                      "description": null,
+                      "type": "string",
+                      "enum": null,
+                      "example": null,
+                      "default": "5ee77a05825236b6d5aab005"
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "description": "Response received",
+                      "contentType": "application/json; charset=utf-8",
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string"
+                          },
+                          "accountName": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "isDefault": {
+                            "type": "boolean"
+                          },
+                          "listingsCount": {
+                            "type": "number"
+                          },
+                          "paymentMethodsCount": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "_id"
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "helper": "request",
+              "method": "GET",
+              "path": "/v1/payment-providers/default",
+              "dynamicPath": false,
+              "paginated": false,
+              "resultsKey": null,
+              "responseType": "auto",
+              "queryParams": [],
+              "line": 55,
+              "sourceFile": "src/payment-provider-operations.ts",
+              "reference": [
+                {
+                  "group": "payment-providers",
+                  "title": "Get default payment provider",
+                  "slug": "getdefaultprovider",
+                  "docsUrl": "https://open-api-docs.guesty.com/reference/getdefaultprovider",
+                  "responses": {
+                    "200": {
+                      "description": "Response received"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "helper": "request",
+              "method": "GET",
+              "path": "/v1/payment-providers/provider-by-listing",
+              "dynamicPath": false,
+              "paginated": false,
+              "resultsKey": null,
+              "responseType": "auto",
+              "queryParams": [
+                {
+                  "name": "listingId",
+                  "source": "listingId",
+                  "cliOption": null
+                }
+              ],
+              "line": 32,
+              "sourceFile": "src/payment-provider-operations.ts",
+              "reference": [
+                {
+                  "group": "payment-providers",
+                  "title": "Get payment provider by listing id",
+                  "slug": "getpaymentproviderbylisting",
+                  "docsUrl": "https://open-api-docs.guesty.com/reference/getpaymentproviderbylisting",
+                  "parameters": [
+                    {
+                      "name": "includeInactiveProviders",
+                      "in": "query",
+                      "required": false,
+                      "description": "include inactive providers in the response.",
+                      "type": "boolean",
+                      "enum": null,
+                      "example": null,
+                      "default": false
+                    },
+                    {
+                      "name": "listingId",
+                      "in": "query",
+                      "required": true,
+                      "description": "listing id",
+                      "type": "string",
+                      "enum": null,
+                      "example": null,
+                      "default": null
+                    },
+                    {
+                      "name": "fields",
+                      "in": "query",
+                      "required": false,
+                      "description": "Selection of fields, separated by space. When null retrieve the main properties of the object. We recommend always specifying the specific fields you'd like to receive to ensure that you get them.",
+                      "type": "string",
+                      "enum": null,
+                      "example": null,
+                      "default": null
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "description": "Response received",
+                      "contentType": "application/json; charset=utf-8",
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string"
+                          },
+                          "accountName": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "isDefault": {
+                            "type": "boolean"
+                          },
+                          "listingsCount": {
+                            "type": "number"
+                          },
+                          "paymentMethodsCount": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "helper": "request",
+              "method": "POST",
+              "path": "/v1/payment-providers/{param}/unassign-listings",
+              "dynamicPath": false,
+              "paginated": false,
+              "resultsKey": null,
+              "responseType": "auto",
+              "queryParams": [],
+              "line": 71,
+              "sourceFile": "src/payment-provider-operations.ts",
+              "reference": []
+            },
+            {
+              "helper": "request",
+              "method": "GET",
+              "path": "/v1/payment-providers/provider-by-listing",
+              "dynamicPath": false,
+              "paginated": false,
+              "resultsKey": null,
+              "responseType": "auto",
+              "queryParams": [
+                {
+                  "name": "listingId",
+                  "source": "listingId",
+                  "cliOption": null
+                }
+              ],
+              "line": 32,
+              "sourceFile": "src/payment-provider-operations.ts",
+              "reference": [
+                {
+                  "group": "payment-providers",
+                  "title": "Get payment provider by listing id",
+                  "slug": "getpaymentproviderbylisting",
+                  "docsUrl": "https://open-api-docs.guesty.com/reference/getpaymentproviderbylisting",
+                  "parameters": [
+                    {
+                      "name": "includeInactiveProviders",
+                      "in": "query",
+                      "required": false,
+                      "description": "include inactive providers in the response.",
+                      "type": "boolean",
+                      "enum": null,
+                      "example": null,
+                      "default": false
+                    },
+                    {
+                      "name": "listingId",
+                      "in": "query",
+                      "required": true,
+                      "description": "listing id",
+                      "type": "string",
+                      "enum": null,
+                      "example": null,
+                      "default": null
+                    },
+                    {
+                      "name": "fields",
+                      "in": "query",
+                      "required": false,
+                      "description": "Selection of fields, separated by space. When null retrieve the main properties of the object. We recommend always specifying the specific fields you'd like to receive to ensure that you get them.",
+                      "type": "string",
+                      "enum": null,
+                      "example": null,
+                      "default": null
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "description": "Response received",
+                      "contentType": "application/json; charset=utf-8",
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string"
+                          },
+                          "accountName": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "isDefault": {
+                            "type": "boolean"
+                          },
+                          "listingsCount": {
+                            "type": "number"
+                          },
+                          "paymentMethodsCount": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "sourceFile": "src/commands/payment-providers.ts",
+          "line": 65
+        },
+        {
+          "id": "guesty payment-providers verify-listings <providerId>",
+          "rootAction": false,
+          "name": "verify-listings",
+          "syntax": "verify-listings <providerId>",
+          "fullCommand": "guesty payment-providers verify-listings <providerId>",
+          "description": "Check effective listing providers, including default fallback; exit 1 on mismatch (--data or stdin)",
+          "arguments": [
+            {
+              "name": "providerId",
+              "required": true,
+              "variadic": false
+            }
+          ],
+          "options": [
+            {
+              "flags": "--data <json>",
+              "description": "JSON body containing listingIds",
+              "required": false,
+              "defaultValue": null,
+              "line": 76
+            },
+            {
+              "flags": "--stripe-account <id>",
+              "description": "Also require this connected Stripe account",
+              "required": false,
+              "defaultValue": null,
+              "line": 76
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": true,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": true,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [
+            {
+              "helper": "request",
+              "method": "GET",
+              "path": "/v1/payment-providers/provider-by-listing",
+              "dynamicPath": false,
+              "paginated": false,
+              "resultsKey": null,
+              "responseType": "auto",
+              "queryParams": [
+                {
+                  "name": "listingId",
+                  "source": "listingId",
+                  "cliOption": null
+                }
+              ],
+              "line": 32,
+              "sourceFile": "src/payment-provider-operations.ts",
+              "reference": [
+                {
+                  "group": "payment-providers",
+                  "title": "Get payment provider by listing id",
+                  "slug": "getpaymentproviderbylisting",
+                  "docsUrl": "https://open-api-docs.guesty.com/reference/getpaymentproviderbylisting",
+                  "parameters": [
+                    {
+                      "name": "includeInactiveProviders",
+                      "in": "query",
+                      "required": false,
+                      "description": "include inactive providers in the response.",
+                      "type": "boolean",
+                      "enum": null,
+                      "example": null,
+                      "default": false
+                    },
+                    {
+                      "name": "listingId",
+                      "in": "query",
+                      "required": true,
+                      "description": "listing id",
+                      "type": "string",
+                      "enum": null,
+                      "example": null,
+                      "default": null
+                    },
+                    {
+                      "name": "fields",
+                      "in": "query",
+                      "required": false,
+                      "description": "Selection of fields, separated by space. When null retrieve the main properties of the object. We recommend always specifying the specific fields you'd like to receive to ensure that you get them.",
+                      "type": "string",
+                      "enum": null,
+                      "example": null,
+                      "default": null
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "description": "Response received",
+                      "contentType": "application/json; charset=utf-8",
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string"
+                          },
+                          "accountName": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "isDefault": {
+                            "type": "boolean"
+                          },
+                          "listingsCount": {
+                            "type": "number"
+                          },
+                          "paymentMethodsCount": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "sourceFile": "src/commands/payment-providers.ts",
+          "line": 76
         }
       ]
     },
@@ -158507,7 +158965,7 @@
           "description": "JSON body",
           "required": false,
           "defaultValue": null,
-          "line": 53
+          "line": 54
         }
       ],
       "inputCapabilities": {
@@ -158529,7 +158987,7 @@
           "resultsKey": null,
           "responseType": "auto",
           "queryParams": [],
-          "line": 59,
+          "line": 61,
           "reference": [
             {
               "group": "payment-providers",
@@ -158633,7 +159091,7 @@
         }
       ],
       "sourceFile": "src/commands/payment-providers.ts",
-      "line": 53
+      "line": 54
     },
     {
       "id": "guesty payment-providers by-listing",
@@ -158647,9 +159105,9 @@
         {
           "flags": "--listing <id>",
           "description": "Listing ID",
-          "required": false,
+          "required": true,
           "defaultValue": null,
-          "line": 42
+          "line": 43
         }
       ],
       "inputCapabilities": {
@@ -158677,7 +159135,7 @@
               "cliOption": "listing"
             }
           ],
-          "line": 49,
+          "line": 50,
           "reference": [
             {
               "group": "payment-providers",
@@ -158750,7 +159208,7 @@
         }
       ],
       "sourceFile": "src/commands/payment-providers.ts",
-      "line": 42
+      "line": 43
     },
     {
       "id": "guesty payment-providers default",
@@ -158780,7 +159238,7 @@
           "resultsKey": null,
           "responseType": "auto",
           "queryParams": [],
-          "line": 22,
+          "line": 23,
           "reference": [
             {
               "group": "payment-providers",
@@ -158797,7 +159255,7 @@
         }
       ],
       "sourceFile": "src/commands/payment-providers.ts",
-      "line": 18
+      "line": 19
     },
     {
       "id": "guesty payment-providers get <providerId>",
@@ -158833,7 +159291,7 @@
           "resultsKey": null,
           "responseType": "auto",
           "queryParams": [],
-          "line": 38,
+          "line": 39,
           "reference": [
             {
               "group": "payment-providers",
@@ -158889,7 +159347,7 @@
         }
       ],
       "sourceFile": "src/commands/payment-providers.ts",
-      "line": 34
+      "line": 35
     },
     {
       "id": "guesty payment-providers stats",
@@ -158919,7 +159377,7 @@
           "resultsKey": null,
           "responseType": "auto",
           "queryParams": [],
-          "line": 30,
+          "line": 31,
           "reference": [
             {
               "group": "payment-providers",
@@ -158987,7 +159445,7 @@
         }
       ],
       "sourceFile": "src/commands/payment-providers.ts",
-      "line": 26
+      "line": 27
     },
     {
       "id": "guesty payment-providers summary",
@@ -159017,7 +159475,7 @@
           "resultsKey": null,
           "responseType": "auto",
           "queryParams": [],
-          "line": 14,
+          "line": 15,
           "reference": [
             {
               "group": "payment-providers",
@@ -159034,7 +159492,465 @@
         }
       ],
       "sourceFile": "src/commands/payment-providers.ts",
-      "line": 10
+      "line": 11
+    },
+    {
+      "id": "guesty payment-providers unassign-listings <id>",
+      "rootAction": false,
+      "name": "unassign-listings",
+      "syntax": "unassign-listings <id>",
+      "fullCommand": "guesty payment-providers unassign-listings <id>",
+      "description": "Return listings to the default payment provider and verify the result (--data or stdin)",
+      "arguments": [
+        {
+          "name": "id",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "options": [
+        {
+          "flags": "--data <json>",
+          "description": "JSON body containing listingIds",
+          "required": false,
+          "defaultValue": null,
+          "line": 65
+        },
+        {
+          "flags": "--expect-default <id>",
+          "description": "Require this default provider before changing assignments",
+          "required": false,
+          "defaultValue": null,
+          "line": 65
+        },
+        {
+          "flags": "--dry-run",
+          "description": "Read and show the proposed move without changing assignments",
+          "required": false,
+          "defaultValue": null,
+          "line": 65
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": true,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": true,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [
+        {
+          "helper": "request",
+          "method": "GET",
+          "path": "/v1/payment-providers/{param}",
+          "dynamicPath": false,
+          "paginated": false,
+          "resultsKey": null,
+          "responseType": "auto",
+          "queryParams": [],
+          "line": 54,
+          "sourceFile": "src/payment-provider-operations.ts",
+          "reference": [
+            {
+              "group": "payment-providers",
+              "title": "Get payment provider by id",
+              "slug": "getpaymentprovider",
+              "docsUrl": "https://open-api-docs.guesty.com/reference/getpaymentprovider",
+              "parameters": [
+                {
+                  "name": "providerId",
+                  "in": "path",
+                  "required": true,
+                  "description": null,
+                  "type": "string",
+                  "enum": null,
+                  "example": null,
+                  "default": "5ee77a05825236b6d5aab005"
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Response received",
+                  "contentType": "application/json; charset=utf-8",
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "_id": {
+                        "type": "string"
+                      },
+                      "accountName": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "isDefault": {
+                        "type": "boolean"
+                      },
+                      "listingsCount": {
+                        "type": "number"
+                      },
+                      "paymentMethodsCount": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "_id"
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "helper": "request",
+          "method": "GET",
+          "path": "/v1/payment-providers/default",
+          "dynamicPath": false,
+          "paginated": false,
+          "resultsKey": null,
+          "responseType": "auto",
+          "queryParams": [],
+          "line": 55,
+          "sourceFile": "src/payment-provider-operations.ts",
+          "reference": [
+            {
+              "group": "payment-providers",
+              "title": "Get default payment provider",
+              "slug": "getdefaultprovider",
+              "docsUrl": "https://open-api-docs.guesty.com/reference/getdefaultprovider",
+              "responses": {
+                "200": {
+                  "description": "Response received"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "helper": "request",
+          "method": "GET",
+          "path": "/v1/payment-providers/provider-by-listing",
+          "dynamicPath": false,
+          "paginated": false,
+          "resultsKey": null,
+          "responseType": "auto",
+          "queryParams": [
+            {
+              "name": "listingId",
+              "source": "listingId",
+              "cliOption": null
+            }
+          ],
+          "line": 32,
+          "sourceFile": "src/payment-provider-operations.ts",
+          "reference": [
+            {
+              "group": "payment-providers",
+              "title": "Get payment provider by listing id",
+              "slug": "getpaymentproviderbylisting",
+              "docsUrl": "https://open-api-docs.guesty.com/reference/getpaymentproviderbylisting",
+              "parameters": [
+                {
+                  "name": "includeInactiveProviders",
+                  "in": "query",
+                  "required": false,
+                  "description": "include inactive providers in the response.",
+                  "type": "boolean",
+                  "enum": null,
+                  "example": null,
+                  "default": false
+                },
+                {
+                  "name": "listingId",
+                  "in": "query",
+                  "required": true,
+                  "description": "listing id",
+                  "type": "string",
+                  "enum": null,
+                  "example": null,
+                  "default": null
+                },
+                {
+                  "name": "fields",
+                  "in": "query",
+                  "required": false,
+                  "description": "Selection of fields, separated by space. When null retrieve the main properties of the object. We recommend always specifying the specific fields you'd like to receive to ensure that you get them.",
+                  "type": "string",
+                  "enum": null,
+                  "example": null,
+                  "default": null
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Response received",
+                  "contentType": "application/json; charset=utf-8",
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "_id": {
+                        "type": "string"
+                      },
+                      "accountName": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "isDefault": {
+                        "type": "boolean"
+                      },
+                      "listingsCount": {
+                        "type": "number"
+                      },
+                      "paymentMethodsCount": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "helper": "request",
+          "method": "POST",
+          "path": "/v1/payment-providers/{param}/unassign-listings",
+          "dynamicPath": false,
+          "paginated": false,
+          "resultsKey": null,
+          "responseType": "auto",
+          "queryParams": [],
+          "line": 71,
+          "sourceFile": "src/payment-provider-operations.ts",
+          "reference": []
+        },
+        {
+          "helper": "request",
+          "method": "GET",
+          "path": "/v1/payment-providers/provider-by-listing",
+          "dynamicPath": false,
+          "paginated": false,
+          "resultsKey": null,
+          "responseType": "auto",
+          "queryParams": [
+            {
+              "name": "listingId",
+              "source": "listingId",
+              "cliOption": null
+            }
+          ],
+          "line": 32,
+          "sourceFile": "src/payment-provider-operations.ts",
+          "reference": [
+            {
+              "group": "payment-providers",
+              "title": "Get payment provider by listing id",
+              "slug": "getpaymentproviderbylisting",
+              "docsUrl": "https://open-api-docs.guesty.com/reference/getpaymentproviderbylisting",
+              "parameters": [
+                {
+                  "name": "includeInactiveProviders",
+                  "in": "query",
+                  "required": false,
+                  "description": "include inactive providers in the response.",
+                  "type": "boolean",
+                  "enum": null,
+                  "example": null,
+                  "default": false
+                },
+                {
+                  "name": "listingId",
+                  "in": "query",
+                  "required": true,
+                  "description": "listing id",
+                  "type": "string",
+                  "enum": null,
+                  "example": null,
+                  "default": null
+                },
+                {
+                  "name": "fields",
+                  "in": "query",
+                  "required": false,
+                  "description": "Selection of fields, separated by space. When null retrieve the main properties of the object. We recommend always specifying the specific fields you'd like to receive to ensure that you get them.",
+                  "type": "string",
+                  "enum": null,
+                  "example": null,
+                  "default": null
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Response received",
+                  "contentType": "application/json; charset=utf-8",
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "_id": {
+                        "type": "string"
+                      },
+                      "accountName": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "isDefault": {
+                        "type": "boolean"
+                      },
+                      "listingsCount": {
+                        "type": "number"
+                      },
+                      "paymentMethodsCount": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "sourceFile": "src/commands/payment-providers.ts",
+      "line": 65
+    },
+    {
+      "id": "guesty payment-providers verify-listings <providerId>",
+      "rootAction": false,
+      "name": "verify-listings",
+      "syntax": "verify-listings <providerId>",
+      "fullCommand": "guesty payment-providers verify-listings <providerId>",
+      "description": "Check effective listing providers, including default fallback; exit 1 on mismatch (--data or stdin)",
+      "arguments": [
+        {
+          "name": "providerId",
+          "required": true,
+          "variadic": false
+        }
+      ],
+      "options": [
+        {
+          "flags": "--data <json>",
+          "description": "JSON body containing listingIds",
+          "required": false,
+          "defaultValue": null,
+          "line": 76
+        },
+        {
+          "flags": "--stripe-account <id>",
+          "description": "Also require this connected Stripe account",
+          "required": false,
+          "defaultValue": null,
+          "line": 76
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": true,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": true,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [
+        {
+          "helper": "request",
+          "method": "GET",
+          "path": "/v1/payment-providers/provider-by-listing",
+          "dynamicPath": false,
+          "paginated": false,
+          "resultsKey": null,
+          "responseType": "auto",
+          "queryParams": [
+            {
+              "name": "listingId",
+              "source": "listingId",
+              "cliOption": null
+            }
+          ],
+          "line": 32,
+          "sourceFile": "src/payment-provider-operations.ts",
+          "reference": [
+            {
+              "group": "payment-providers",
+              "title": "Get payment provider by listing id",
+              "slug": "getpaymentproviderbylisting",
+              "docsUrl": "https://open-api-docs.guesty.com/reference/getpaymentproviderbylisting",
+              "parameters": [
+                {
+                  "name": "includeInactiveProviders",
+                  "in": "query",
+                  "required": false,
+                  "description": "include inactive providers in the response.",
+                  "type": "boolean",
+                  "enum": null,
+                  "example": null,
+                  "default": false
+                },
+                {
+                  "name": "listingId",
+                  "in": "query",
+                  "required": true,
+                  "description": "listing id",
+                  "type": "string",
+                  "enum": null,
+                  "example": null,
+                  "default": null
+                },
+                {
+                  "name": "fields",
+                  "in": "query",
+                  "required": false,
+                  "description": "Selection of fields, separated by space. When null retrieve the main properties of the object. We recommend always specifying the specific fields you'd like to receive to ensure that you get them.",
+                  "type": "string",
+                  "enum": null,
+                  "example": null,
+                  "default": null
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Response received",
+                  "contentType": "application/json; charset=utf-8",
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "_id": {
+                        "type": "string"
+                      },
+                      "accountName": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "isDefault": {
+                        "type": "boolean"
+                      },
+                      "listingsCount": {
+                        "type": "number"
+                      },
+                      "paymentMethodsCount": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "sourceFile": "src/commands/payment-providers.ts",
+      "line": 76
     },
     {
       "id": "guesty price-adjustments create",
@@ -199913,7 +200829,7 @@
   ],
   "referenceCoverage": {
     "referenceFile": "api-spec.json",
-    "implementedUniqueEndpoints": 308,
+    "implementedUniqueEndpoints": 309,
     "referenceEndpoints": 308,
     "implementedGroups": 54,
     "referenceGroups": 55,
