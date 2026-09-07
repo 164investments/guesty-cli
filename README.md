@@ -5,7 +5,7 @@ Command-line access to the [Guesty](https://guesty.com) Open API with read-only 
 ## Quick Start
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.0/guesty-cli-1.2.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.1/guesty-cli-1.2.1.tgz
 guesty init
 ```
 
@@ -14,19 +14,19 @@ This installs the CLI and displays shared-cache setup instructions. The CLI does
 ## Install
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.0/guesty-cli-1.2.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.1/guesty-cli-1.2.1.tgz
 ```
 
 Download the compiled package and checksum from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
 
-To update an existing installation, including one originally installed from npm:
+To upgrade an older installation (including npm version 1.1.0), run the compiled-package installation command above. For version 1.2.0 and later:
 
 ```bash
 guesty update
 guesty --version
 ```
 
-Older CLI versions update from GitHub's `main` branch; the Git installation now builds automatically. Version 1.2.0 and later install the latest stable GitHub release package. Interactive commands display an update notice when a newer release is available. Help, version, token output, and scripted commands do not wait for an update check.
+Older CLI versions use a Git-based updater that can fail during npm 11 global dependency preparation. Installing the compiled tarball avoids that npm issue. Version 1.2.0 and later install the latest stable GitHub release package. Interactive commands display an update notice when a newer release is available. Help, version, token output, and scripted commands do not wait for an update check.
 
 For an npm-linked source checkout or a custom installation prefix, update with its original package manager or use the separate GitHub package installation command above. The 1.2.0 updater preserves these installations and prints the applicable command.
 

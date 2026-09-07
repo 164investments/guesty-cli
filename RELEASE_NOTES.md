@@ -1,15 +1,15 @@
-# Guesty CLI 1.2.0
+# Guesty CLI 1.2.1
 
-This release repairs commands that sent ignored filters, incomplete requests, or the wrong payload format, and updates the bundled reference to Guesty's 333 currently documented Open API operations.
+Version 1.2.1 clarifies the verified upgrade path for older npm installations and includes the complete 1.2.0 API audit. It repairs commands that sent ignored filters, incomplete requests, or the wrong payload format, and updates the bundled reference to Guesty's 333 currently documented Open API operations.
 
 ## Install or update
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.0/guesty-cli-1.2.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.1/guesty-cli-1.2.1.tgz
 guesty --version
 ```
 
-Existing users can run `guesty update`. Older versions install from GitHub; Git installs now build automatically. Starting with 1.2.0, updates use the latest stable GitHub release package. A source checkout or custom package prefix is preserved; the updater gives a separate installation command instead of changing that workspace.
+Users already on 1.2.0 or later can run `guesty update`. Users on older versions should run the compiled-package command above: the legacy updater uses Git, and npm 11 can fail while preparing a global Git dependency before CLI code runs. The tarball installs successfully without that build step. Starting with 1.2.0, updates use the latest stable GitHub release package. A source checkout or custom package prefix is preserved; the updater gives a separate installation command instead of changing that workspace.
 
 GitHub Releases is the current distribution channel. The npm registry release remains 1.1.0; `npm update -g guesty-cli` alone does not obtain this release. The release includes `SHA256SUMS` for the compiled tarball.
 
