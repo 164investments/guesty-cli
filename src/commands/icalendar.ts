@@ -1,4 +1,4 @@
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
@@ -100,8 +100,13 @@ icalendar
 icalendar
   .command("delete-imported <id>")
   .description("Delete an imported calendar")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/icalendar-api/imported-calendars/${id}`, { method: "DELETE" });
+  .addOption(new Option("--strategy <strategy>", "How to handle existing imported events")
+    .choices(["remove_all_channel_events", "remove_past_channel_events", "remove_future_channel_events", "preserve_channel_events"])
+    .makeOptionMandatory())
+  .action(async (id: string, opts) => {
+    const data = await guestyFetch(`/v1/icalendar-api/imported-calendars/${id}`, {
+      method: "DELETE", params: { strategy: opts.strategy },
+    });
     print(data);
   });
 

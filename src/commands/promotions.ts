@@ -36,7 +36,10 @@ promotions
 promotions
   .command("list-properties <promotionId>")
   .description("List properties assigned to a promotion")
-  .action(async (promotionId: string) => {
-    const data = await guestyFetch(`/v1/rm-promotions/promotions/${promotionId}/listings`);
+  .option("--include-children", "Include child listings")
+  .action(async (promotionId: string, opts) => {
+    const data = await guestyFetch(`/v1/rm-promotions/promotions/${promotionId}/listings`, {
+      params: { includeChildren: Boolean(opts.includeChildren) },
+    });
     print(data);
   });

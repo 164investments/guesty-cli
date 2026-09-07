@@ -18,24 +18,27 @@ export function loadEnv(): void {
     resolve(process.cwd(), ".env"),
   ].filter((p): p is string => p !== null);
 
-  for (const envPath of paths) {
+  for (const envPath of new Set(paths)) {
     try {
       const content = readFileSync(envPath, "utf8");
       for (const line of content.split("\n")) {
         const trimmed = line.trim();
         if (!trimmed || trimmed.startsWith("#")) continue;
-        const eqIdx = trimmed.indexOf("=");
-        if (eqIdx === -1) continue;
-        const key = trimmed.slice(0, eqIdx).trim();
-        let val = trimmed.slice(eqIdx + 1).trim();
-        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-          val = val.slice(1, -1);
+        const match = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(trimmed);
+        if (!match) continue;
+        const [, key, raw] = match;
+        let val = raw;
+        if (val.startsWith('"') || val.startsWith("'")) {
+          const quoted = val.startsWith('"') ? /^"((?:\\.|[^"\\])*)"\s*(?:#.*)?$/.exec(val) : /^'([^']*)'\s*(?:#.*)?$/.exec(val);
+          if (!quoted) continue;
+          val = quoted[1];
+        } else {
+          val = val.replace(/\s+#.*$/, "").trimEnd();
         }
-        if (!process.env[key]) {
+        if (process.env[key] === undefined) {
           process.env[key] = val;
         }
       }
-      return;
     } catch {
       continue;
     }

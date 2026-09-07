@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { integer } from "./query-options.js";
 
 export const integrations = new Command("integrations")
   .alias("int")
@@ -61,9 +62,15 @@ integrations
 
 integrations
   .command("rate-plans")
-  .description("List all rate plans")
-  .action(async () => {
-    const data = await guestyFetch("/v1/rm-rate-plans-ext/rate-plans");
+  .description("List rate plans for a channel")
+  .requiredOption("--channel <id>", "Channel ID (bookingCom, manual_reservations, booking_engine)")
+  .option("--sort <field>", "Sort field", "name")
+  .option("--limit <n>", "Max results", "25")
+  .option("--skip <n>", "Offset", "0")
+  .action(async (opts) => {
+    const data = await guestyFetch("/v1/rm-rate-plans-ext/rate-plans", {
+      params: { channelId: opts.channel, sort: opts.sort, limit: integer(opts.limit, "--limit", 1), skip: integer(opts.skip, "--skip") },
+    });
     print(data);
   });
 

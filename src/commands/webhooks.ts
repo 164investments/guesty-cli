@@ -53,7 +53,8 @@ webhooks
 webhooks
   .command("secret")
   .description("Get webhook secret")
-  .action(async () => {
-    const data = await guestyFetch("/v1/webhooks-v2/secret");
+  .requiredOption("--url <url>", "Registered webhook URL")
+  .action(async (opts) => {
+    const data = await guestyFetch("/v1/webhooks-v2/secret", { params: { url: opts.url } });
     print(data);
   });

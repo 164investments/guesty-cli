@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
+import { basename, extname } from "node:path";
 import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { integer } from "./query-options.js";
 
 export const properties = new Command("properties")
   .alias("prop")
@@ -175,9 +177,12 @@ properties
 
 properties
   .command("list-house-rules")
-  .description("List house rules")
-  .action(async () => {
-    const data = await guestyFetch("/v1/properties/house-rules/");
+  .description("List house rules for selected properties")
+  .requiredOption("--property-ids <ids>", "Comma-separated unit type IDs")
+  .action(async (opts) => {
+    const ids = String(opts.propertyIds).split(",").map((id) => id.trim());
+    if (ids.some((id) => !id)) throw new Error("--property-ids must contain nonempty comma-separated IDs.");
+    const data = await guestyFetch("/v1/properties/house-rules/", { params: { propertyIds: ids.join(",") } });
     print(data);
   });
 
@@ -386,10 +391,12 @@ properties
   .command("list-groups")
   .description("List property groups")
   .option("--limit <n>", "Max results", "25")
-  .option("--skip <n>", "Offset", "0")
+  .option("--skip <n>", "Pagination offset", "0")
+  .option("--type <type>", "Filter by COMBO or DUPLICATES")
   .action(async (opts) => {
+    if (opts.type && !["COMBO", "DUPLICATES"].includes(opts.type)) throw new Error("--type must be COMBO or DUPLICATES.");
     const data = await guestyFetch("/v1/properties-api/groups/group", {
-      params: { limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
+      params: { limit: integer(opts.limit, "--limit", 1, 200), offset: integer(opts.skip, "--skip"), ...(opts.type ? { type: opts.type } : {}) },
     });
     print(data);
   });
@@ -504,17 +511,18 @@ properties
 
 properties
   .command("upload-photo <propertyId>")
-  .description("Upload a photo blob to a property (--data-file <path>)")
-  .option("--data-file <path>", "Path to the image file to upload")
+  .description("Upload a photo file to a property using multipart form data")
+  .requiredOption("--data-file <path>", "Path to the image file to upload")
+  .option("--caption <text>", "Photo caption")
   .action(async (propertyId: string, opts) => {
-    if (!opts.dataFile) {
-      throw new Error("--data-file is required for upload-photo");
-    }
-    const body = readFileSync(opts.dataFile);
+    const body = new FormData();
+    const mimeTypes: Record<string, string> = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp" };
+    const type = mimeTypes[extname(opts.dataFile).toLowerCase()] ?? "application/octet-stream";
+    body.append("file", new Blob([readFileSync(opts.dataFile)], { type }), basename(opts.dataFile));
+    if (opts.caption !== undefined) body.append("caption", opts.caption);
     const data = await guestyFetch(`/v1/properties-api/property-photos/property-photos/${propertyId}/upload/blob`, {
       method: "POST",
       body,
-      headers: { "Content-Type": "application/octet-stream" },
     });
     print(data);
   });

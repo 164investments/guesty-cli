@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { guestyFetch, paginateAll } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { fields, integer } from "./query-options.js";
 
 export const listings = new Command("listings")
   .alias("ls")
@@ -11,18 +12,33 @@ export const listings = new Command("listings")
 listings
   .command("list")
   .description("List all listings")
-  .option("--fields <fields>", "Comma-separated fields to return")
+  .option("--fields <fields>", "Fields to return (space- or comma-separated)")
+  .option("--q <query>", "Search listing title, internal note, or full address")
+  .option("--city <city>", "Filter by city")
+  .option("--tags <tag>", "Filter by listing tag")
+  .option("--ids <ids>", "Comma-separated listing IDs")
+  .option("--view <id>", "Use a saved listing view")
+  .option("--sort <field>", "Sort field, prefix with - for descending")
   .option("--limit <n>", "Max results", "100")
   .option("--skip <n>", "Offset", "0")
   .option("--all", "Fetch all pages")
   .option("--active", "Only active listings")
+  .option("--inactive", "Only inactive listings")
   .action(async (opts) => {
+    if (opts.active && opts.inactive) throw new Error("Use only one of --active and --inactive.");
     const params: Record<string, string | number | boolean> = {
-      limit: parseInt(opts.limit),
-      skip: parseInt(opts.skip),
+      limit: integer(opts.limit, "--limit", 1, 100),
+      skip: integer(opts.skip, "--skip"),
     };
-    if (opts.fields) params.fields = opts.fields;
+    if (opts.fields) params.fields = fields(opts.fields);
     if (opts.active) params.active = true;
+    if (opts.inactive) params.active = false;
+    if (opts.q) params.q = opts.q;
+    if (opts.city) params.city = opts.city;
+    if (opts.tags) params.tags = opts.tags;
+    if (opts.ids) params.ids = opts.ids;
+    if (opts.view) params.viewId = opts.view;
+    if (opts.sort) params.sort = opts.sort;
 
     if (opts.all) {
       const results = await paginateAll("/v1/listings", params, "results");
@@ -49,10 +65,10 @@ listings
 listings
   .command("get <id>")
   .description("Get a single listing by ID")
-  .option("--fields <fields>", "Comma-separated fields to return")
+  .option("--fields <fields>", "Fields to return (space- or comma-separated)")
   .action(async (id: string, opts) => {
     const params: Record<string, string> = {};
-    if (opts.fields) params.fields = opts.fields;
+    if (opts.fields) params.fields = fields(opts.fields);
     const data = await guestyFetch(`/v1/listings/${id}`, { params });
     print(data);
   });
@@ -115,7 +131,7 @@ listings
   .command("payment-provider <id>")
   .description("Get a listing payment provider ID")
   .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/listings/${id}?fields=paymentProviderId`);
+    const data = await guestyFetch(`/v1/listings/${id}`, { params: { fields: "paymentProviderId" } });
     print(data);
   });
 
@@ -183,7 +199,7 @@ listings
   .command("get-payment-provider <id>")
   .description("Get the payment provider ID for a listing")
   .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/listings/${id}?fields=paymentProviderId`);
+    const data = await guestyFetch(`/v1/listings/${id}`, { params: { fields: "paymentProviderId" } });
     print(data);
   });
 
