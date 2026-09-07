@@ -5,7 +5,8 @@ Command-line access to the [Guesty](https://guesty.com) Open API with read-only 
 ## Quick Start
 
 ```bash
-npm install -g guesty-cli && guesty init
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.0/guesty-cli-1.2.0.tgz
+guesty init
 ```
 
 This installs the CLI and displays shared-cache setup instructions. The CLI does not request OAuth tokens or collect Guesty client credentials.
@@ -13,10 +14,23 @@ This installs the CLI and displays shared-cache setup instructions. The CLI does
 ## Install
 
 ```bash
-npm install -g guesty-cli
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.0/guesty-cli-1.2.0.tgz
 ```
 
-Or from this repo:
+Download the compiled package and checksum from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
+
+To update an existing installation, including one originally installed from npm:
+
+```bash
+guesty update
+guesty --version
+```
+
+Older CLI versions update from GitHub's `main` branch; the Git installation now builds automatically. Version 1.2.0 and later install the latest stable GitHub release package. Interactive commands display an update notice when a newer release is available. Help, version, token output, and scripted commands do not wait for an update check.
+
+For an npm-linked source checkout or a custom installation prefix, update with its original package manager or use the separate GitHub package installation command above. The 1.2.0 updater preserves these installations and prints the applicable command.
+
+Or build from this repo:
 
 ```bash
 npm install
@@ -61,14 +75,17 @@ guesty res list --limit 10
 # Get a specific listing
 guesty ls get <listingId>
 
-# Search guests
-guesty guests list --q "John Smith"
+# Search by reservation confirmation code
+guesty res search CONFIRMATION_CODE
+
+# Use the current v3 reservation search
+guesty res list-v3 --listing <listingId> --status confirmed --limit 10
 
 # Update calendar data
-guesty cal update <listingId> --data '{"dateFrom":"2026-04-01","dateTo":"2026-04-30","price":200}'
+guesty cal update <listingId> --data '{"startDate":"2026-10-01","endDate":"2026-10-31","price":200}'
 
 # Create a reservation (v3 API)
-guesty res v3-create --data '{"listingId":"...","checkIn":"...","checkOut":"..."}'
+guesty res create --data '{"listingId":"...","checkInDateLocalized":"2026-10-01","checkOutDateLocalized":"2026-10-03","guestsCount":2,"source":"manual","status":"inquiry"}'
 
 # Manage iCalendar imports
 guesty ical list-imported
@@ -137,10 +154,8 @@ guesty raw POST /v1/contacts --data '{"firstName":"Ada","lastName":"Lovelace"}'
 # CSV/text response
 guesty raw POST /v1/reservations.csv --accept text/csv --output reservations.csv
 
-# Binary upload
-guesty raw POST /v1/properties-api/property-photos/property-photos/<propertyId>/upload/blob \
-  --data-file ./photo.jpg \
-  --content-type image/jpeg
+# Multipart photo upload
+guesty properties upload-photo <propertyId> --data-file ./photo.jpg
 
 # Custom headers
 guesty raw GET /v1/listings --header 'X-Debug: 1'
@@ -152,13 +167,13 @@ Commands that accept a request body support multiple input methods:
 
 ```bash
 # Inline JSON
-guesty res v3-create --data '{"listingId":"...","checkIn":"...","checkOut":"..."}'
+guesty res create --data '{"listingId":"...","checkInDateLocalized":"2026-10-01","checkOutDateLocalized":"2026-10-03","guestsCount":2,"source":"manual","status":"inquiry"}'
 
 # Pipe from stdin
-cat reservation.json | guesty res v3-create
+cat reservation.json | guesty res create
 
 # File input (raw command only)
-guesty raw POST /v1/reservations-v3 --data-file reservation.json
+guesty raw POST /v1/reservations-v3 --data-file reservation.json --content-type application/json
 ```
 
 ## Authentication
@@ -176,21 +191,37 @@ npm ci
 npm run check
 ```
 
-The check compiles the strict TypeScript project and runs the offline authentication regression suite. Tests replace all network calls and private-cache reads with fake data, reject file writes, and prove that cache failures cannot request OAuth tokens. Never test authentication by requesting a real token or running a live `guesty init` credential verification.
+The check compiles strict TypeScript, runs offline authentication, transport, command, and update regression tests, and verifies that the generated CLI contract matches the source. Authentication tests replace all network calls and private-cache reads with fake data and prove that cache failures cannot request OAuth tokens. Endpoint tests assert methods, paths, query parameters, bodies, and meaningful validation failures. Live write tests are not part of this suite.
 
 ## Rate Limiting
 
-The CLI enforces Guesty's rate limit (100 requests/minute) client-side. If you hit the limit, it waits automatically and retries.
+The CLI observes Guesty's documented Open API limits of 15 requests/second, 120/minute, and 5,000/hour within each process. Guesty applies account-wide limits across tokens and processes, so the CLI also honors `Retry-After` on 429 responses. See [Guesty's current rate limits](https://open-api-docs.guesty.com/docs/rate-limits).
+
+Requests time out after 60 seconds by default; `raw --timeout <seconds>` can adjust that limit. Transient network/server failures are retried for reads. A mutation with an uncertain network/server outcome is not automatically repeated. Explicit 401 recovery only retries with a different valid cached token.
 
 ## Machine-Readable Contract
 
 The repo includes [`guesty-cli-spec.json`](./guesty-cli-spec.json) as the machine-readable reference for all commands, options, and the Guesty endpoints they call. Each endpoint includes a `docsUrl` linking to the official Guesty API documentation.
+
+[`api-spec.json`](./api-spec.json) catalogs all 333 documented Open API operations in this release; [`openapi-spec.json`](./openapi-spec.json) preserves the current full request/response schemas and deprecation flags. Booking Engine documentation is reviewed separately; normal CLI commands continue to use Open API credentials and endpoints.
 
 Regenerate with:
 
 ```bash
 npm run generate:cli-spec
 ```
+
+Refresh from Guesty's current published schema before regenerating:
+
+```bash
+npm run refresh:api-spec
+npm run generate:cli-spec
+npm run check
+```
+
+`node scripts/scrape-api-docs.mjs` downloads pages from the current documentation index into the ignored `docs/api/open` cache. Add `--booking` for Booking Engine documentation or `--guides` for guides only. The historical `.ts` script names remain compatibility entry points. `node scripts/build-knowledge-base.mjs --output <directory>` generates a condensed reference from the current schema.
+
+See the [September 2026 audit and verification record](./docs/api-audit-2026-09-07.md) and [release notes](./RELEASE_NOTES.md) for fixes, migrations, endpoint coverage, and testing limits.
 
 ## License
 

@@ -73,6 +73,7 @@ async function readSharedToken(tokenType: TokenType): Promise<CachedToken> {
           Accept: "application/json",
         },
         signal: AbortSignal.timeout(CACHE_TIMEOUT_MS),
+        redirect: "error",
       }
     );
   } catch {
@@ -98,14 +99,19 @@ async function readSharedToken(tokenType: TokenType): Promise<CachedToken> {
   return { access_token, expires_at, token_type };
 }
 
-export function invalidateToken(): void {
+export function invalidateToken(rejectedToken?: string): void {
   const token = cached.get("openapi");
-  if (token) rejectedTokens.add(token.access_token);
+  const rejected = rejectedToken ?? token?.access_token;
+  if (rejected) rejectedTokens.add(rejected);
   // A 401 invalidates only this process's copy, never the shared or disk cache.
-  cached.delete("openapi");
+  // A concurrent request may already have installed a different cached token.
+  if (token?.access_token === rejected) cached.delete("openapi");
 }
 
 export async function getCachedToken(tokenType: TokenType = "openapi"): Promise<CachedToken> {
+  if (tokenType !== "openapi" && tokenType !== "beapi") {
+    throw new Error("Cached token type must be openapi or beapi.");
+  }
   const memoryToken = cached.get(tokenType);
   if (isUsableToken(memoryToken, tokenType)) return { ...memoryToken };
 

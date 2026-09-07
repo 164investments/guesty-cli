@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Validate release tag and production ancestry
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node -e 'if (`v${JSON.parse(require("fs").readFileSync("package.json")).version}` !== process.env.RELEASE_TAG) process.exit(1)'
+          git merge-base --is-ancestor HEAD origin/main
+      - run: npm ci
+      - run: npm run check
+      - name: Build and verify installable package
+        run: |
+          mkdir release
+          npm pack --pack-destination release
+          npm install --prefix "$RUNNER_TEMP/guesty-smoke" ./release/guesty-cli-*.tgz
+          "$RUNNER_TEMP/guesty-smoke/node_modules/.bin/guesty" --version
+          "$RUNNER_TEMP/guesty-smoke/node_modules/.bin/guesty" reservations --help
+          cd release
+          sha256sum guesty-cli-*.tgz > SHA256SUMS
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          release_flags=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            release_flags+=(--prerelease --latest=false)
+          fi
+          gh release create "$RELEASE_TAG" release/guesty-cli-*.tgz release/SHA256SUMS --verify-tag --title "Guesty CLI $RELEASE_TAG" --notes-file RELEASE_NOTES.md "${release_flags[@]}"

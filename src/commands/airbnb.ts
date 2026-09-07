@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { dateRange } from "./query-options.js";
 
 export const airbnb = new Command("airbnb")
   .description("Airbnb listing expectations and resolutions");
@@ -30,9 +31,10 @@ airbnb
 airbnb
   .command("resolutions <guestyReservationId>")
   .description("List Airbnb resolutions for a reservation")
-  .option("--from <date>", "From date (YYYY-MM-DD)")
-  .option("--to <date>", "To date (YYYY-MM-DD)")
+  .requiredOption("--from <date>", "Created on or after this ISO 8601 date-time")
+  .requiredOption("--to <date>", "Created on or before this ISO 8601 date-time")
   .action(async (guestyReservationId: string, opts) => {
+    dateRange(opts.from, opts.to);
     const params: Record<string, string> = {};
     if (opts.from) params.from = opts.from;
     if (opts.to) params.to = opts.to;

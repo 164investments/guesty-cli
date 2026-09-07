@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { dateRange, integer } from "./query-options.js";
 
 export const ratePlans = new Command("rate-plans")
   .alias("rp")
@@ -48,16 +49,27 @@ ratePlans
 ratePlans
   .command("by-listing <listingId>")
   .description("Get rate plans for a property")
-  .action(async (listingId: string) => {
-    const data = await guestyFetch(`/v1/rm-rate-plans-ext/rate-plans/listing/${listingId}`);
+  .requiredOption("--channel <id>", "Channel ID (bookingCom, manual_reservations, booking_engine)")
+  .option("--sort <field>", "Sort field", "name")
+  .option("--limit <n>", "Max results", "25")
+  .option("--skip <n>", "Offset", "0")
+  .action(async (listingId: string, opts) => {
+    const data = await guestyFetch(`/v1/rm-rate-plans-ext/rate-plans/listing/${listingId}`, {
+      params: { channelId: opts.channel, sort: opts.sort, limit: integer(opts.limit, "--limit", 1), skip: integer(opts.skip, "--skip") },
+    });
     print(data);
   });
 
 ratePlans
   .command("get-calendar <listingId> <ratePlanId>")
   .description("Get rate plan calendar for a property")
-  .action(async (listingId: string, ratePlanId: string) => {
-    const data = await guestyFetch(`/v1/rm-rate-plans-ext/ari-calendar/listing/${listingId}/ratePlan/${ratePlanId}`);
+  .requiredOption("--from <date>", "Period start date (YYYY-MM-DD)")
+  .requiredOption("--to <date>", "Period end date (YYYY-MM-DD)")
+  .action(async (listingId: string, ratePlanId: string, opts) => {
+    dateRange(opts.from, opts.to);
+    const data = await guestyFetch(`/v1/rm-rate-plans-ext/ari-calendar/listing/${listingId}/ratePlan/${ratePlanId}`, {
+      params: { fromDate: opts.from, toDate: opts.to },
+    });
     print(data);
   });
 

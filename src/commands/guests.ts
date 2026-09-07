@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { fields, integer, jsonObject } from "./query-options.js";
 
 export const guests = new Command("guests")
   .description("Manage guests");
@@ -9,17 +10,19 @@ export const guests = new Command("guests")
 guests
   .command("list")
   .description("List/search guests")
-  .option("--q <query>", "Search query (name, email, phone)")
-  .option("--columns <cols>", "Columns to return (space-separated)", "fullName email phone")
+  .option("--q <query>", "Unsupported by Guesty; use --filters instead")
+  .option("--filters <json>", "JSON object of guest report filters")
+  .option("--columns <cols>", "Columns to return (space- or comma-separated)", "id fullName guestEmail guestPhone")
   .option("--limit <n>", "Max results", "25")
   .option("--skip <n>", "Offset", "0")
   .action(async (opts) => {
+    if (opts.q !== undefined) throw new Error("Guesty's guests API does not support --q. Use --filters with guest report fields instead.");
     const params: Record<string, string | number> = {
-      columns: opts.columns,
-      limit: parseInt(opts.limit),
-      skip: parseInt(opts.skip),
+      columns: fields(opts.columns),
+      limit: integer(opts.limit, "--limit", 1),
+      skip: integer(opts.skip, "--skip"),
     };
-    if (opts.q) params.q = opts.q;
+    if (opts.filters) params.filters = JSON.stringify(jsonObject(opts.filters, "--filters"));
     const data = await guestyFetch("/v1/guests-crud", { params });
     print(data);
   });
@@ -27,8 +30,9 @@ guests
 guests
   .command("get <id>")
   .description("Get a single guest by ID")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/guests-crud/${id}`);
+  .option("--fields <fields>", "Fields to return (space- or comma-separated)", "id firstName lastName fullName address")
+  .action(async (id: string, opts) => {
+    const data = await guestyFetch(`/v1/guests-crud/${id}`, { params: { fields: fields(opts.fields) } });
     print(data);
   });
 
@@ -75,7 +79,10 @@ guests
 guests
   .command("payment-methods <id>")
   .description("List payment methods for a guest")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/guests/${id}/payment-methods`);
+  .option("--reservation <id>", "Reservation context for its payment methods, including virtual credit cards")
+  .action(async (id: string, opts) => {
+    const params: Record<string, string> = {};
+    if (opts.reservation) params.reservationId = opts.reservation;
+    const data = await guestyFetch(`/v1/guests/${id}/payment-methods`, { params });
     print(data);
   });

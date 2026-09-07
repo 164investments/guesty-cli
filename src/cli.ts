@@ -101,11 +101,18 @@ program.addCommand(raw);
 program
   .command("update")
   .description("Update guesty-cli to the latest version")
-  .action(() => runSelfUpdate());
+  .action(async () => { await runSelfUpdate(); });
 
-checkForUpdate().then(() => {
-  program.parseAsync().catch((err: Error) => {
-    process.stderr.write(`Error: ${err.message}\n`);
-    process.exit(1);
+const skipUpdateCheck = process.argv.slice(2).some((arg) =>
+  ["token", "update", "init", "--help", "-h", "--version", "-V"].includes(arg)
+);
+
+program.parseAsync()
+  .then(async () => {
+    if (process.stdout.isTTY && process.stderr.isTTY && !skipUpdateCheck) await checkForUpdate();
+  })
+  .catch((err: Error) => {
+    const message = err instanceof SyntaxError ? "Invalid JSON input. Check the JSON supplied through --data or stdin." : err.message;
+    process.stderr.write(`Error: ${message}\n`);
+    process.exitCode = 1;
   });
-});

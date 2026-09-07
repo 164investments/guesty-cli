@@ -42,7 +42,7 @@ paymentProviders
 paymentProviders
   .command("by-listing")
   .description("Get payment provider by listing")
-  .option("--listing <id>", "Listing ID")
+  .requiredOption("--listing <id>", "Listing ID")
   .action(async (opts) => {
     const params: Record<string, string> = {};
     if (opts.listing) params.listingId = opts.listing;

@@ -1,8 +1,33 @@
 import { writeFileSync } from "node:fs";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { guestyFetch, paginateAll } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { date, dateRange, dateTime, fields, integer, jsonObject } from "./query-options.js";
+
+async function readObject(data?: string): Promise<Record<string, unknown>> {
+  return jsonObject(data ?? await readStdin(), "--data or stdin");
+}
+
+function financialParams(opts: { mergeAccommodationFarePriceComponents?: boolean }): Record<string, boolean> {
+  return opts.mergeAccommodationFarePriceComponents === undefined
+    ? {}
+    : { mergeAccommodationFarePriceComponents: opts.mergeAccommodationFarePriceComponents };
+}
+
+function validateComment(body: Record<string, unknown>): void {
+  if (typeof body.body !== "string" || [...body.body].length < 1 || [...body.body].length > 4095) {
+    throw new Error("Comment body must be a string between 1 and 4095 characters.");
+  }
+  if (body.mentions !== undefined && (!Array.isArray(body.mentions) ||
+    body.mentions.some((id) => typeof id !== "string" || !id.trim()))) {
+    throw new Error("Comment mentions must be an array of user ID strings.");
+  }
+  if (body.parentCommentId !== undefined &&
+    (typeof body.parentCommentId !== "string" || !body.parentCommentId.trim())) {
+    throw new Error("parentCommentId must be a non-empty comment ID string.");
+  }
+}
 
 function deprecated(name: string, replacement: string) {
   process.stderr.write(
@@ -14,16 +39,16 @@ export const reservations = new Command("reservations")
   .alias("res")
   .description("Manage reservations");
 
-// ─── list / search (v1 — no v3 equivalent) ─────────────────────────────────
+// ─── legacy list / search (v1 response shape) ──────────────────────────────
 
 reservations
   .command("list")
-  .description("List reservations with optional filters")
+  .description("List reservations with legacy v1 fields and filters; use list-v3 for the current API")
   .option("--from <date>", "Check-in from date (YYYY-MM-DD)")
   .option("--to <date>", "Check-in to date (YYYY-MM-DD)")
   .option("--status <status>", "Filter by status (confirmed, canceled, inquiry, etc.)")
   .option("--listing <id>", "Filter by listing ID")
-  .option("--guest <name>", "Filter by guest name")
+  .option("--guest <name>", "Filter by exact guest full name")
   .option("--source <source>", "Filter by source (Airbnb, Booking.com, etc.)")
   .option("--limit <n>", "Max results", "25")
   .option("--skip <n>", "Offset", "0")
@@ -31,21 +56,24 @@ reservations
   .option("--fields <fields>", "Comma-separated fields to return")
   .option("--all", "Fetch all pages (up to 10k)")
   .action(async (opts) => {
+    dateRange(opts.from, opts.to);
+    if (opts.from) date(opts.from, "--from");
+    if (opts.to) date(opts.to, "--to");
     const params: Record<string, string | number> = {
-      limit: parseInt(opts.limit),
-      skip: parseInt(opts.skip),
+      limit: integer(opts.limit, "--limit", 1, 100),
+      skip: integer(opts.skip, "--skip"),
       sort: opts.sort,
     };
-    if (opts.fields) params.fields = opts.fields;
-    if (opts.status) params.status = opts.status;
-    if (opts.listing) params.listingId = opts.listing;
-    if (opts.source) params.source = opts.source;
-
-    const filters: string[] = [];
-    if (opts.from) filters.push(`checkIn>=${opts.from}`);
-    if (opts.to) filters.push(`checkIn<=${opts.to}`);
-    if (opts.guest) filters.push(`guestName=${opts.guest}`);
-    if (filters.length > 0) params.filters = filters.join(",");
+    if (opts.fields) params.fields = fields(opts.fields);
+    const filters: Record<string, unknown>[] = [];
+    if (opts.status) filters.push({ field: "status", operator: "$eq", value: opts.status });
+    if (opts.listing) filters.push({ field: "listingId", operator: "$eq", value: opts.listing });
+    if (opts.source) filters.push({ field: "source", operator: "$eq", value: opts.source });
+    if (opts.from) filters.push({ field: "checkInDateLocalized", operator: "$gte", value: opts.from });
+    if (opts.to) filters.push({ field: "checkInDateLocalized", operator: "$lte", value: opts.to });
+    if (opts.guest) filters.push({ field: "guest.fullName", operator: "$eq", value: opts.guest });
+    if (filters.length > 0) params.filters = JSON.stringify(filters);
+    deprecated("list", "list-v3");
 
     if (opts.all) {
       const results = await paginateAll("/v1/reservations", params, "results");
@@ -58,16 +86,66 @@ reservations
 
 reservations
   .command("search <query>")
-  .description("Search reservations by guest name or confirmation code")
+  .description("Search the legacy API by exact confirmation code (or exact name with --guest-name)")
+  .option("--guest-name", "Treat the query as an exact guest full name")
   .option("--limit <n>", "Max results", "25")
   .action(async (query: string, opts) => {
+    if (!query.trim()) throw new Error("Search query must be a non-empty confirmation code or guest name.");
     const data = await guestyFetch("/v1/reservations", {
       params: {
-        q: query,
-        limit: parseInt(opts.limit),
+        filters: JSON.stringify([{ field: opts.guestName ? "guest.fullName" : "confirmationCode", operator: "$eq", value: query }]),
+        limit: integer(opts.limit, "--limit", 1, 100),
       },
     });
     print(data);
+  });
+
+// ─── filtered search (v3) ──────────────────────────────────────────────────
+
+reservations
+  .command("list-v3")
+  .alias("search-v3")
+  .description("Search reservations using the current v3 API and its response shape")
+  .option("--from <date>", "Check-in on/after localized date (YYYY-MM-DD)")
+  .option("--to <date>", "Check-in on/before localized date (YYYY-MM-DD)")
+  .option("--check-out-from <date>", "Check-out on/after localized date (YYYY-MM-DD)")
+  .option("--check-out-to <date>", "Check-out on/before localized date (YYYY-MM-DD)")
+  .option("--created-from <timestamp>", "Created on/after ISO datetime with timezone")
+  .option("--created-before <timestamp>", "Created strictly before ISO datetime with timezone")
+  .option("--status <statuses>", "Status or comma-separated statuses")
+  .option("--exclude-status <status>", "Exclude a status")
+  .option("--listing <ids>", "Listing ID or comma-separated IDs")
+  .option("--confirmation-code <codes>", "Confirmation code or comma-separated codes")
+  .option("--source <sources>", "Source or comma-separated sources")
+  .option("--limit <n>", "Page size (1-100)", "25")
+  .option("--skip <n>", "Initial offset", "0")
+  .addOption(new Option("--sort <field>", "Sort field; prefix with - for descending")
+    .choices(["_id", "-_id", "checkIn", "-checkIn", "checkOut", "-checkOut", "createdAt", "-createdAt"])
+    .default("-_id"))
+  .option("--all", "Fetch all pages from --skip (up to 10k)")
+  .action(async (opts) => {
+    const params: Record<string, string | number> = {
+      limit: integer(opts.limit, "--limit", 1, 100),
+      skip: integer(opts.skip, "--skip"),
+      sort: opts.sort,
+    };
+    dateRange(opts.from, opts.to);
+    dateRange(opts.checkOutFrom, opts.checkOutTo, "--check-out-from", "--check-out-to");
+    dateRange(opts.createdFrom, opts.createdBefore, "--created-from", "--created-before");
+    if (opts.from) params["filter[checkIn][gte]"] = date(opts.from, "--from");
+    if (opts.to) params["filter[checkIn][lte]"] = date(opts.to, "--to");
+    if (opts.checkOutFrom) params["filter[checkOut][gte]"] = date(opts.checkOutFrom, "--check-out-from");
+    if (opts.checkOutTo) params["filter[checkOut][lte]"] = date(opts.checkOutTo, "--check-out-to");
+    if (opts.createdFrom) params["filter[createdAt][gte]"] = dateTime(opts.createdFrom, "--created-from");
+    if (opts.createdBefore) params["filter[createdAt][lt]"] = dateTime(opts.createdBefore, "--created-before");
+    if (opts.status) params["filter[status]"] = opts.status;
+    if (opts.excludeStatus) params["filter[status][ne]"] = opts.excludeStatus;
+    if (opts.listing) params["filter[listingId]"] = opts.listing;
+    if (opts.confirmationCode) params["filter[confirmationCode]"] = opts.confirmationCode;
+    if (opts.source) params["filter[source]"] = opts.source;
+    print(opts.all
+      ? await paginateAll("/v1/reservations-v3/search", params, "results")
+      : await guestyFetch("/v1/reservations-v3/search", { params }));
   });
 
 // ─── get / create (v3) ──────────────────────────────────────────────────────
@@ -75,11 +153,22 @@ reservations
 reservations
   .command("get <ids...>")
   .description("Retrieve reservations by ID (up to 10 IDs)")
-  .option("--fields <fields>", "Comma-separated fields to return")
+  .option("--fields <fields>", "Unsupported by v3; use legacy-get --fields for API field selection")
+  .option("--include-payments-template", "Include payment schedule template information")
+  .option("--no-include-payments-template", "Exclude payment schedule template information")
+  .option("--merge-inclusive-taxes", "Merge inclusive taxes into their line items")
+  .option("--no-merge-inclusive-taxes", "Return inclusive taxes separately")
+  .option("--merge-accommodation-fare-price-components", "Merge markups, extra-person fees, and discounts into accommodation fare")
+  .option("--no-merge-accommodation-fare-price-components", "Return accommodation fare components separately")
   .action(async (ids: string[], opts) => {
-    const idParams: Record<string, string> = {};
+    if (opts.fields !== undefined) {
+      throw new Error("The v3 get API ignores --fields. Use guesty res legacy-get <id> --fields <fields> for API field selection, or pipe guesty res get <id> to jq for local selection.");
+    }
+    if (ids.length > 10) throw new Error("The reservations v3 API accepts at most 10 reservation IDs per request.");
+    const idParams: Record<string, string | boolean> = financialParams(opts);
     ids.forEach((id, i) => { idParams[`reservationIds[${i}]`] = id; });
-    if (opts.fields) idParams.fields = opts.fields;
+    if (opts.includePaymentsTemplate !== undefined) idParams.includePaymentsTemplate = opts.includePaymentsTemplate;
+    if (opts.mergeInclusiveTaxes !== undefined) idParams.mergeInclusiveTaxes = opts.mergeInclusiveTaxes;
     const data = await guestyFetch("/v1/reservations-v3", { params: idParams });
     print(data);
   });
@@ -128,10 +217,21 @@ reservations
 
 reservations
   .command("decline <reservationId>")
-  .description("Decline channel reservation")
-  .action(async (reservationId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/decline`, {
+  .description("Decline channel reservation with reason/message (--data or stdin)")
+  .option("--data <json>", "JSON body with reason and messageToGuest")
+  .action(async (reservationId: string, opts) => {
+    const input = opts.data ?? (process.stdin.isTTY ? "" : await readStdin());
+    const body = opts.data !== undefined || input.trim() ? jsonObject(input, "--data or stdin") : undefined;
+    if (body) {
+      for (const key of ["reason", "messageToGuest"]) {
+        if (body[key] !== undefined && typeof body[key] !== "string") {
+          throw new Error(`${key} must be a string.`);
+        }
+      }
+    }
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/decline`, {
       method: "POST",
+      body,
     });
     print(data);
   });
@@ -148,10 +248,18 @@ reservations
 
 reservations
   .command("request-cancellation <reservationId>")
-  .description("Request cancellation for a reservation")
-  .action(async (reservationId: string) => {
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/request-cancellation`, {
+  .description("Request cancellation with required channel reason and messages (--data or stdin)")
+  .option("--data <json>", "JSON body with reason, subReason, messageToChannel, and messageToGuest")
+  .action(async (reservationId: string, opts) => {
+    const body = await readObject(opts.data);
+    for (const key of ["reason", "subReason", "messageToChannel", "messageToGuest"]) {
+      if (typeof body[key] !== "string" || !(body[key] as string).trim()) {
+        throw new Error(`Cancellation requires a non-empty ${key} string.`);
+      }
+    }
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/request-cancellation`, {
       method: "POST",
+      body,
     });
     print(data);
   });
@@ -192,6 +300,8 @@ reservations
   .command("update-source <reservationId>")
   .description("Change reservation source (--data or stdin)")
   .option("--data <json>", "JSON body")
+  .option("--merge-accommodation-fare-price-components", "Merge markups, extra-person fees, and discounts into accommodation fare")
+  .option("--no-merge-accommodation-fare-price-components", "Return accommodation fare components separately")
   .action(async (reservationId: string, opts) => {
     const body = opts.data
       ? JSON.parse(opts.data)
@@ -199,6 +309,7 @@ reservations
     const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/source`, {
       method: "PUT",
       body,
+      params: financialParams(opts),
     });
     print(data);
   });
@@ -220,15 +331,36 @@ reservations
 
 reservations
   .command("update-dates <reservationId>")
-  .description("Update reservation dates (--data or stdin)")
-  .option("--data <json>", "JSON body")
+  .description("Update localized dates/times; date changes recalculate financials (--data or stdin)")
+  .option("--data <json>", "JSON with checkInDateLocalized/checkOutDateLocalized and/or plannedArrival/plannedDeparture")
+  .option("--merge-accommodation-fare-price-components", "Merge markups, extra-person fees, and discounts into accommodation fare")
+  .option("--no-merge-accommodation-fare-price-components", "Return accommodation fare components separately")
   .action(async (reservationId: string, opts) => {
-    const body = opts.data
-      ? JSON.parse(opts.data)
-      : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/dates`, {
+    const body = await readObject(opts.data);
+    if ("checkIn" in body || "checkOut" in body) {
+      throw new Error("Use checkInDateLocalized/checkOutDateLocalized (YYYY-MM-DD), and plannedArrival/plannedDeparture (HH:mm), instead of checkIn/checkOut.");
+    }
+    for (const key of ["checkInDateLocalized", "checkOutDateLocalized"]) {
+      if (body[key] !== undefined) {
+        if (typeof body[key] !== "string") throw new Error(`${key} must be a YYYY-MM-DD string.`);
+        date(body[key] as string, key);
+      }
+    }
+    const checkIn = body.checkInDateLocalized as string | undefined;
+    const checkOut = body.checkOutDateLocalized as string | undefined;
+    dateRange(checkIn, checkOut, "checkInDateLocalized", "checkOutDateLocalized");
+    if (checkIn !== undefined && checkIn === checkOut) {
+      throw new Error("checkOutDateLocalized must be after checkInDateLocalized.");
+    }
+    for (const key of ["plannedArrival", "plannedDeparture"]) {
+      if (body[key] !== undefined && (typeof body[key] !== "string" || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(body[key] as string))) {
+        throw new Error(`${key} must be a valid time in HH:mm format.`);
+      }
+    }
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/dates`, {
       method: "PUT",
       body,
+      params: financialParams(opts),
     });
     print(data);
   });
@@ -237,11 +369,53 @@ reservations
   .command("relocate <reservationId>")
   .description("Update reservation listing (--data or stdin)")
   .option("--data <json>", "JSON body")
+  .option("--merge-accommodation-fare-price-components", "Merge markups, extra-person fees, and discounts into accommodation fare")
+  .option("--no-merge-accommodation-fare-price-components", "Return accommodation fare components separately")
   .action(async (reservationId: string, opts) => {
     const body = opts.data
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/relocate`, {
+      method: "PUT",
+      body,
+      params: financialParams(opts),
+    });
+    print(data);
+  });
+
+reservations
+  .command("update-booking-date <reservationId>")
+  .description("Update the real-world booking date (--data or stdin)")
+  .option("--data <json>", "JSON body with bookingDate (ISO datetime with timezone)")
+  .action(async (reservationId: string, opts) => {
+    const body = await readObject(opts.data);
+    if (typeof body.bookingDate !== "string") {
+      throw new Error("bookingDate is required and must be an ISO datetime with timezone.");
+    }
+    dateTime(body.bookingDate, "bookingDate");
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/booking-date`, {
+      method: "PUT",
+      body,
+    });
+    print(data);
+  });
+
+reservations
+  .command("update-travel-information <reservationId>")
+  .description("Update transportation, reason for visit, or agent booking (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (reservationId: string, opts) => {
+    const body = await readObject(opts.data);
+    if (body.reasonForVisit !== undefined && !["business", "leisure", "family", "event", "other"].includes(body.reasonForVisit as string)) {
+      throw new Error("reasonForVisit must be business, leisure, family, event, or other.");
+    }
+    if (body.agentBooking !== undefined && typeof body.agentBooking !== "boolean") {
+      throw new Error("agentBooking must be a boolean.");
+    }
+    if (body.transportation !== undefined && (body.transportation === null || typeof body.transportation !== "object" || Array.isArray(body.transportation))) {
+      throw new Error("transportation must be a JSON object.");
+    }
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/travel-information`, {
       method: "PUT",
       body,
     });
@@ -282,6 +456,8 @@ reservations
   .command("update-guests <reservationId>")
   .description("Update guests breakdown (--data or stdin)")
   .option("--data <json>", "JSON body")
+  .option("--merge-accommodation-fare-price-components", "Merge markups, extra-person fees, and discounts into accommodation fare")
+  .option("--no-merge-accommodation-fare-price-components", "Return accommodation fare components separately")
   .action(async (reservationId: string, opts) => {
     const body = opts.data
       ? JSON.parse(opts.data)
@@ -289,7 +465,52 @@ reservations
     const data = await guestyFetch(`/v1/reservations-v3/${reservationId}/guests`, {
       method: "PUT",
       body,
+      params: financialParams(opts),
     });
+    print(data);
+  });
+
+// ─── internal comments (v3) ────────────────────────────────────────────────
+
+reservations
+  .command("comments <reservationId>")
+  .description("List internal reservation comments and nested replies")
+  .option("--limit <n>", "Maximum top-level comments", "20")
+  .option("--skip <n>", "Top-level comments to skip", "0")
+  .action(async (reservationId: string, opts) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/comments`, {
+      params: { limit: integer(opts.limit, "--limit", 1), skip: integer(opts.skip, "--skip") },
+    });
+    print(data);
+  });
+
+reservations
+  .command("add-comment <reservationId>")
+  .description("Add an internal reservation comment or reply (--data or stdin)")
+  .option("--data <json>", "JSON with body, optional mentions, and optional parentCommentId")
+  .action(async (reservationId: string, opts) => {
+    const body = await readObject(opts.data);
+    validateComment(body);
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/comments`, { method: "POST", body });
+    print(data);
+  });
+
+reservations
+  .command("update-comment <reservationId> <commentId>")
+  .description("Edit an internal reservation comment as its author (--data or stdin)")
+  .option("--data <json>", "JSON with body and optional mentions")
+  .action(async (reservationId: string, commentId: string, opts) => {
+    const body = await readObject(opts.data);
+    validateComment(body);
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/comments/${encodeURIComponent(commentId)}`, { method: "PATCH", body });
+    print(data);
+  });
+
+reservations
+  .command("delete-comment <reservationId> <commentId>")
+  .description("Soft-delete an internal reservation comment as its author")
+  .action(async (reservationId: string, commentId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/comments/${encodeURIComponent(commentId)}`, { method: "DELETE" });
     print(data);
   });
 
@@ -512,15 +733,29 @@ reservations
 reservations
   .command("report <viewId>")
   .description("Get reservations report by view ID")
-  .option("--timezone <tz>", "Timezone (e.g. America/Los_Angeles)")
+  .requiredOption("--timezone <tz>", "Timezone (e.g. America/Los_Angeles)")
   .option("--limit <n>", "Max results")
   .option("--skip <n>", "Offset")
   .action(async (viewId: string, opts) => {
-    const params: Record<string, string | number> = {};
-    if (opts.timezone) params.timezone = opts.timezone;
-    if (opts.limit) params.limit = parseInt(opts.limit);
-    if (opts.skip) params.skip = parseInt(opts.skip);
-    const data = await guestyFetch(`/v1/reservations-reports/${viewId}`, { params });
+    try { new Intl.DateTimeFormat("en-US", { timeZone: opts.timezone }); }
+    catch { throw new Error("--timezone must be a valid IANA timezone, such as America/Los_Angeles."); }
+    const params: Record<string, string | number> = { timezone: opts.timezone };
+    if (opts.limit !== undefined) params.limit = integer(opts.limit, "--limit", 1);
+    if (opts.skip !== undefined) params.skip = integer(opts.skip, "--skip");
+    const data = await guestyFetch(`/v1/reservations-reports/${encodeURIComponent(viewId)}`, { params });
+    print(data);
+  });
+
+reservations
+  .command("logs <reservationId>")
+  .description("Get reservation activity logs with cursor pagination")
+  .option("--cursor <logId>", "Last logId from the previous page")
+  .option("--limit <n>", "Page size (1-20)", "20")
+  .addOption(new Option("--sort <order>", "Log sort order").choices(["asc", "desc"]).default("desc"))
+  .action(async (reservationId: string, opts) => {
+    const params: Record<string, string | number> = { limit: integer(opts.limit, "--limit", 1, 20), sort: opts.sort };
+    if (opts.cursor) params.cursor = opts.cursor;
+    const data = await guestyFetch(`/v1/reservation-logs/${encodeURIComponent(reservationId)}`, { params });
     print(data);
   });
 
@@ -555,7 +790,7 @@ reservations
   .action(async (id: string, opts) => {
     deprecated("legacy-get", "get");
     const params: Record<string, string> = {};
-    if (opts.fields) params.fields = opts.fields;
+    if (opts.fields) params.fields = fields(opts.fields);
     const data = await guestyFetch(`/v1/reservations/${id}`, { params });
     print(data);
   });
