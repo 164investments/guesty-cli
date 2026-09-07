@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import ts from "typescript";
+import { listOperations, operationSchemas, requestMatchesEndpoint } from "./api-reference.mjs";
 
 const ROOT = process.cwd();
 const COMMANDS_DIR = join(ROOT, "src", "commands");
@@ -8,6 +9,7 @@ const OUTPUT_FILE = join(ROOT, "guesty-cli-spec.json");
 const PACKAGE_FILE = join(ROOT, "package.json");
 const OPTIONAL_REFERENCE_FILE = join(ROOT, "api-spec.json");
 const OPTIONAL_SCHEMAS_FILE = join(ROOT, "schemas.json");
+const OPENAPI_FILE = join(ROOT, "openapi-spec.json");
 const EXISTING_CONTRACT_FILE = join(ROOT, "guesty-cli-spec.json");
 
 function readJson(filePath) {
@@ -19,8 +21,18 @@ function listCommandFiles() {
   return host.readDirectory(COMMANDS_DIR, [".ts"], undefined, ["**/*.ts"]).sort();
 }
 
-function getLiteralValue(node) {
+function getLiteralValue(node, seen = new Set()) {
   if (!node) return null;
+  if (ts.isAsExpression(node) || ts.isParenthesizedExpression(node)) return getLiteralValue(node.expression, seen);
+  if (ts.isIdentifier(node) && !seen.has(node.text)) {
+    let initializer;
+    const visit = (child) => {
+      if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name) && child.name.text === node.text) initializer = child.initializer;
+      ts.forEachChild(child, visit);
+    };
+    visit(node.getSourceFile());
+    if (initializer) return getLiteralValue(initializer, new Set([...seen, node.text]));
+  }
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   if (ts.isNumericLiteral(node)) return Number(node.text);
   if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
@@ -124,9 +136,9 @@ function unwrapChain(node) {
     return { root: node.text, newArgs: null, segments: [] };
   }
 
-  if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "Command") {
+  if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && ["Command", "Option"].includes(node.expression.text)) {
     return {
-      root: "Command",
+      root: node.expression.text,
       newArgs: [...(node.arguments ?? [])],
       segments: [],
     };
@@ -162,6 +174,25 @@ function loadExistingContractSchemas() {
 }
 
 function loadSchemas() {
+  if (existsSync(OPENAPI_FILE)) {
+    const schema = readJson(OPENAPI_FILE);
+    const operations = new Map(listOperations(schema).map((entry) =>
+      [`${entry.method} ${normalizePath(entry.path)}`, entry]
+    ));
+    const schemas = new Map();
+    const covered = new Set();
+    for (const entries of Object.values(readJson(OPTIONAL_REFERENCE_FILE))) {
+      for (const entry of entries) {
+        const key = `${entry.method} ${normalizePath(entry.path)}`;
+        const operation = operations.get(key);
+        if (!operation) throw new Error(`Catalog endpoint missing from OpenAPI: ${entry.method} ${entry.path}`);
+        covered.add(key);
+        schemas.set(entry.slug, operationSchemas(schema, operation.pathItem, operation.operation));
+      }
+    }
+    if (covered.size !== operations.size) throw new Error("The endpoint catalog is missing current OpenAPI operations. Run npm run refresh:api-spec.");
+    return schemas;
+  }
   const schemas = loadExistingContractSchemas();
   if (!existsSync(OPTIONAL_SCHEMAS_FILE)) return schemas;
 
@@ -230,7 +261,8 @@ function parseRootCommand(sourceFilePath) {
         return;
       }
 
-      const commandName = getLiteralValue(chain.newArgs?.[0]);
+      const nameSegment = chain.segments.find((segment) => segment.name === "name");
+      const commandName = getLiteralValue(chain.newArgs?.[0] ?? nameSegment?.args[0]);
       if (typeof commandName !== "string") {
         ts.forEachChild(node, visit);
         return;
@@ -318,6 +350,13 @@ function collectParamAssignments(actionNode, sourceFile) {
       addParam(node.left.name.text, getNodeText(node.right, sourceFile));
     }
 
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isElementAccessExpression(node.left) && ts.isIdentifier(node.left.expression) &&
+        node.left.expression.text === "params") {
+      const name = getLiteralValue(node.left.argumentExpression);
+      if (typeof name === "string") addParam(name, getNodeText(node.right, sourceFile));
+    }
+
     ts.forEachChild(node, visit);
   }
 
@@ -329,9 +368,10 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
   const collectedParams = collectParamAssignments(actionNode, sourceFile);
   const requests = [];
 
-  function matchReference(method, path) {
+  function matchReference(method, path, queryParams) {
     if (!path) return null;
-    const matches = reference.byKey.get(`${method} ${normalizePath(path)}`) ?? [];
+    const matches = [...reference.byKey.values()].flat().filter((endpoint) =>
+      requestMatchesEndpoint({ method, path, queryParams }, endpoint));
     return matches.map((match) => {
       const entry = {
         group: match.group,
@@ -345,6 +385,7 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
           if (schema.parameters) entry.parameters = schema.parameters;
           if (schema.requestBody) entry.requestBody = schema.requestBody;
           if (schema.responses) entry.responses = schema.responses;
+          entry.deprecated = schema.deprecated === true;
         }
       }
       return entry;
@@ -408,7 +449,7 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
           responseType,
           queryParams: params,
           line: lineForNode(node, sourceFile),
-          reference: matchReference(method, path),
+          reference: matchReference(method, path, params),
         });
       }
     }
@@ -421,6 +462,21 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
 }
 
 function parseOptionSegment(segment, sourceFile) {
+  if (segment.name === "addOption") {
+    const option = unwrapChain(segment.args[0]);
+    if (!option || option.root !== "Option") throw new Error("Cannot inspect addOption; use an inline new Option.");
+    const defaultSegment = option.segments.find((item) => item.name === "default");
+    const choicesSegment = option.segments.find((item) => item.name === "choices");
+    const mandatorySegment = option.segments.find((item) => item.name === "makeOptionMandatory");
+    return {
+      flags: getLiteralValue(option.newArgs?.[0]),
+      description: getLiteralValue(option.newArgs?.[1]),
+      required: !!mandatorySegment && getLiteralValue(mandatorySegment.args[0]) !== false,
+      defaultValue: defaultSegment ? getLiteralValue(defaultSegment.args[0]) : null,
+      ...(choicesSegment ? { choices: getLiteralValue(choicesSegment.args[0]) } : {}),
+      line: lineForNode(segment.node, sourceFile),
+    };
+  }
   const flags = getLiteralValue(segment.args[0]);
   const description = getLiteralValue(segment.args[1]);
   const trailingArgs = segment.args.slice(2).map((arg) => getLiteralValue(arg)).filter((value) => value !== null);
@@ -447,7 +503,7 @@ function buildOperation(chain, sourceFile, rootCommand, reference) {
   const commandSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "command");
   const descriptionSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "description");
   const optionSegments = chain.segments.filter(
-    (segment) => segment.kind === "call" && (segment.name === "option" || segment.name === "requiredOption")
+    (segment) => segment.kind === "call" && ["option", "requiredOption", "addOption"].includes(segment.name)
   );
   const argumentSegments = chain.segments.filter(
     (segment) => segment.kind === "call" && segment.name === "argument"
@@ -461,12 +517,16 @@ function buildOperation(chain, sourceFile, rootCommand, reference) {
   const actionNode = actionSegment.args[0];
   const actionText = getNodeText(actionNode, sourceFile);
   const syntax = commandSegment ? getLiteralValue(commandSegment.args[0]) : rootCommand.name;
+  if (typeof syntax !== "string") throw new Error(`Cannot inspect dynamic command syntax in ${sourceFile.fileName}:${lineForNode(actionNode, sourceFile)}. Declare the command inline.`);
   const parsedSyntax = parseSyntax(syntax);
   const rootAction = !commandSegment;
   const fullCommand = rootAction
     ? `guesty ${rootCommand.name}`
-    : `guesty ${rootCommand.name} ${syntax}`;
+    : `guesty ${rootCommand.name === "guesty" ? "" : `${rootCommand.name} `}${syntax}`;
 
+  const options = optionSegments.map((segment) => parseOptionSegment(segment, sourceFile));
+  const jsonStdin = actionText.includes("JSON.parse(await readStdin())") || actionText.includes("readObject(") ||
+    (actionText.includes("await readStdin()") && actionText.includes("jsonObject("));
   return {
     id: fullCommand,
     rootAction,
@@ -474,17 +534,18 @@ function buildOperation(chain, sourceFile, rootCommand, reference) {
     syntax,
     fullCommand,
     description: descriptionSegment ? getLiteralValue(descriptionSegment.args[0]) : null,
+    aliases: chain.segments.filter((segment) => segment.name === "alias").map((segment) => getLiteralValue(segment.args[0])),
     arguments: rootAction
       ? argumentSegments.map((segment) => parseArgumentSegment(segment, sourceFile))
       : parsedSyntax.args,
-    options: optionSegments.map((segment) => parseOptionSegment(segment, sourceFile)),
+    options,
     inputCapabilities: {
-      supportsDataOption: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--data ")),
+      supportsDataOption: options.some((option) => String(option.flags ?? "").includes("--data ")),
       supportsTextOption: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--text ")),
       supportsDataFileOption: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--data-file ")),
       supportsStdinFlag: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--stdin")),
-      readsJsonFromStdin: actionText.includes("JSON.parse(await readStdin())"),
-      readsTextFromStdin: actionText.includes("await readStdin()") && !actionText.includes("JSON.parse(await readStdin())"),
+      readsJsonFromStdin: jsonStdin,
+      readsTextFromStdin: actionText.includes("await readStdin()") && !jsonStdin,
       writesToOutputFile: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--output ")),
     },
     requests: extractRequestDetails(actionNode, sourceFile, reference),
@@ -519,10 +580,12 @@ function collectOperations(sourceFile, rootCommand, reference) {
 
 function summarizeCoverage(operations, reference) {
   const implementedKeys = new Set();
+  const implementedReferences = new Set();
   for (const operation of operations) {
     for (const request of operation.requests) {
       if (!request.path) continue;
       implementedKeys.add(`${request.method} ${normalizePath(request.path)}`);
+      for (const entry of request.reference ?? []) implementedReferences.add(entry.slug);
     }
   }
 
@@ -530,8 +593,8 @@ function summarizeCoverage(operations, reference) {
   for (const [group, endpoints] of reference.byGroup.entries()) {
     const covered = new Set();
     for (const endpoint of endpoints) {
-      if (implementedKeys.has(`${endpoint.method} ${endpoint.normalizedPath}`)) {
-        covered.add(`${endpoint.method} ${endpoint.normalizedPath}`);
+      if (implementedReferences.has(endpoint.slug)) {
+        covered.add(endpoint.slug);
       }
     }
     coveredGroups.push({
@@ -546,8 +609,7 @@ function summarizeCoverage(operations, reference) {
   const missingImplementedEndpoints = [];
   for (const [group, endpoints] of reference.byGroup.entries()) {
     for (const endpoint of endpoints) {
-      const key = `${endpoint.method} ${endpoint.normalizedPath}`;
-      if (!implementedKeys.has(key)) {
+      if (!implementedReferences.has(endpoint.slug)) {
         missingImplementedEndpoints.push({
           group,
           method: endpoint.method,
@@ -562,6 +624,7 @@ function summarizeCoverage(operations, reference) {
   return {
     referenceFile: reference.file,
     implementedUniqueEndpoints: implementedKeys.size,
+    implementedReferenceEndpoints: implementedReferences.size,
     referenceEndpoints: reference.totalEndpoints,
     implementedGroups: coveredGroups.filter((group) => group.implementedEndpoints > 0).length,
     referenceGroups: coveredGroups.length,
@@ -573,7 +636,7 @@ function summarizeCoverage(operations, reference) {
 function main() {
   const packageJson = readJson(PACKAGE_FILE);
   const reference = parseReference();
-  const commandFiles = listCommandFiles();
+  const commandFiles = [...listCommandFiles(), join(ROOT, "src", "cli.ts")];
   const commands = [];
   const allOperations = [];
 
@@ -582,7 +645,12 @@ function main() {
     if (!rootCommand) continue;
 
     const operations = collectOperations(sourceFile, rootCommand, reference);
-    commands.push({
+    if (rootCommand.name === "guesty") {
+      for (const operation of operations) commands.push({
+        name: operation.name, alias: null, description: operation.description,
+        sourceFile: rootCommand.sourceFile, line: operation.line, operations: [operation],
+      });
+    } else commands.push({
       name: rootCommand.name,
       alias: rootCommand.alias,
       description: rootCommand.description,
@@ -612,12 +680,25 @@ function main() {
       "The raw command remains the escape hatch for endpoints or payload shapes that are not wrapped by a named command.",
       "If api-spec.json is present when this file is generated, request entries include the matched Guesty reference group and title.",
     ],
+    ...(existsSync(OPENAPI_FILE) ? {
+      openapiSource: { file: "openapi-spec.json", ...readJson(OPENAPI_FILE)["x-cli-source"] },
+      components: readJson(OPENAPI_FILE).components ?? {},
+    } : {}),
     commands,
     operations: allOperations,
     referenceCoverage: summarizeCoverage(allOperations, reference),
   };
 
   mkdirSync(dirname(OUTPUT_FILE), { recursive: true });
+  if (process.argv.includes("--check")) {
+    const existing = readJson(OUTPUT_FILE);
+    const expected = { ...spec, generatedAt: existing.generatedAt };
+    if (JSON.stringify(existing) !== JSON.stringify(expected)) {
+      throw new Error("guesty-cli-spec.json is out of date. Run npm run generate:cli-spec.");
+    }
+    process.stdout.write("CLI contract matches source and current OpenAPI.\n");
+    return;
+  }
   writeFileSync(OUTPUT_FILE, JSON.stringify(spec, null, 2) + "\n");
   process.stdout.write(`Wrote ${relative(ROOT, OUTPUT_FILE)}\n`);
 }

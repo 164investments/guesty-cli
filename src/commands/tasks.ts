@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { fields, integer, jsonObject } from "./query-options.js";
 
 export const tasks = new Command("tasks")
   .description("Manage tasks");
@@ -10,18 +11,21 @@ tasks
   .command("list")
   .description("List tasks")
   .option("--status <status>", "Filter by status")
-  .option("--listing <id>", "Filter by listing ID")
-  .option("--columns <cols>", "Columns to return (space-separated)", "status title listingId assigneeId dueDate")
-  .option("--limit <n>", "Max results (min 25)", "25")
+  .option("--listing <id>", "Unsupported shorthand; use the API's --filters object")
+  .option("--filters <json>", "JSON object of task report filters")
+  .option("--columns <cols>", "Columns to return (space- or comma-separated)", "id status taskTitle listing assignee scheduledFor")
+  .option("--limit <n>", "Max results (minimum 25)", "25")
   .option("--skip <n>", "Offset", "0")
   .action(async (opts) => {
+    if (opts.listing !== undefined) throw new Error("Guesty's tasks API does not document a --listing shorthand. Use --filters with the task report's filter fields instead.");
     const params: Record<string, string | number> = {
-      columns: opts.columns,
-      limit: parseInt(opts.limit),
-      skip: parseInt(opts.skip),
+      columns: fields(opts.columns),
+      limit: integer(opts.limit, "--limit", 25),
+      skip: integer(opts.skip, "--skip"),
     };
-    if (opts.status) params.status = opts.status;
-    if (opts.listing) params.listingId = opts.listing;
+    const filters = opts.filters ? jsonObject(opts.filters, "--filters") : {};
+    if (opts.status) filters.status = { "@in": [opts.status] };
+    if (Object.keys(filters).length) params.filters = JSON.stringify(filters);
     const data = await guestyFetch("/v1/tasks-open-api/tasks", { params });
     print(data);
   });

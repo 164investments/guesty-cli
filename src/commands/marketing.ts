@@ -9,34 +9,40 @@ export const marketing = new Command("marketing")
 marketing
   .command("list-fields <id>")
   .description("List marketing fields for a listing")
-  .action(async (id: string) => {
-    const data = await guestyFetch(`/v1/marketing/fields/${id}`);
+  .option("--language <slug>", "Language slug, or all for every translation", "all")
+  .action(async (id: string, opts) => {
+    const data = await guestyFetch(`/v1/marketing/fields/${id}`, { params: { language: opts.language } });
     print(data);
   });
 
 marketing
   .command("list-channel-fields <id> <channel>")
   .description("List marketing fields for a listing channel")
-  .action(async (id: string, channel: string) => {
-    const data = await guestyFetch(`/v1/marketing/fields/${id}/channels/${channel}`);
+  .option("--language <slug>", "Language slug, or all for every translation", "all")
+  .action(async (id: string, channel: string, opts) => {
+    const data = await guestyFetch(`/v1/marketing/fields/${id}/channels/${channel}`, { params: { language: opts.language } });
     print(data);
   });
 
 marketing
   .command("list-description-set-fields <id> <descriptionSetId>")
   .description("List marketing fields for a description set")
-  .action(async (id: string, descriptionSetId: string) => {
-    const data = await guestyFetch(`/v1/marketing/fields/${id}/description-sets/${descriptionSetId}`);
+  .option("--language <slug>", "Language slug, or all for every translation", "all")
+  .action(async (id: string, descriptionSetId: string, opts) => {
+    const data = await guestyFetch(`/v1/marketing/fields/${id}/description-sets/${descriptionSetId}`, { params: { language: opts.language } });
     print(data);
   });
 
 marketing
   .command("upsert-translation <id>")
   .description("Upsert a marketing translation (--data or stdin)")
+  .requiredOption("--language <slug>", "Language slug for the translation")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
-    const data = await guestyFetch(`/v1/marketing/fields/${id}/upsert`, { method: "PUT", body });
+    const data = await guestyFetch(`/v1/marketing/fields/${id}/upsert`, {
+      method: "PUT", body, params: { language: opts.language },
+    });
     print(data);
   });
 

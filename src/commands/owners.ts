@@ -1,11 +1,42 @@
-import { writeFileSync } from "node:fs";
-import { Command } from "commander";
+import { readFileSync, writeFileSync } from "node:fs";
+import { basename } from "node:path";
+import { Command, Option } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
+import { collect, date, dateRange } from "./query-options.js";
+import { ownerStatementParams } from "./owner-statement-options.js";
 
 export const owners = new Command("owners")
   .description("Manage owners and ownerships");
+
+owners
+  .command("statements")
+  .description("List owner statement metadata and PDF download URLs (valid for one hour)")
+  .option("--owner <id>", "Filter by owner ID")
+  .option("--listing <id>", "Filter by listing ID (repeat for multiple)", collect, [])
+  .option("--business-model <id>", "Filter by business model ID (repeat for multiple)", collect, [])
+  .addOption(new Option("--period-mode <mode>", "Period filter mode").choices(["month", "year", "monthRange", "yearRange", "fiscalYear", "fiscalYearRange"]))
+  .option("--year <n>", "Period filter year")
+  .option("--month <n>", "Period filter month")
+  .option("--from-year <n>", "Period filter fromYear")
+  .option("--from-month <n>", "Period filter fromMonth")
+  .option("--to-year <n>", "Period filter toYear")
+  .option("--to-month <n>", "Period filter toMonth")
+  .option("--fiscal-year <n>", "Period filter fiscalYear")
+  .option("--from-fiscal-year <n>", "Period filter fromFiscalYear")
+  .option("--to-fiscal-year <n>", "Period filter toFiscalYear")
+  .option("--updated-since <date-time>", "Incremental sync timestamp (ISO 8601 with timezone)")
+  .option("--generated-from <date-time>", "Generation timestamp range start")
+  .option("--generated-to <date-time>", "Generation timestamp range end")
+  .addOption(new Option("--statement-type <type>", "Statement type").choices(["MONTHLY", "ANNUAL", "ANNUAL_SUMMARY", "ANNUAL_SUMMARY_BY_MONTH"]))
+  .option("--status <status>", "Lifecycle status (repeat for multiple)", collect, [])
+  .option("--shared-via <channel>", "Sharing channel (repeat for multiple)", collect, [])
+  .option("--limit <n>", "Max results (1-100)", "25")
+  .option("--skip <n>", "Offset", "0")
+  .action(async (opts) => {
+    print(await guestyFetch("/v1/owner-statement-api/owner-statements", { params: ownerStatementParams(opts) }));
+  });
 
 owners
   .command("bulk-create")
@@ -144,10 +175,28 @@ owners
 
 owners
   .command("create-document <ownerId>")
-  .description("Create a document for an owner (--data or stdin)")
-  .option("--data <json>", "JSON body")
+  .description("Upload a PDF document for an owner (maximum 5 MB)")
+  .requiredOption("--data-file <path>", "Path to the PDF document")
+  .requiredOption("--name <name>", "Document name")
+  .option("--description <text>", "Document description")
+  .addOption(new Option("--type <type>", "Document type").choices(["DOCUMENT", "CONTRACT", "OWNER1099_COPYB", "OWNER1099_COPY2"]).default("DOCUMENT"))
+  .option("--shared", "Make the document visible in the Owners Portal")
+  .option("--start-date <date>", "Effective date (YYYY-MM-DD)")
+  .option("--end-date <date>", "Expiration date (YYYY-MM-DD)")
   .action(async (ownerId: string, opts) => {
-    const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
+    if (opts.startDate) date(opts.startDate, "--start-date");
+    if (opts.endDate) date(opts.endDate, "--end-date");
+    dateRange(opts.startDate, opts.endDate, "--start-date", "--end-date");
+    const bytes = readFileSync(opts.dataFile);
+    if (bytes.length > 5 * 1024 * 1024) throw new Error("Owner documents must not exceed 5 MB.");
+    const body = new FormData();
+    body.append("file", new Blob([bytes], { type: "application/pdf" }), basename(opts.dataFile));
+    body.append("name", opts.name);
+    body.append("type", opts.type);
+    body.append("isShared", String(Boolean(opts.shared)));
+    if (opts.description !== undefined) body.append("description", opts.description);
+    if (opts.startDate) body.append("startDate", opts.startDate);
+    if (opts.endDate) body.append("endDate", opts.endDate);
     const data = await guestyFetch(`/v1/owners/${ownerId}/documents`, { method: "POST", body });
     print(data);
   });

@@ -19,7 +19,12 @@ export function print(data: unknown): void {
     return;
   }
 
-  process.stdout.write(JSON.stringify(data, null, 2) + "\n");
+  if (data instanceof ArrayBuffer) {
+    process.stdout.write(Buffer.from(data));
+    return;
+  }
+
+  printJson(data);
 }
 
 export function printTable(rows: Record<string, unknown>[], columns?: string[]): void {
@@ -29,7 +34,7 @@ export function printTable(rows: Record<string, unknown>[], columns?: string[]):
   }
   const cols = columns ?? Object.keys(rows[0]);
   const widths = cols.map((col) =>
-    Math.max(col.length, ...rows.map((r) => String(r[col] ?? "").length))
+    rows.reduce((width, row) => Math.max(width, String(row[col] ?? "").length), col.length)
   );
 
   const header = cols.map((c, i) => c.padEnd(widths[i])).join("  ");
@@ -40,4 +45,10 @@ export function printTable(rows: Record<string, unknown>[], columns?: string[]):
     const line = cols.map((c, i) => String(row[c] ?? "").padEnd(widths[i])).join("  ");
     process.stdout.write(`${line}\n`);
   }
+}
+
+export function printJson(data: unknown): void {
+  const json = JSON.stringify(data === undefined ? null : data, null, 2);
+  if (json === undefined) throw new Error("The response cannot be represented as JSON.");
+  process.stdout.write(json + "\n");
 }
