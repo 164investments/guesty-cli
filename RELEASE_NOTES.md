@@ -1,13 +1,11 @@
-# Guesty CLI 1.2.1
+# Guesty CLI 1.2.0
 
-Version 1.2.1 also repairs source installation under npm 11 global updates. npm can pass its global setting into Git dependency preparation and omit the local compiler. The preparation helper explicitly installs locked build dependencies in the source checkout when needed, then compiles there. Published tarballs use their verified compiled files without rebuilding.
-
-This release includes the 1.2.0 API audit. It repairs commands that sent ignored filters, incomplete requests, or the wrong payload format, and updates the bundled reference to Guesty's 333 currently documented Open API operations.
+This release repairs commands that sent ignored filters, incomplete requests, or the wrong payload format, and updates the bundled reference to Guesty's 333 currently documented Open API operations.
 
 ## Install or update
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.1/guesty-cli-1.2.1.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.0/guesty-cli-1.2.0.tgz
 guesty --version
 ```
 
