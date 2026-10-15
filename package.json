@@ -20,8 +20,8 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "npm run build && node --test test/*.test.mjs",
-    "typecheck": "tsc --noEmit",
-    "check": "npm test && npm run check:cli-spec",
+    "typecheck": "tsc -v | grep 'Version 7' && tsc --noEmit",
+    "check": "npm run typecheck && npm test && npm run check:cli-spec",
     "check:cli-spec": "node scripts/generate-cli-spec.mjs --check",
     "generate:cli-spec": "node scripts/generate-cli-spec.mjs",
     "link": "npm run build && npm link",
@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.7.0"
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   }
 }
