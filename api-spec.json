@@ -79,38 +79,44 @@
     {
       "method": "GET",
       "path": "/v1/accounts/{id}/custom-fields",
-      "title": "Get All Custom Fields",
-      "slug": "get_accounts-id-custom-fields"
+      "title": "List custom field configurations",
+      "slug": "accountscustomfieldlist",
+      "operationId": "accountsCustomFieldList"
     },
     {
       "method": "POST",
       "path": "/v1/accounts/{id}/custom-fields",
-      "title": "Create new custom field",
-      "slug": "post_accounts-id-custom-fields"
+      "title": "Create custom field configurations",
+      "slug": "accountscustomfieldcreate",
+      "operationId": "accountsCustomFieldCreate"
     },
     {
       "method": "PUT",
       "path": "/v1/accounts/{id}/custom-fields",
-      "title": "Update custom field",
-      "slug": "put_accounts-id-custom-fields"
+      "title": "Update custom field configurations",
+      "slug": "accountscustomfieldupdate",
+      "operationId": "accountsCustomFieldUpdate"
     },
     {
       "method": "DELETE",
       "path": "/v1/accounts/{id}/custom-fields/{field_id}",
-      "title": "Delete Custom Field",
-      "slug": "delete_accounts-id-custom-fields-field-id"
+      "title": "Delete a custom field configuration",
+      "slug": "accountscustomfielddelete",
+      "operationId": "accountsCustomFieldDelete"
     },
     {
       "method": "GET",
       "path": "/v1/accounts/{id}/custom-fields/{field_id}",
-      "title": "Get Custom Field",
-      "slug": "get_accounts-id-custom-fields-field-id"
+      "title": "Get a custom field configuration",
+      "slug": "accountscustomfieldget",
+      "operationId": "accountsCustomFieldGet"
     },
     {
       "method": "GET",
       "path": "/v1/accounts/me",
-      "title": "Get account details of current user.",
-      "slug": "get_accounts-me"
+      "title": "Get account details",
+      "slug": "accountsget",
+      "operationId": "accountsGet"
     }
   ],
   "additional-fees": [
@@ -259,6 +265,43 @@
       "slug": "get_availability-pricing-api-calendar-listings-minified-listingid"
     }
   ],
+  "beta-basic-fees": [
+    {
+      "method": "GET",
+      "path": "/v1/basic-fees/listings",
+      "title": "List basic fees for listings",
+      "slug": "openapibasicfeescontroller_getmany",
+      "operationId": "OpenApiBasicFeesController_getMany"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/basic-fees/listings/{listingId}",
+      "title": "Delete listing basic fees",
+      "slug": "openapibasicfeescontroller_delete",
+      "operationId": "OpenApiBasicFeesController_delete"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/basic-fees/listings/{listingId}",
+      "title": "Get listing basic fees",
+      "slug": "openapibasicfeescontroller_get",
+      "operationId": "OpenApiBasicFeesController_get"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/basic-fees/listings/{listingId}",
+      "title": "Update listing basic fees",
+      "slug": "openapibasicfeescontroller_upsert",
+      "operationId": "OpenApiBasicFeesController_upsert"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/basic-fees/listings/{listingId}/channels/{channel}",
+      "title": "Get listing cleaning fee for channel",
+      "slug": "openapibasicfeescontroller_getbychannel",
+      "operationId": "OpenApiBasicFeesController_getByChannel"
+    }
+  ],
   "business-models-api": [
     {
       "method": "PUT",
@@ -309,56 +352,109 @@
       "path": "/v1/channel-commission/account",
       "title": "Get account channel commission",
       "slug": "channelcommissioncontroller_getaccountchannelcommission",
-      "operationId": "ChannelCommissionController_getAccountChannelCommission"
+      "operationId": "ChannelCommissionController_getAccountChannelCommission",
+      "deprecated": true
     },
     {
       "method": "PUT",
       "path": "/v1/channel-commission/account",
       "title": "Update account channel commission",
       "slug": "channelcommissioncontroller_updateaccountchannelcommission",
-      "operationId": "ChannelCommissionController_updateAccountChannelCommission"
+      "operationId": "ChannelCommissionController_updateAccountChannelCommission",
+      "deprecated": true
     },
     {
       "method": "GET",
       "path": "/v1/channel-commission/listings",
       "title": "Get listings channel commission",
       "slug": "channelcommissioncontroller_getlistingschannelcommission",
-      "operationId": "ChannelCommissionController_getListingsChannelCommission"
+      "operationId": "ChannelCommissionController_getListingsChannelCommission",
+      "deprecated": true
     },
     {
       "method": "PUT",
       "path": "/v1/channel-commission/listings",
       "title": "Update listings channel commission",
       "slug": "channelcommissioncontroller_updatelistingschannelcommission",
-      "operationId": "ChannelCommissionController_updateListingsChannelCommission"
+      "operationId": "ChannelCommissionController_updateListingsChannelCommission",
+      "deprecated": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/channel-commissions-v2",
+      "title": "Create channel commission",
+      "slug": "channelcommissionsopenapicontroller_create",
+      "operationId": "ChannelCommissionsOpenApiController_create"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/channel-commissions-v2/{channelCommissionId}",
+      "title": "Delete channel commission",
+      "slug": "channelcommissionsopenapicontroller_delete",
+      "operationId": "ChannelCommissionsOpenApiController_delete"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/channel-commissions-v2/{channelCommissionId}",
+      "title": "Update channel commission",
+      "slug": "channelcommissionsopenapicontroller_update",
+      "operationId": "ChannelCommissionsOpenApiController_update"
     },
     {
       "method": "GET",
       "path": "/v1/channel-commissions-v2/account",
-      "title": "Get account channel commission",
-      "slug": "channelcommissioncontroller_getaccountchannelcommission1",
-      "operationId": "ChannelCommissionController_getAccountChannelCommission1"
+      "title": "Get account level channel commission",
+      "slug": "channelcommissionsopenapicontroller_getaccountlevelchannelcommissions",
+      "operationId": "ChannelCommissionsOpenApiController_getAccountLevelChannelCommissions"
     },
     {
       "method": "PUT",
       "path": "/v1/channel-commissions-v2/account",
-      "title": "Update account channel commission",
-      "slug": "channelcommissioncontroller_updateaccountchannelcommission1",
-      "operationId": "ChannelCommissionController_updateAccountChannelCommission1"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/channel-commissions-v2/listings",
-      "title": "Get listings channel commission",
-      "slug": "channelcommissioncontroller_getlistingschannelcommission1",
-      "operationId": "ChannelCommissionController_getListingsChannelCommission1"
+      "title": "Update or create account level channel commission",
+      "slug": "channelcommissionsopenapicontroller_updatechannelcommissionaccountlevel",
+      "operationId": "ChannelCommissionsOpenApiController_updateChannelCommissionAccountLevel"
     },
     {
       "method": "PUT",
-      "path": "/v1/channel-commissions-v2/listings",
-      "title": "Update listings channel commission",
-      "slug": "channelcommissioncontroller_updatelistingschannelcommission1",
-      "operationId": "ChannelCommissionController_updateListingsChannelCommission1"
+      "path": "/v1/channel-commissions-v2/reservations/{reservationId}",
+      "title": "[Beta] Update reservation channel commission",
+      "slug": "channelcommissionsopenapicontroller_updatereservationchannelcommission",
+      "operationId": "ChannelCommissionsOpenApiController_updateReservationChannelCommission"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/channel-commissions-v2/unit-type/{unitTypeId}",
+      "title": "Get listing level channel commission",
+      "slug": "channelcommissionsopenapicontroller_getlistinglevelchannelcommissions",
+      "operationId": "ChannelCommissionsOpenApiController_getListingLevelChannelCommissions"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/channel-commissions-v2/unit-type/{unitTypeId}",
+      "title": "Update or create listing level channel commission",
+      "slug": "channelcommissionsopenapicontroller_updatechannelcommission",
+      "operationId": "ChannelCommissionsOpenApiController_updateChannelCommission"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/channel-commissions-v2/unit-type/{unitTypeId}/actual",
+      "title": "Get effective listing channel commissions",
+      "slug": "channelcommissionsopenapicontroller_getlistingactualchannelcommissions",
+      "operationId": "ChannelCommissionsOpenApiController_getListingActualChannelCommissions"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/channel-commissions-v2/unit-type/{unitTypeId}/level-configurations",
+      "title": "Get listing commission level configuration",
+      "slug": "channelcommissionsopenapicontroller_getlevelconfiguration",
+      "operationId": "ChannelCommissionsOpenApiController_getLevelConfiguration"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/channel-commissions-v2/unit-type/{unitTypeId}/level-configurations",
+      "title": "Update listing commission level configuration",
+      "slug": "channelcommissionsopenapicontroller_updatelistinglevelconfiguration",
+      "operationId": "ChannelCommissionsOpenApiController_updateListingLevelConfiguration"
     }
   ],
   "communication": [
@@ -478,14 +574,16 @@
     {
       "method": "GET",
       "path": "/v1/financials/listing/{id}",
-      "title": "Retrieve listing Financials",
-      "slug": "get_financials-listing-id"
+      "title": "Get a listing's financial settings",
+      "slug": "propertiesfinancialsget",
+      "operationId": "propertiesFinancialsGet"
     },
     {
       "method": "PUT",
       "path": "/v1/financials/listing/{id}",
-      "title": "Update listing Financials",
-      "slug": "put_financials-listing-id"
+      "title": "Update a listing's financial settings",
+      "slug": "propertiesfinancialsupdate",
+      "operationId": "propertiesFinancialsUpdate"
     }
   ],
   "guest-app-api": [
@@ -520,20 +618,29 @@
       "title": "Get guest folio overview",
       "slug": "guestfoliocontroller_getfoliooverview",
       "operationId": "GuestFolioController_getFolioOverview"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/guest-folio/settings-snapshot",
+      "title": "Get settings snapshots",
+      "slug": "getguestfoliosettingssnapshots",
+      "operationId": "getGuestFolioSettingsSnapshots"
     }
   ],
   "guests": [
     {
       "method": "GET",
       "path": "/v1/guests/{id}/payment-methods",
-      "title": "List guest's payment methods",
-      "slug": "get_guests-id-payment-methods"
+      "title": "List a guest's payment methods",
+      "slug": "guestspaymentmethodlist",
+      "operationId": "guestsPaymentMethodList"
     },
     {
       "method": "POST",
       "path": "/v1/guests/{id}/payment-methods",
-      "title": "Create guest payment method",
-      "slug": "post_guests-id-payment-methods"
+      "title": "Add a payment method for a guest",
+      "slug": "guestspaymentmethodcreate",
+      "operationId": "guestsPaymentMethodCreate"
     }
   ],
   "guests-crud": [
@@ -656,27 +763,31 @@
     {
       "method": "GET",
       "path": "/v1/integrations",
-      "title": "List all integrations",
-      "slug": "get_integrations"
+      "title": "List integrations",
+      "slug": "accountsintegrationlist",
+      "operationId": "accountsIntegrationList"
     },
     {
       "method": "POST",
       "path": "/v1/integrations",
-      "title": "Create integration",
-      "slug": "post_integrations",
+      "title": "Create an integration",
+      "slug": "accountsintegrationcreate",
+      "operationId": "accountsIntegrationCreate",
       "deprecated": true
     },
     {
       "method": "GET",
       "path": "/v1/integrations/{id}",
-      "title": "Get integration",
-      "slug": "get_integrations-id"
+      "title": "Get an integration",
+      "slug": "accountsintegrationget",
+      "operationId": "accountsIntegrationGet"
     },
     {
       "method": "PUT",
       "path": "/v1/integrations/{id}",
-      "title": "Update integration",
-      "slug": "put_integrations-id",
+      "title": "Update an integration",
+      "slug": "accountsintegrationupdate",
+      "operationId": "accountsIntegrationUpdate",
       "deprecated": true
     }
   ],
@@ -684,7 +795,7 @@
     {
       "method": "POST",
       "path": "/v1/invoice-items/reservation/{reservationId}",
-      "title": "Create Invoice Item",
+      "title": "Create invoice item",
       "slug": "invoiceitemscontroller_createinvoiceitem",
       "operationId": "InvoiceItemsController_createInvoiceItem"
     }
@@ -693,100 +804,115 @@
     {
       "method": "GET",
       "path": "/v1/listings",
-      "title": "Retrieve all listings",
-      "slug": "get_listings"
+      "title": "List listings",
+      "slug": "propertieslistinglist",
+      "operationId": "propertiesListingList"
     },
     {
       "method": "POST",
       "path": "/v1/listings",
       "title": "Create a listing",
-      "slug": "post_listings"
+      "slug": "propertieslistingcreate",
+      "operationId": "propertiesListingCreate"
     },
     {
       "method": "DELETE",
       "path": "/v1/listings/{id}",
       "title": "Delete a listing",
-      "slug": "delete_listings-id"
+      "slug": "propertieslistingdelete",
+      "operationId": "propertiesListingDelete"
     },
     {
       "method": "GET",
       "path": "/v1/listings/{id}",
-      "title": "Retrieve a listing",
-      "slug": "get_listings-id"
+      "title": "Get a listing",
+      "slug": "propertieslistingget",
+      "operationId": "propertiesListingGet"
     },
     {
       "method": "PUT",
       "path": "/v1/listings/{id}",
       "title": "Update a listing",
-      "slug": "put_listings-id"
+      "slug": "propertieslistingupdate",
+      "operationId": "propertiesListingUpdate"
     },
     {
       "method": "GET",
       "path": "/v1/listings/{id}?fields=paymentProviderId",
-      "title": "Retrieve a listing's paymentProviderId",
-      "slug": "get_listings-id-fields-paymentproviderid"
+      "title": "Get a listing's payment provider",
+      "slug": "propertiespaymentprovideridget",
+      "operationId": "propertiesPaymentProviderIdGet"
     },
     {
       "method": "PUT",
       "path": "/v1/listings/{id}/availability-settings",
-      "title": "Update listings availability settings",
-      "slug": "put_listings-id-availability-settings"
+      "title": "Update listing availability settings",
+      "slug": "propertiesavailabilitysettingupdate",
+      "operationId": "propertiesAvailabilitySettingUpdate"
     },
     {
       "method": "GET",
       "path": "/v1/listings/{id}/custom-fields",
-      "title": "Get all listing's custom fields",
-      "slug": "get_listings-id-custom-fields",
+      "title": "List a listing's custom fields",
+      "slug": "propertieslistingcustomfieldlist",
+      "operationId": "propertiesListingCustomFieldList",
       "deprecated": true
     },
     {
       "method": "PUT",
       "path": "/v1/listings/{id}/custom-fields",
-      "title": "Update listing's Custom Fields",
-      "slug": "put_listings-id-custom-fields",
+      "title": "Update a listing's Custom Fields",
+      "slug": "propertieslistingcustomfieldupdate",
+      "operationId": "propertiesListingCustomFieldUpdate",
       "deprecated": true
     },
     {
       "method": "GET",
       "path": "/v1/listings/{id}/custom-fields/{field_id}",
-      "title": "Get custom field-Listings",
-      "slug": "get_listings-id-custom-fields-field-id",
+      "title": "Get listing custom field",
+      "slug": "propertieslistingcustomfieldget",
+      "operationId": "propertiesListingCustomFieldGet",
       "deprecated": true
     },
     {
       "method": "DELETE",
       "path": "/v1/listings/{listing_id}/custom-fields/{field_id}",
-      "title": "Delete listing's custom fields",
-      "slug": "delete_listings-listing-id-custom-fields-field-id",
+      "title": "Delete a listing's custom fields",
+      "slug": "propertieslistingcustomfielddelete",
+      "operationId": "propertiesListingCustomFieldDelete",
       "deprecated": true
     },
     {
       "method": "GET",
       "path": "/v1/listings/cities",
-      "title": "List all cities",
-      "slug": "get_listings-cities"
+      "title": "List cities",
+      "slug": "propertiescitylist",
+      "operationId": "propertiesCityList"
     },
     {
       "method": "GET",
       "path": "/v1/listings/tags",
-      "title": "List all tags",
-      "slug": "get_listings-tags"
+      "title": "List listing tags",
+      "slug": "propertiestaglist",
+      "operationId": "propertiesTagList"
     }
   ],
   "listings.csv": [
     {
       "method": "POST",
       "path": "/v1/listings.csv",
-      "title": "Export as CSV",
-      "slug": "post_listings-csv"
+      "title": "Download a listings report as a CSV",
+      "slug": "propertiesexportlistingscsvdownload",
+      "operationId": "propertiesExportListingsCsvDownload"
     }
   ],
   "listings.email": [
     {
       "method": "POST",
       "path": "/v1/listings.email",
-      "title": "Send results in email",
-      "slug": "post_listings-email"
+      "title": "Email a listings report",
+      "slug": "propertieslistingemailsend",
+      "operationId": "propertiesListingEmailSend"
     }
   ],
   "marketing": [
@@ -1002,22 +1128,25 @@
     {
       "method": "GET",
       "path": "/v1/owners-reservations",
-      "title": "List owners reservations",
-      "slug": "get_owners-reservations",
+      "title": "List owner reservations",
+      "slug": "ownerreservationslist",
+      "operationId": "ownerReservationsList",
       "deprecated": true
     },
     {
       "method": "GET",
       "path": "/v1/owners-reservations/{id}",
-      "title": "Retrieve an owner reservation",
-      "slug": "get_owners-reservations-id",
+      "title": "Get an owner reservation",
+      "slug": "ownerreservationsget",
+      "operationId": "ownerReservationsGet",
       "deprecated": true
     },
     {
       "method": "PUT",
       "path": "/v1/owners-reservations/{id}",
       "title": "Update an owner reservation",
-      "slug": "put_owners-reservations-id",
+      "slug": "ownerreservationsupdate",
+      "operationId": "ownerReservationsUpdate",
       "deprecated": true
     }
   ],
@@ -1026,7 +1155,8 @@
       "method": "POST",
       "path": "/v1/payment-providers/{id}/assign-listings",
       "title": "Assign listings to Stripe account",
-      "slug": "post_payment-providers-id-assign-listings"
+      "slug": "paymentprovidersstripeassign",
+      "operationId": "paymentProvidersStripeAssign"
     },
     {
       "method": "GET",
@@ -1533,113 +1663,129 @@
     {
       "method": "GET",
       "path": "/v1/reservations",
-      "title": "Search reservations",
-      "slug": "get_reservations",
+      "title": "List reservations",
+      "slug": "reservationsv2list",
+      "operationId": "reservationsV2List",
       "deprecated": true
     },
     {
       "method": "POST",
       "path": "/v1/reservations",
       "title": "Create a reservation",
-      "slug": "post_reservations",
+      "slug": "reservationsv2create",
+      "operationId": "reservationsV2Create",
       "deprecated": true
     },
     {
       "method": "GET",
       "path": "/v1/reservations/{id}",
-      "title": "Retrieve a reservation",
-      "slug": "get_reservations-id",
+      "title": "Get a reservation",
+      "slug": "reservationsv2get",
+      "operationId": "reservationsV2Get",
       "deprecated": true
     },
     {
       "method": "PUT",
       "path": "/v1/reservations/{id}",
       "title": "Update a reservation",
-      "slug": "put_reservations-id",
+      "slug": "reservationsv2update",
+      "operationId": "reservationsV2Update",
       "deprecated": true
     },
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/approve",
       "title": "Approve a pending booking request",
-      "slug": "post_reservations-id-approve",
+      "slug": "reservationsv2bookingrequestapprove",
+      "operationId": "reservationsV2BookingRequestApprove",
       "deprecated": true
     },
     {
       "method": "GET",
       "path": "/v1/reservations/{id}/custom-fields",
-      "title": "Retrieve all populated custom fields on an existing reservation.",
-      "slug": "get_reservations-id-custom-fields",
+      "title": "List a reservation's populated custom field values",
+      "slug": "reservationsv2customfieldlist",
+      "operationId": "reservationsV2CustomFieldList",
       "deprecated": true
     },
     {
       "method": "PUT",
       "path": "/v1/reservations/{id}/custom-fields",
-      "title": "Update reservation's Custom Fields",
-      "slug": "put_reservations-id-custom-fields",
+      "title": "Update a reservation's custom field values",
+      "slug": "reservationsv2customfieldupdate",
+      "operationId": "reservationsV2CustomFieldUpdate",
       "deprecated": true
     },
     {
       "method": "GET",
       "path": "/v1/reservations/{id}/custom-fields/{field_id}",
-      "title": "Get custom field - Reservations",
-      "slug": "get_reservations-id-custom-fields-field-id",
+      "title": "Get a reservation's custom field value",
+      "slug": "reservationsv2customfieldget",
+      "operationId": "reservationsV2CustomFieldGet",
       "deprecated": true
     },
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/decline",
       "title": "Decline a pending booking request",
-      "slug": "post_reservations-id-decline",
+      "slug": "reservationsv2bookingrequestdecline",
+      "operationId": "reservationsV2BookingRequestDecline",
       "deprecated": true
     },
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/invoiceItems",
-      "title": "Create new Invoice item",
-      "slug": "post_reservations-id-invoiceitems",
+      "title": "Create an invoice item",
+      "slug": "reservationsv2invoiceitemscreate",
+      "operationId": "reservationsV2InvoiceItemsCreate",
       "deprecated": true
     },
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/payments",
-      "title": "Add a payment to reservation",
-      "slug": "post_reservations-id-payments",
+      "title": "Record or process a reservation payment",
+      "slug": "reservationsv2paymentcreate",
+      "operationId": "reservationsV2PaymentCreate",
       "deprecated": true
     },
     {
       "method": "PUT",
       "path": "/v1/reservations/{id}/payments/{paymentId}",
-      "title": "Update or cancel a payment for reservation",
-      "slug": "put_reservations-id-payments-paymentid",
+      "title": "Update or cancel a pending payment",
+      "slug": "reservationsv2paymentupdate",
+      "operationId": "reservationsV2PaymentUpdate",
       "deprecated": true
     },
     {
       "method": "PATCH",
       "path": "/v1/reservations/{id}/payments/{paymentId}/cancel",
-      "title": "Cancels a pending or recorded payment",
-      "slug": "patch_reservations-id-payments-paymentid-cancel",
+      "title": "Cancel a pending or recorded payment",
+      "slug": "reservationsv2paymentcancelupdate",
+      "operationId": "reservationsV2PaymentCancelUpdate",
       "deprecated": true
     },
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/payments/{paymentId}/refund",
-      "title": "Refund an existing payment",
-      "slug": "post_reservations-id-payments-paymentid-refund",
+      "title": "Refund a payment",
+      "slug": "reservationsv2paymentrefundcreate",
+      "operationId": "reservationsV2PaymentRefundCreate",
       "deprecated": true
     },
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/request-cancellation-sync",
-      "title": "Request airbnb reservation cancellation on the platform",
-      "slug": "post_reservations-id-request-cancellation-sync",
+      "title": "Request an airbnb reservation cancellation",
+      "slug": "reservationsv2requestairbnbcancellationpost",
+      "operationId": "reservationsV2RequestAirbnbCancellationPost",
       "deprecated": true
     },
     {
       "method": "DELETE",
       "path": "/v1/reservations/{reservation_id}/custom-fields/{field_id}",
-      "title": "Delete reservation's custom fields",
-      "slug": "delete_reservations-reservation-id-custom-fields-field-id",
+      "title": "Delete a reservation's custom field value",
+      "slug": "reservationsv2customfielddelete",
+      "operationId": "reservationsV2CustomFieldDelete",
       "deprecated": true
     }
   ],
@@ -1877,8 +2023,9 @@
     {
       "method": "POST",
       "path": "/v1/reservations.csv",
-      "title": "Export as CSV",
-      "slug": "post_reservations-csv",
+      "title": "Download a reservation list as a CSV",
+      "slug": "reservationsv2listcsvdownload",
+      "operationId": "reservationsV2ListCsvDownload",
       "deprecated": true
     }
   ],
@@ -1886,8 +2033,9 @@
     {
       "method": "POST",
       "path": "/v1/reservations.email",
-      "title": "Send results in email",
-      "slug": "post_reservations-email",
+      "title": "Email a reservation list",
+      "slug": "reservationsv2listemailsend",
+      "operationId": "reservationsV2ListEmailSend",
       "deprecated": true
     }
   ],
@@ -2094,38 +2242,44 @@
     {
       "method": "GET",
       "path": "/v1/saved-replies",
-      "title": "Get saved replies",
-      "slug": "get_saved-replies"
+      "title": "List saved replies",
+      "slug": "inboxsavedreplylist",
+      "operationId": "inboxSavedReplyList"
     },
     {
       "method": "POST",
       "path": "/v1/saved-replies",
-      "title": "Post saved reply",
-      "slug": "post_saved-replies"
+      "title": "Create a saved reply",
+      "slug": "inboxsavedreplycreate",
+      "operationId": "inboxSavedReplyCreate"
     },
     {
       "method": "DELETE",
       "path": "/v1/saved-replies/{replyId}",
-      "title": "Delete saved reply by id",
-      "slug": "delete_saved-replies-replyid"
+      "title": "Delete a saved reply",
+      "slug": "inboxsavedreplydelete",
+      "operationId": "inboxSavedReplyDelete"
     },
     {
       "method": "GET",
       "path": "/v1/saved-replies/{replyId}",
-      "title": "Get saved reply by id",
-      "slug": "get_saved-replies-replyid"
+      "title": "Get a saved reply",
+      "slug": "inboxsavedreplyget",
+      "operationId": "inboxSavedReplyGet"
     },
     {
       "method": "PUT",
       "path": "/v1/saved-replies/{replyId}",
-      "title": "Update saved reply by id",
-      "slug": "put_saved-replies-replyid"
+      "title": "Update a saved reply",
+      "slug": "inboxsavedreplyupdate",
+      "operationId": "inboxSavedReplyUpdate"
     },
     {
       "method": "GET",
       "path": "/v1/saved-replies/listing/{listingId}",
-      "title": "Get saved replies by listing id",
-      "slug": "get_saved-replies-listing-listingid"
+      "title": "List saved replies by listing",
+      "slug": "inboxsavedreplylistinglist",
+      "operationId": "inboxSavedReplyListingList"
     }
   ],
   "tasks-open-api": [
@@ -2307,64 +2461,74 @@
     {
       "method": "GET",
       "path": "/v1/views",
-      "title": "Retrieve all views",
-      "slug": "get_views"
+      "title": "List saved views",
+      "slug": "accountsviewlist",
+      "operationId": "accountsViewList"
     },
     {
       "method": "POST",
       "path": "/v1/views",
       "title": "Create a view",
-      "slug": "post_views"
+      "slug": "accountsviewcreate",
+      "operationId": "accountsViewCreate"
     },
     {
       "method": "DELETE",
       "path": "/v1/views/{id}",
       "title": "Delete a view",
-      "slug": "delete_views-id"
+      "slug": "accountsviewdelete",
+      "operationId": "accountsViewDelete"
     },
     {
       "method": "GET",
       "path": "/v1/views/{id}",
-      "title": "Retrieve a view",
-      "slug": "get_views-id"
+      "title": "Get a saved view",
+      "slug": "accountsviewget",
+      "operationId": "accountsViewGet"
     },
     {
       "method": "PUT",
       "path": "/v1/views/{id}",
-      "title": "Update a view",
-      "slug": "put_views-id"
+      "title": "Update a saved view",
+      "slug": "accountsviewupdate",
+      "operationId": "accountsViewUpdate"
     }
   ],
   "webhooks": [
     {
       "method": "GET",
       "path": "/v1/webhooks",
-      "title": "List all webhooks",
-      "slug": "get_webhooks"
+      "title": "List webhook subscriptions",
+      "slug": "accountswebhooklist",
+      "operationId": "accountsWebhookList"
     },
     {
       "method": "POST",
       "path": "/v1/webhooks",
-      "title": "Create a Webhook",
-      "slug": "post_webhooks"
+      "title": "Create a webhook subscription",
+      "slug": "accountswebhookcreate",
+      "operationId": "accountsWebhookCreate"
     },
     {
       "method": "DELETE",
       "path": "/v1/webhooks/{id}",
-      "title": "Delete webhook",
-      "slug": "delete_webhooks-id"
+      "title": "Delete a webhook subscription",
+      "slug": "accountswebhookdelete",
+      "operationId": "accountsWebhookDelete"
     },
     {
       "method": "GET",
       "path": "/v1/webhooks/{id}",
-      "title": "Retrieve a Webhook",
-      "slug": "get_webhooks-id"
+      "title": "Get a Webhook subscription",
+      "slug": "accountswebhookget",
+      "operationId": "accountsWebhookGet"
     },
     {
       "method": "PUT",
       "path": "/v1/webhooks/{id}",
-      "title": "Update webhook",
-      "slug": "put_webhooks-id"
+      "title": "Update a webhook subscription",
+      "slug": "accountswebhookupdate",
+      "operationId": "accountsWebhookUpdate"
     }
   ],
   "webhooks-v2": [
