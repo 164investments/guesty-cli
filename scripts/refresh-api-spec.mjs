@@ -1,39 +1,39 @@
 #!/usr/bin/env node
 
-import { readFile, writeFile, rename, rm } from "node:fs/promises";
+// Usage: node scripts/refresh-api-spec.mjs [--interval-ms 2000] [--max-minutes 25] [--allow-shrink]
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { buildReference, readDocumentationPage } from "./api-reference.mjs";
+import { refreshApiSpec } from "./reference-refresh.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const sourceUrl = "https://open-api-docs.guesty.com/reference/get_accounts-me";
+const args = process.argv.slice(2);
+
+function numberOption(name, fallback) {
+  const index = args.indexOf(name);
+  if (index === -1) return fallback;
+  const value = Number(args[index + 1]);
+  if (!Number.isFinite(value) || value <= 0) throw new Error(`${name} needs a positive number.`);
+  return value;
+}
 
 async function main() {
-  const response = await fetch(sourceUrl, {
-    headers: { "User-Agent": "guesty-cli documentation-refresh" },
-    signal: AbortSignal.timeout(30_000),
+  const result = await refreshApiSpec({
+    root,
+    intervalMs: numberOption("--interval-ms", 2_000),
+    maxRuntimeMs: numberOption("--max-minutes", 25) * 60_000,
+    allowShrink: args.includes("--allow-shrink"),
+    log: (line) => process.stdout.write(`${line}\n`),
+    warn: (line) => process.stderr.write(`${line}\n`),
   });
-  if (!response.ok) throw new Error(`Guesty documentation returned HTTP ${response.status}; no reference files were updated.`);
-  const page = readDocumentationPage(await response.text());
-  const previous = JSON.parse(await readFile(join(root, "api-spec.json"), "utf8"));
-  const catalog = buildReference(page, previous);
-  const schema = page.document.api.schema;
-  schema["x-cli-source"] = { url: sourceUrl, updatedAt: page.apiDefinitions?.[0]?.updated_at ?? page.document.updated_at };
-  // Finish parsing/validation before replacing either artifact. A failed fetch
-  // must never silently publish a partial or empty endpoint inventory.
-  const staged = [];
-  try {
-    for (const [name, data] of [["openapi-spec.json", schema], ["api-spec.json", catalog]]) {
-      const target = join(root, name);
-      const temporary = `${target}.tmp-${process.pid}-${Date.now()}`;
-      staged.push({ target, temporary });
-      await writeFile(temporary, JSON.stringify(data, null, 2) + "\n", { flag: "wx" });
-    }
-    for (const { target, temporary } of staged) await rename(temporary, target);
-  } finally {
-    for (const { temporary } of staged) await rm(temporary, { force: true });
-  }
-  process.stdout.write(`Refreshed ${Object.values(catalog).reduce((sum, entries) => sum + entries.length, 0)} endpoints from the current Guesty OpenAPI document.\n`);
+  const seconds = Math.round(result.elapsedMs / 1000);
+  const lines = [
+    `Refreshed ${result.current} operations from ${result.pages} Guesty reference pages (previously ${result.previous}; documentation updated ${result.source.updatedAt}).`,
+    `Added ${result.added.length}, removed ${result.removed.length}.`,
+    ...result.added.map((key) => `  + ${key}`),
+    ...result.removed.map((key) => `  - ${key}`),
+    `Took ${Math.floor(seconds / 60)}m ${seconds % 60}s: ${result.requests} requests, ${result.retries} retries, ${result.throttled} rate-limited.`,
+  ];
+  process.stdout.write(`${lines.join("\n")}\n`);
 }
 
 main().catch((error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });

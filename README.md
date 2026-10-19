@@ -203,7 +203,7 @@ Requests time out after 60 seconds by default; `raw --timeout <seconds>` can adj
 
 The repo includes [`guesty-cli-spec.json`](./guesty-cli-spec.json) as the machine-readable reference for all commands, options, and the Guesty endpoints they call. Each endpoint includes a `docsUrl` linking to the official Guesty API documentation.
 
-[`api-spec.json`](./api-spec.json) catalogs all 333 documented Open API operations in this release; [`openapi-spec.json`](./openapi-spec.json) preserves the current full request/response schemas and deprecation flags. Booking Engine documentation is reviewed separately; normal CLI commands continue to use Open API credentials and endpoints.
+[`api-spec.json`](./api-spec.json) catalogs all 346 documented Open API operations (Guesty documentation of 2026-10-18); [`openapi-spec.json`](./openapi-spec.json) preserves the current full request/response schemas and deprecation flags. Booking Engine documentation is reviewed separately; normal CLI commands continue to use Open API credentials and endpoints.
 
 Regenerate with:
 
@@ -218,6 +218,10 @@ npm run refresh:api-spec
 npm run generate:cli-spec
 npm run check
 ```
+
+Guesty's documentation site publishes no complete OpenAPI download; each reference page carries only its own operation. The refresh reads the reference navigation from `https://open-api-docs.guesty.com/reference`, then each reference page's Markdown copy (`/reference/<slug>.md`), one request every two seconds, and merges them into one document. It takes about 12 minutes. A 429 response waits for `Retry-After` and slows the rest of the run; other server and network errors back off and retry.
+
+The refresh writes nothing and exits non-zero if any page cannot be read, if pages disagree, if the result does not cover every reference page, if the operation count falls below 90% of the previous `openapi-spec.json`, or if it runs past 25 minutes. Options: `--interval-ms <ms>`, `--max-minutes <minutes>`, and `--allow-shrink` after you have confirmed that Guesty removed the missing operations.
 
 `node scripts/scrape-api-docs.mjs` downloads pages from the current documentation index into the ignored `docs/api/open` cache. Add `--booking` for Booking Engine documentation or `--guides` for guides only. The historical `.ts` script names remain compatibility entry points. `node scripts/build-knowledge-base.mjs --output <directory>` generates a condensed reference from the current schema.
 
