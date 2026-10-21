@@ -83,6 +83,9 @@ globalThis.fetch = async (input, options = {}) => {
     body: teamRequest ? JSON.parse(options.body) : undefined,
     timeout: options.signal instanceof AbortSignal,
   });
+  if (url.hostname === "team-cache.invalid" && url.pathname === "/v1/teams") {
+    return new Response(JSON.stringify(scenario.teamCreate ?? {}), { status: 201, headers: { "Content-Type": "application/json" } });
+  }
   if (teamRequest && ["team-cache.invalid", "127.0.0.1"].includes(url.hostname)) {
     if (options.method !== "POST") throw new Error("The token service is read through POST /v1/token");
     if (scenario.teamError) throw new Error("fake-secret-in-team-network-error");

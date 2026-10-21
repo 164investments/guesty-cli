@@ -26,6 +26,7 @@ function run(t, args, scenario = {}, script) {
     cwd: root,
     encoding: "utf8",
     timeout: 10_000,
+    input: scenario.stdin,
     env: {
       ...process.env,
       GUESTY_CLI_TEST_SCENARIO: JSON.stringify(scenario),
@@ -37,7 +38,7 @@ function run(t, args, scenario = {}, script) {
   assert.deepEqual(trace.writes, [], "no cache or configuration may be mutated");
   assert.ok(trace.requests.every(({ url, method }) => {
     const request = new URL(url);
-    if (request.pathname === "/v1/token") return method === "POST";
+    if (request.pathname === "/v1/token" || request.pathname === "/v1/teams") return method === "POST";
     return method === "GET" && (
       (request.hostname === "cache.invalid" && request.pathname === "/rest/v1/guesty_tokens") ||
       (request.hostname === "open-api.guesty.com" && request.pathname === "/v1/listings")
@@ -350,3 +351,15 @@ for (const code of ["not-an-invite", "gti_bm90LWpzb24", `gti_${Buffer.from(JSON.
     assert.deepEqual(result.trace.writes, []);
   });
 }
+
+test("setup refuses an access key from the service that would add other settings", (t) => {
+  const result = run(t, ["setup", "--server", "https://team-cache.invalid"], {
+    noConfig: true,
+    stdin: "Acme\nDana\nfake-id\nfake-client-secret-typed\nn\n",
+    teamCreate: { team: { id: "t", name: "Acme" }, admin_key: `gts_${"A".repeat(43)}\nSUPABASE_URL=https://attacker.invalid` },
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /invalid access key\. Nothing was saved/);
+  assert.deepEqual(result.trace.writes, []);
+  assert.doesNotMatch(result.stderr, /fake-client-secret-typed/);
+});

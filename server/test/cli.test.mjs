@@ -122,13 +122,22 @@ test("a revoked teammate can no longer get the token", async () => {
   assert.match(result.stderr, /token service rejected the access key \(HTTP 401\)/);
 });
 
-test("rerunning setup with the same credentials recovers admin access instead of a second team", async () => {
+test("rerunning setup with the same credentials points to an invite, then recovers admin access the next day", async () => {
   const other = home();
-  const result = await cli(other, ["setup", "--server", base], "Acme again\nDana\nacme-id\nacme-secret\nn\n");
-  assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stderr, /already belong to the team "Acme"/);
+  const answers = "Acme again\nDana\nacme-id\nacme-secret\nn\n";
+  const sameDay = await cli(other, ["setup", "--server", base], answers);
+  assert.equal(sameDay.status, 1);
+  assert.match(sameDay.stderr, /already belong to a team on this service\. Ask one of its admins for an invite/);
+  assert.equal(settings(other), "");
   assert.equal(oauthRequests.length, 1);
-  assert.equal((await cli(other, ["token"])).stdout, "mock-token-1\n");
+  const db = await mf.getD1Database("DB");
+  await db.prepare("UPDATE token_requests SET requested_at = requested_at - ?").bind(25 * 3600_000).run();
+  const nextDay = await cli(other, ["setup", "--server", base], answers);
+  assert.equal(nextDay.status, 0, nextDay.stderr);
+  assert.match(nextDay.stderr, /already belong to the team "Acme"/);
+  assert.equal(oauthRequests.length, 2);
+  assert.equal((await cli(other, ["token"])).stdout, "mock-token-2\n");
+  assert.equal((await cli(admin, ["token"])).stdout, "mock-token-2\n");
 });
 
 test("deleting the team removes it from the service and this CLI's settings", async () => {

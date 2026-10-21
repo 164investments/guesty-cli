@@ -132,18 +132,6 @@ test("keys are checked: wrong, revoked, member-only and last-admin cases", async
   assert.equal((await callJson("POST", "/v1/team/keys", { key: admin, body: { label: "Sam" } })).body.error, "label_in_use");
 });
 
-test("the same Guesty client cannot start a second team, but its secret recovers admin access", async () => {
-  const taken = await callJson("POST", "/v1/teams", { body: { name: "Copy", credentials: { openapi: { client_id: "acme-id", client_secret: "other" } } } });
-  assert.equal(taken.status, 409);
-  assert.equal(taken.body.error, "credentials_in_use");
-  const recovered = await callJson("POST", "/v1/teams", { body: { name: "Again", credentials: { openapi: { client_id: "acme-id", client_secret: "acme-secret" } } } });
-  assert.equal(recovered.status, 200);
-  assert.equal(recovered.body.recovered, true);
-  const status = await callJson("GET", "/v1/team", { key: recovered.body.admin_key });
-  assert.equal(status.body.team.name, "Acme");
-  assert.equal(oauth.requests.length, 1);
-});
-
 test("a token near expiry is renewed once, even when several members ask at the same moment", async () => {
   await sql("UPDATE tokens SET expires_at = ?", Date.now() + 30 * 60_000).run();
   oauth.replies.push({ status: 200, delayMs: 300 });
@@ -234,9 +222,9 @@ test("a request that never reaches Guesty is recorded and pauses renewals", asyn
   }
 });
 
-test("rejected credentials save nothing, and retries still count toward the limit", async () => {
+test("rejected credentials save nothing, and sign-up retries are limited to two a day", async () => {
   const before = oauth.requests.length;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
     oauth.replies.push({ status: 401 });
     const result = await createTeam("typo");
     assert.equal(result.status, 422, `attempt ${attempt}`);
@@ -244,7 +232,8 @@ test("rejected credentials save nothing, and retries still count toward the limi
   }
   const blocked = await createTeam("typo");
   assert.equal(blocked.body.error, "limit_reached");
-  assert.equal(oauth.requests.length, before + 3);
+  assert.match(blocked.body.message, /sign-up attempts/);
+  assert.equal(oauth.requests.length, before + 2);
   assert.equal((await sql("SELECT COUNT(*) AS n FROM teams WHERE name = 'Team typo'").first()).n, 0);
 });
 
@@ -302,6 +291,37 @@ test("an admin can replace credentials, and Guesty confirms them first", async (
   assert.equal(taken.body.error, "credentials_in_use");
 });
 
+test("someone who only knows a team's client ID cannot take it over or use up its renewals", async () => {
+  const acme = (secret) => callJson("POST", "/v1/teams", { body: { name: "Copy", credentials: { openapi: { client_id: "acme-id", client_secret: secret } } } });
+  await ageRequests(25 * 3600_000);
+  await sql("UPDATE team_creation_attempts SET attempted_at = attempted_at - ?", 2 * 3600_000).run();
+  const before = oauth.requests.length;
+  oauth.replies.push({ status: 401 });
+  const guess = await acme("guessed");
+  assert.equal(guess.status, 422);
+  const again = await acme("guessed-again");
+  assert.equal(again.status, 409);
+  assert.match(again.body.message, /Ask one of its admins for an invite/);
+  assert.equal(oauth.requests.length, before + 1);
+  // The team's own renewals are counted separately and still work.
+  assert.equal((await callJson("POST", "/v1/team/refresh", { key: admin, body: {} })).status, 200);
+  assert.equal(oauth.requests.length, before + 2);
+});
+
+test("the current client secret recovers admin access after Guesty accepts it", async () => {
+  await ageRequests(25 * 3600_000);
+  const before = oauth.requests.length;
+  const recovered = await callJson("POST", "/v1/teams", { body: { name: "Again", credentials: { openapi: { client_id: "acme-id", client_secret: "rotated" } } } });
+  assert.equal(recovered.status, 200, JSON.stringify(recovered.body));
+  assert.equal(recovered.body.recovered, true);
+  assert.equal(oauth.requests.length, before + 1);
+  assert.equal(oauth.requests.at(-1).form.client_secret, "rotated");
+  const status = await callJson("GET", "/v1/team", { key: recovered.body.admin_key });
+  assert.equal(status.body.team.name, "Acme");
+  const sameDay = await callJson("POST", "/v1/teams", { body: { name: "Again", credentials: { openapi: { client_id: "acme-id", client_secret: "rotated" } } } });
+  assert.equal(sameDay.status, 409);
+});
+
 test("status shows token health and keys but no secrets", async () => {
   const { status, body } = await callJson("GET", "/v1/team", { key: admin });
   assert.equal(status, 200);
@@ -327,7 +347,8 @@ test("bad requests are refused before any work", async () => {
 });
 
 test("one address can create at most ten teams an hour", async () => {
-  const before = (await sql("SELECT COUNT(*) AS n FROM team_creation_attempts").first()).n;
+  await sql("UPDATE team_creation_attempts SET attempted_at = attempted_at - ?", 2 * 3600_000).run();
+  const before = 0;
   for (let n = 0; n < 10 - before; n += 1) await createTeam(`burst-${n}`);
   const blocked = await createTeam("burst-over");
   assert.equal(blocked.status, 429);

@@ -9,6 +9,7 @@ import {
   configuredService,
   decodeInvite,
   encodeInvite,
+  isAccessKey,
   serviceUrl,
   type ServiceSettings,
 } from "../token-service.js";
@@ -31,6 +32,8 @@ function currentService(): ServiceSettings {
 }
 
 function useService(settings: ServiceSettings): void {
+  // The key comes from the service, which may be someone else's server.
+  if (!isAccessKey(settings.key)) throw new Error("The token service returned an invalid access key. Nothing was saved.");
   const file = saveSettings({ [TOKEN_SERVICE_URL_ENV]: settings.url, [TOKEN_SERVICE_KEY_ENV]: settings.key });
   note(`Saved to ${file}.`);
 }
@@ -92,6 +95,7 @@ team
       key: service.key,
       body: { label: name, role: opts.admin ? "admin" : "member" },
     });
+    if (!isAccessKey(created.key)) throw new Error("The token service returned an invalid access key.");
     note(`Send this invite code to ${name} privately. They run: guesty team join <code>`);
     print(encodeInvite({ url: service.url, key: created.key }));
   });

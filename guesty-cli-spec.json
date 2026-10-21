@@ -1,7 +1,7 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-21T18:03:58.686Z",
+  "generatedAt": "2026-10-21T18:14:24.514Z",
   "cliVersion": "1.2.1",
   "generatedFrom": {
     "packageFile": "package.json",
@@ -129422,7 +129422,7 @@
       "alias": null,
       "description": "Share one Guesty token with your team through a token service",
       "sourceFile": "src/commands/team.ts",
-      "line": 75,
+      "line": 78,
       "operations": [
         {
           "id": "guesty team join",
@@ -129445,7 +129445,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 78
+          "line": 81
         },
         {
           "id": "guesty team invite",
@@ -129462,7 +129462,7 @@
               "description": "Let this teammate manage the team too",
               "required": false,
               "defaultValue": null,
-              "line": 84
+              "line": 87
             }
           ],
           "inputCapabilities": {
@@ -129476,7 +129476,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 84
+          "line": 87
         },
         {
           "id": "guesty team revoke",
@@ -129499,7 +129499,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 99
+          "line": 103
         },
         {
           "id": "guesty team status",
@@ -129522,7 +129522,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 109
+          "line": 113
         },
         {
           "id": "guesty team refresh",
@@ -129539,7 +129539,7 @@
               "description": "Replace the booking-engine token instead of the Open API token",
               "required": false,
               "defaultValue": null,
-              "line": 117
+              "line": 121
             }
           ],
           "inputCapabilities": {
@@ -129553,7 +129553,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 117
+          "line": 121
         },
         {
           "id": "guesty team credentials",
@@ -129570,7 +129570,7 @@
               "description": "Set booking-engine API credentials instead of Open API",
               "required": false,
               "defaultValue": null,
-              "line": 130
+              "line": 134
             }
           ],
           "inputCapabilities": {
@@ -129584,7 +129584,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 130
+          "line": 134
         },
         {
           "id": "guesty team limit",
@@ -129607,7 +129607,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 145
+          "line": 149
         },
         {
           "id": "guesty team delete",
@@ -129624,7 +129624,7 @@
               "description": "Confirm without asking",
               "required": false,
               "defaultValue": null,
-              "line": 156
+              "line": 160
             }
           ],
           "inputCapabilities": {
@@ -129638,7 +129638,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 156
+          "line": 160
         }
       ]
     },
@@ -262959,7 +262959,7 @@
           "description": "Set booking-engine API credentials instead of Open API",
           "required": false,
           "defaultValue": null,
-          "line": 130
+          "line": 134
         }
       ],
       "inputCapabilities": {
@@ -262973,7 +262973,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 130
+      "line": 134
     },
     {
       "id": "guesty team delete",
@@ -262990,7 +262990,7 @@
           "description": "Confirm without asking",
           "required": false,
           "defaultValue": null,
-          "line": 156
+          "line": 160
         }
       ],
       "inputCapabilities": {
@@ -263004,7 +263004,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 156
+      "line": 160
     },
     {
       "id": "guesty team invite",
@@ -263021,7 +263021,7 @@
           "description": "Let this teammate manage the team too",
           "required": false,
           "defaultValue": null,
-          "line": 84
+          "line": 87
         }
       ],
       "inputCapabilities": {
@@ -263035,7 +263035,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 84
+      "line": 87
     },
     {
       "id": "guesty team join",
@@ -263058,7 +263058,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 78
+      "line": 81
     },
     {
       "id": "guesty team limit",
@@ -263081,7 +263081,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 145
+      "line": 149
     },
     {
       "id": "guesty team refresh",
@@ -263098,7 +263098,7 @@
           "description": "Replace the booking-engine token instead of the Open API token",
           "required": false,
           "defaultValue": null,
-          "line": 117
+          "line": 121
         }
       ],
       "inputCapabilities": {
@@ -263112,7 +263112,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 117
+      "line": 121
     },
     {
       "id": "guesty team revoke",
@@ -263135,7 +263135,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 99
+      "line": 103
     },
     {
       "id": "guesty team status",
@@ -263158,7 +263158,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 109
+      "line": 113
     },
     {
       "id": "guesty token",

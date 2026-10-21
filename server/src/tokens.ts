@@ -114,17 +114,21 @@ async function releaseLease(env: TokenEnv, fingerprint: string, leaseId: string)
   await env.DB.prepare("DELETE FROM refresh_leases WHERE fingerprint = ? AND lease_id = ?").bind(fingerprint, leaseId).run();
 }
 
+export type RequestSource = "team" | "signup";
+
 // Returns when the next request is allowed, or undefined if one is allowed now.
-async function nextAllowedRequest(env: TokenEnv, fingerprint: string, maxPerDay: number): Promise<{ status: "limit" | "waiting"; retryAt: number } | undefined> {
+// The limit counts one source's requests; the pause follows the latest request
+// of either kind.
+async function nextAllowedRequest(env: TokenEnv, fingerprint: string, source: RequestSource, maxPerDay: number): Promise<{ status: "limit" | "waiting"; retryAt: number } | undefined> {
   const now = Date.now();
   const recent = await env.DB.prepare(
-    "SELECT requested_at, outcome, http_status FROM token_requests WHERE fingerprint = ? AND requested_at > ? ORDER BY requested_at DESC"
-  ).bind(fingerprint, now - POLICY.windowMs).all<{ requested_at: number; outcome: string; http_status: number | null }>();
-  const rows = recent.results;
-  if (rows.length >= maxPerDay) {
-    return { status: "limit", retryAt: rows[maxPerDay - 1].requested_at + POLICY.windowMs };
+    "SELECT requested_at, outcome, http_status, source FROM token_requests WHERE fingerprint = ? AND requested_at > ? ORDER BY requested_at DESC"
+  ).bind(fingerprint, now - POLICY.windowMs).all<{ requested_at: number; outcome: string; http_status: number | null; source: RequestSource }>();
+  const counted = recent.results.filter((row) => row.source === source);
+  if (counted.length >= maxPerDay) {
+    return { status: "limit", retryAt: counted[maxPerDay - 1].requested_at + POLICY.windowMs };
   }
-  const last = rows[0];
+  const last = recent.results[0];
   // Guesty refusing the credentials is not worth pausing for: the admin is
   // correcting a typo, and the daily limit still counts the attempt.
   if (last && last.outcome !== "succeeded" && ![400, 401, 403].includes(last.http_status ?? 0)) {
@@ -134,13 +138,13 @@ async function nextAllowedRequest(env: TokenEnv, fingerprint: string, maxPerDay:
   return undefined;
 }
 
-async function requestFromGuesty(env: TokenEnv, tokenType: TokenType, credentials: Credentials, fingerprint: string, teamId: string | null): Promise<{ status: "refreshed"; token: CachedToken } | Blocked> {
+async function requestFromGuesty(env: TokenEnv, tokenType: TokenType, credentials: Credentials, fingerprint: string, teamId: string | null, source: RequestSource): Promise<{ status: "refreshed"; token: CachedToken } | Blocked> {
   const startedAt = Date.now();
   // Written before the request and never rolled back: the daily limit counts it
   // even if this Worker stops before Guesty answers.
   const ledger = await env.DB.prepare(
-    "INSERT INTO token_requests (fingerprint, team_id, token_type, requested_at) VALUES (?, ?, ?, ?) RETURNING id"
-  ).bind(fingerprint, teamId, tokenType, startedAt).first<{ id: number }>();
+    "INSERT INTO token_requests (fingerprint, team_id, token_type, source, requested_at) VALUES (?, ?, ?, ?, ?) RETURNING id"
+  ).bind(fingerprint, teamId, tokenType, source, startedAt).first<{ id: number }>();
   const finish = (outcome: "succeeded" | "failed", httpStatus: number | null, detail: string | null) =>
     env.DB.prepare("UPDATE token_requests SET outcome = ?, http_status = ?, detail = ? WHERE id = ?")
       .bind(outcome, httpStatus, detail, ledger!.id)
@@ -189,15 +193,16 @@ async function requestFromGuesty(env: TokenEnv, tokenType: TokenType, credential
   return { status: "refreshed", token: { token_type: tokenType, access_token: accessToken, expires_at: startedAt + expiresIn * 1000 } };
 }
 
-// Requests a token for credentials that are not stored yet (a new team, or an
-// admin replacing credentials), so Guesty confirms them before they are saved.
-export async function verifyCredentials(env: TokenEnv, tokenType: TokenType, credentials: Credentials, fingerprint: string, teamId: string | null, maxPerDay: number): Promise<Refresh> {
+// Requests a token for credentials that are not stored yet (a new team, a
+// recovery, or an admin replacing credentials), so Guesty confirms them before
+// they are saved.
+export async function verifyCredentials(env: TokenEnv, tokenType: TokenType, credentials: Credentials, fingerprint: string, teamId: string | null, source: RequestSource, maxPerDay: number): Promise<Refresh> {
   const leaseId = await acquireLease(env, fingerprint);
   if (!leaseId) return { status: "busy", retryAt: Date.now() + 2_000 };
   try {
-    const blocked = await nextAllowedRequest(env, fingerprint, maxPerDay);
+    const blocked = await nextAllowedRequest(env, fingerprint, source, maxPerDay);
     if (blocked) return blocked;
-    return await requestFromGuesty(env, tokenType, credentials, fingerprint, teamId);
+    return await requestFromGuesty(env, tokenType, credentials, fingerprint, teamId, source);
   } finally {
     await releaseLease(env, fingerprint, leaseId);
   }
@@ -220,9 +225,9 @@ export async function ensureToken(env: TokenEnv, keys: ServiceKeys, teamId: stri
   try {
     const latest = await readToken(env, keys, teamId, tokenType);
     if (!force && isFresh(latest)) return { status: "fresh", token: latest };
-    const blocked = await nextAllowedRequest(env, credentials.fingerprint, maxPerDay);
+    const blocked = await nextAllowedRequest(env, credentials.fingerprint, "team", maxPerDay);
     if (blocked) return { ...blocked, token: latest };
-    const result = await requestFromGuesty(env, tokenType, credentials, credentials.fingerprint, teamId);
+    const result = await requestFromGuesty(env, tokenType, credentials, credentials.fingerprint, teamId, "team");
     if (result.status !== "refreshed") return { ...result, token: latest };
     await (await storeToken(env, keys, teamId, result.token)).run();
     return result;

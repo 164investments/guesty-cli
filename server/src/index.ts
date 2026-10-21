@@ -4,7 +4,6 @@ import {
   clientFingerprint,
   ensureToken,
   isTokenType,
-  readCredentials,
   storeCredentials,
   storeToken,
   verifyCredentials,
@@ -23,6 +22,11 @@ const MAX_BODY_BYTES = 16_384;
 const MAX_TEAMS_PER_CLIENT_PER_HOUR = 10;
 const LAST_USED_RESOLUTION_MS = 60 * 60_000;
 const DEFAULT_MAX_REQUESTS_PER_DAY = 3;
+// Requests before the caller has a key: two for a new team, so a typo can be
+// fixed, and one to recover a team. With a team's three, a client never
+// exceeds Guesty's five in a day.
+const SIGNUPS_PER_DAY_NEW_TEAM = 2;
+const SIGNUPS_PER_DAY_RECOVERY = 1;
 
 class HttpError extends Error {
   constructor(readonly status: number, readonly code: string, message: string, readonly retryAt?: number) {
@@ -111,6 +115,13 @@ function refreshError(result: Refresh, tokenType: TokenType, maxPerDay: number):
   }
 }
 
+function signupError(result: Refresh, tokenType: TokenType): HttpError {
+  if (result.status !== "limit") return refreshError(result, tokenType, DEFAULT_MAX_REQUESTS_PER_DAY);
+  return new HttpError(503, "limit_reached",
+    `This Guesty ${tokenType} client has used its sign-up attempts on this service for the last 24 hours. The next is allowed at ${new Date(result.retryAt ?? Date.now()).toISOString()}.`,
+    result.retryAt);
+}
+
 async function createAccessKey(env: Env, keys: ServiceKeys, teamId: string, label: string, role: "admin" | "member"): Promise<string> {
   const key = newAccessKey();
   try {
@@ -171,21 +182,38 @@ async function createTeam(request: Request, env: Env, keys: ServiceKeys): Promis
 
   const fingerprints = new Map<TokenType, string>();
   for (const [tokenType, input] of submitted) {
-    const fingerprint = await clientFingerprint(keys, tokenType, input.clientId);
-    fingerprints.set(tokenType, fingerprint);
-    const existing = await env.DB.prepare("SELECT team_id FROM credentials WHERE fingerprint = ?").bind(fingerprint).first<{ team_id: string }>();
-    if (!existing) continue;
-    // Whoever holds the Open API client secret already controls the account,
-    // so it can recover admin access to the team that uses it.
-    const stored = tokenType === "openapi" ? await readCredentials(env, keys, existing.team_id, tokenType) : undefined;
-    if (stored && stored.clientSecret === input.clientSecret) {
-      const team = await env.DB.prepare("SELECT name, max_requests_per_day FROM teams WHERE id = ?").bind(existing.team_id).first<{ name: string; max_requests_per_day: number }>();
-      const label = `Recovered admin ${crypto.randomUUID().slice(0, 8)}`;
-      const adminKey = await createAccessKey(env, keys, existing.team_id, label, "admin");
-      return json({ team: { id: existing.team_id, name: team?.name, max_requests_per_day: team?.max_requests_per_day }, admin_key: adminKey, label, recovered: true });
+    fingerprints.set(tokenType, await clientFingerprint(keys, tokenType, input.clientId));
+  }
+  const owners = new Map<TokenType, string>();
+  for (const [tokenType] of submitted) {
+    const existing = await env.DB.prepare("SELECT team_id FROM credentials WHERE fingerprint = ?").bind(fingerprints.get(tokenType)).first<{ team_id: string }>();
+    if (existing) owners.set(tokenType, existing.team_id);
+  }
+
+  // Credentials that already belong to a team recover admin access to it, but
+  // only once Guesty accepts them now: a secret rotated away no longer works.
+  const recoverTeam = owners.get("openapi");
+  if (recoverTeam) {
+    const [, input] = submitted[0];
+    const result = await verifyCredentials(env, "openapi", input, fingerprints.get("openapi")!, recoverTeam, "signup", SIGNUPS_PER_DAY_RECOVERY);
+    if (result.status === "limit") {
+      throw new HttpError(409, "credentials_in_use",
+        `These Guesty credentials already belong to a team on this service. Ask one of its admins for an invite (guesty team invite), or run setup again after ${new Date(result.retryAt ?? Date.now()).toISOString()} to get a new admin key.`,
+        result.retryAt);
     }
+    if (result.status !== "refreshed") throw signupError(result, "openapi");
+    const team = await env.DB.prepare("SELECT name, max_requests_per_day FROM teams WHERE id = ?").bind(recoverTeam).first<{ name: string; max_requests_per_day: number }>();
+    await env.DB.batch([
+      await storeCredentials(env, keys, recoverTeam, "openapi", input, fingerprints.get("openapi")!),
+      await storeToken(env, keys, recoverTeam, result.token),
+    ]);
+    const label = `Recovered admin ${crypto.randomUUID().slice(0, 8)}`;
+    const adminKey = await createAccessKey(env, keys, recoverTeam, label, "admin");
+    return json({ team: { id: recoverTeam, name: team?.name, max_requests_per_day: team?.max_requests_per_day }, admin_key: adminKey, label, recovered: true });
+  }
+  if (owners.size) {
     throw new HttpError(409, "credentials_in_use",
-      "These Guesty credentials already belong to a team on this service. Ask that team's admin for an invite, or for them to update the credentials.");
+      "These booking-engine credentials already belong to another team on this service. Ask that team's admin for an invite.");
   }
 
   // Guesty confirms each credential before anything is saved. Open API must
@@ -193,13 +221,13 @@ async function createTeam(request: Request, env: Env, keys: ServiceKeys): Promis
   const verified: { tokenType: TokenType; input: Credentials; token: CachedToken }[] = [];
   let beapiError: HttpError | undefined;
   for (const [tokenType, input] of submitted) {
-    const result = await verifyCredentials(env, tokenType, input, fingerprints.get(tokenType)!, null, DEFAULT_MAX_REQUESTS_PER_DAY);
+    const result = await verifyCredentials(env, tokenType, input, fingerprints.get(tokenType)!, null, "signup", SIGNUPS_PER_DAY_NEW_TEAM);
     if (result.status === "refreshed") {
       verified.push({ tokenType, input, token: result.token });
     } else if (tokenType === "openapi") {
-      throw refreshError(result, tokenType, DEFAULT_MAX_REQUESTS_PER_DAY);
+      throw signupError(result, tokenType);
     } else {
-      beapiError = refreshError(result, tokenType, DEFAULT_MAX_REQUESTS_PER_DAY);
+      beapiError = signupError(result, tokenType);
     }
   }
 
@@ -346,7 +374,7 @@ async function putCredentials(request: Request, env: Env, keys: ServiceKeys, cal
   if (owner && owner.team_id !== caller.teamId) {
     throw new HttpError(409, "credentials_in_use", "These Guesty credentials already belong to another team on this service.");
   }
-  const result = await verifyCredentials(env, tokenType, input, fingerprint, caller.teamId, caller.maxPerDay);
+  const result = await verifyCredentials(env, tokenType, input, fingerprint, caller.teamId, "team", caller.maxPerDay);
   if (result.status !== "refreshed") throw refreshError(result, tokenType, caller.maxPerDay);
   await env.DB.batch([
     await storeCredentials(env, keys, caller.teamId, tokenType, input, fingerprint),

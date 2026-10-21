@@ -35,6 +35,10 @@ CREATE TABLE token_requests (
   fingerprint TEXT NOT NULL,
   team_id TEXT REFERENCES teams (id) ON DELETE SET NULL,
   token_type TEXT NOT NULL,
+  -- signup: a request before the caller has a key (new team or recovery).
+  -- Signups have their own small allowance, so nobody who merely knows a
+  -- client ID can use up a team's renewals.
+  source TEXT NOT NULL DEFAULT 'team' CHECK (source IN ('team', 'signup')),
   requested_at INTEGER NOT NULL,
   outcome TEXT NOT NULL DEFAULT 'pending' CHECK (outcome IN ('pending', 'succeeded', 'failed')),
   http_status INTEGER,

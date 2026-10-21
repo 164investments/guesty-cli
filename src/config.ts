@@ -8,6 +8,12 @@ export const CONFIG_ENV_FILE = join(homedir(), ".guesty-cli", ".env");
 // A null value removes the setting. The file holds an access key, so only its
 // owner can read it.
 export function saveSettings(values: Record<string, string | null>): string {
+  for (const [name, value] of Object.entries(values)) {
+    // One setting per line: a value with a line break could add other settings.
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || (value !== null && /[\x00-\x1f\x7f\s#"']/.test(value))) {
+      throw new Error(`Refusing to save an invalid value for ${name}.`);
+    }
+  }
   mkdirSync(join(homedir(), ".guesty-cli"), { recursive: true, mode: 0o700 });
   let lines: string[] = [];
   try {
