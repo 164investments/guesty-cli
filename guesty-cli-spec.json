@@ -1,7 +1,7 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-19T22:16:34.373Z",
+  "generatedAt": "2026-10-21T16:49:55.926Z",
   "cliVersion": "1.2.1",
   "generatedFrom": {
     "packageFile": "package.json",
@@ -38874,7 +38874,7 @@
       "alias": null,
       "description": "Show setup instructions for read-only access to cached Guesty tokens",
       "sourceFile": "src/commands/init.ts",
-      "line": 3,
+      "line": 6,
       "operations": [
         {
           "id": "guesty init",
@@ -38891,7 +38891,14 @@
               "description": "Show setup instructions; existing files are preserved",
               "required": false,
               "defaultValue": null,
-              "line": 3
+              "line": 6
+            },
+            {
+              "flags": "--team-sql",
+              "description": "Print the SQL that sets up a team token cache in your team's Supabase project",
+              "required": false,
+              "defaultValue": null,
+              "line": 6
             }
           ],
           "inputCapabilities": {
@@ -38905,7 +38912,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/init.ts",
-          "line": 3
+          "line": 6
         }
       ]
     },
@@ -172312,7 +172319,14 @@
           "description": "Show setup instructions; existing files are preserved",
           "required": false,
           "defaultValue": null,
-          "line": 3
+          "line": 6
+        },
+        {
+          "flags": "--team-sql",
+          "description": "Print the SQL that sets up a team token cache in your team's Supabase project",
+          "required": false,
+          "defaultValue": null,
+          "line": 6
         }
       ],
       "inputCapabilities": {
@@ -172326,7 +172340,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/init.ts",
-      "line": 3
+      "line": 6
     },
     {
       "id": "guesty integrations channels",

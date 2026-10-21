@@ -37,12 +37,13 @@ function run(t, args, scenario = {}, script) {
   assert.deepEqual(trace.writes, [], "no cache or configuration may be mutated");
   assert.ok(trace.requests.every(({ url, method }) => {
     const request = new URL(url);
+    if (request.pathname === "/rest/v1/rpc/guesty_cli_token") return method === "POST";
     return method === "GET" && (
       (request.hostname === "cache.invalid" && request.pathname === "/rest/v1/guesty_tokens") ||
       (request.hostname === "open-api.guesty.com" && request.pathname === "/v1/listings")
     );
   }), "every network call must be a permitted read; no OAuth request may occur");
-  assert.doesNotMatch(result.stdout + result.stderr, /fake-client-secret|fake-cache-key|fake-secret-in/);
+  assert.doesNotMatch(result.stdout + result.stderr, /fake-client-secret|fake-cache-key|fake-team-api-key|fake-team-access-key|fake-secret-in/);
   return { ...result, trace };
 }
 
@@ -224,6 +225,8 @@ for (const args of [["init"], ["init", "--force"]]) {
     const result = run(t, args);
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stdout, /SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY/);
+    assert.match(result.stdout, /GUESTY_TEAM_CACHE_URL, GUESTY_TEAM_CACHE_API_KEY and GUESTY_TEAM_CACHE_ACCESS_KEY/);
+    assert.match(result.stdout, /guesty init --team-sql/);
     assert.doesNotMatch(result.stdout, /Client ID:|Client Secret:/);
     assert.equal(result.trace.requests.length, 0);
     assert.equal(result.trace.tokenReads, 0);
@@ -239,3 +242,91 @@ for (const header of ["Authorization", "authorization", "AUTHORIZATION"]) {
     assert.equal(result.trace.tokenReads, 0);
   });
 }
+
+test("init --team-sql prints the packaged team-cache setup SQL", (t) => {
+  const result = run(t, ["init", "--team-sql"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, readFileSync(join(root, "sql/team-token-cache.sql"), "utf8"));
+  assert.equal(result.trace.requests.length, 0);
+  assert.equal(result.trace.tokenReads, 0);
+});
+
+for (const tokenType of ["openapi", "beapi"]) {
+  const args = ["token", ...(tokenType === "beapi" ? ["--beapi"] : [])];
+
+  test(`team ${tokenType}: the access key reads the shared token instead of SUPABASE_URL`, (t) => {
+    const token = validToken(tokenType);
+    const result = run(t, [...args, "--json"], { team: true, teamRows: [token], shared: [validToken(tokenType, { access_token: "fake-wrong-project-token" })] });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), token);
+    assert.equal(result.trace.requests.length, 1);
+    const [request] = result.trace.requests;
+    assert.equal(request.url, "https://team-cache.invalid/rest/v1/rpc/guesty_cli_token");
+    assert.deepEqual(request.body, { p_access_key: "fake-team-access-key-must-not-be-printed", p_token_type: tokenType });
+    assert.equal(request.apikey, "fake-team-api-key-must-not-be-printed");
+    assert.equal(request.authorization, undefined);
+    assert.equal(request.timeout, true);
+  });
+
+  for (const [name, scenario, reason] of [
+    ["rejected access key", { teamStatus: 403, teamRows: { message: "fake-secret-in-team-error" } }, /team cache rejected the access key or API key \(HTTP 403\)/],
+    ["no unexpired token", { teamRows: [] }, /team cache has no unexpired token/],
+    ["server error", { teamStatus: 500 }, /team cache returned HTTP 500/],
+    ["network error", { teamError: true }, /team cache request could not complete/],
+    ["malformed JSON", { teamRaw: "fake-secret-in-team-response" }, /team cache returned invalid JSON/],
+    ["wrong type", { teamRows: [validToken(tokenType === "openapi" ? "beapi" : "openapi")] }, /cached row is missing, expired/],
+    ["at expiry buffer", { teamRows: [validToken(tokenType, { expires_at: now + 300_000 })] }, /cached row is missing, expired/],
+  ]) {
+    test(`team ${tokenType}: ${name} fails with the team admin's next step`, (t) => {
+      const result = run(t, args, { team: true, ...scenario });
+      assert.equal(result.status, 1);
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, new RegExp(`No valid cached Guesty ${tokenType} token`));
+      assert.match(result.stderr, reason);
+      assert.match(result.stderr, /CLI authentication is read-only/);
+      assert.match(result.stderr, new RegExp(`guesty_cli\\.status.*guesty_cli\\.refresh_token\\('${tokenType}', true\\)`));
+      assert.equal(result.trace.requests.length, 1);
+    });
+  }
+}
+
+for (const [name, teamEnv, reason] of [
+  ["missing access key", { GUESTY_TEAM_CACHE_ACCESS_KEY: null }, /team-cache configuration is incomplete/],
+  ["missing API key", { GUESTY_TEAM_CACHE_API_KEY: null }, /team-cache configuration is incomplete/],
+  ["plain-HTTP remote URL", { GUESTY_TEAM_CACHE_URL: "http://team-cache.invalid" }, /GUESTY_TEAM_CACHE_URL must use https/],
+  ["invalid URL", { GUESTY_TEAM_CACHE_URL: "team-cache.invalid" }, /GUESTY_TEAM_CACHE_URL is not a valid URL/],
+]) {
+  test(`team cache with ${name} sends nothing and never falls back to SUPABASE_URL`, (t) => {
+    const result = run(t, ["token"], { team: true, teamEnv, shared: [validToken()] });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, reason);
+    assert.equal(result.trace.requests.length, 0);
+  });
+}
+
+test("team cache on this machine may use plain HTTP for local development", (t) => {
+  const result = run(t, ["token"], { team: true, teamEnv: { GUESTY_TEAM_CACHE_URL: "http://127.0.0.1:54321/" }, teamRows: [validToken()] });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, "fake-openapi-token\n");
+  assert.equal(result.trace.requests[0].url, "http://127.0.0.1:54321/rest/v1/rpc/guesty_cli_token");
+});
+
+test("team cache: a 401 retries once with a newer shared token", (t) => {
+  const result = run(t, ["raw", "GET", "/v1/listings"], {
+    team: true,
+    teamReplies: [[validToken()], [validToken("openapi", { access_token: "fake-new-openapi-token" })]],
+    apiStatuses: [401, 200],
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const apiCalls = result.trace.requests.filter(({ url }) => new URL(url).hostname === "open-api.guesty.com");
+  assert.deepEqual(apiCalls.map(({ authorization }) => authorization), ["Bearer fake-openapi-token", "Bearer fake-new-openapi-token"]);
+});
+
+test("team cache: a rejected token cannot be reused and points to the admin's replacement command", (t) => {
+  const result = run(t, ["raw", "GET", "/v1/listings"], { team: true, teamRows: [validToken()], apiStatuses: [401] });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /No valid cached Guesty openapi token/);
+  assert.match(result.stderr, /guesty_cli\.refresh_token\('openapi', true\)/);
+  assert.equal(result.trace.requests.length, 3);
+});
