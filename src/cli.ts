@@ -43,6 +43,7 @@ import { airbnb } from "./commands/airbnb.js";
 import { invoiceItems } from "./commands/invoice-items.js";
 import { accounts } from "./commands/accounts.js";
 import { token } from "./commands/token.js";
+import { bookingEngine } from "./commands/booking-engine.js";
 import { checkForUpdate, runSelfUpdate } from "./update-check.js";
 
 function getCliVersion(): string {
@@ -57,7 +58,7 @@ function getCliVersion(): string {
 const program = new Command()
   .name("guesty")
   .version(getCliVersion())
-  .description("Guesty Open API CLI with read-only cached-token authentication. Named commands cover common workflows, and 'raw' handles other resource endpoints.");
+  .description("Guesty Open API and Booking Engine API CLI with read-only cached-token authentication. Named commands cover every documented endpoint, and 'raw' handles other Open API resource paths.");
 
 program.addCommand(init);
 program.addCommand(reservations);
@@ -95,6 +96,7 @@ program.addCommand(blockLogs);
 program.addCommand(airbnb);
 program.addCommand(invoiceItems);
 program.addCommand(accounts);
+program.addCommand(bookingEngine);
 program.addCommand(token);
 program.addCommand(raw);
 

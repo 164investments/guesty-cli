@@ -22,9 +22,12 @@ let checkData = scenario.checkData;
 let installed = false;
 let apiIndex = 0;
 let sharedIndex = 0;
-const trace = { requests: [], waits: [], writes: [], commands: [], tokenReads: 0, timeouts: [] };
+let bookingIndex = 0;
+let beapiSharedIndex = 0;
+const trace = { requests: [], waits: [], writes: [], commands: [], tokenReads: 0, beapiCacheReads: 0, timeouts: [] };
 globalThis.__guestyTestTrace = trace;
 const token = (value = "fake-isolated-openapi-token") => ({ token_type: "openapi", access_token: value, expires_at: now + 36_000_000 });
+const beapiToken = (value = "fake-isolated-beapi-token") => ({ token_type: "beapi", access_token: value, expires_at: now + 36_000_000 });
 
 Date.now = () => now;
 process.env.SUPABASE_URL = "https://cache.invalid";
@@ -129,6 +132,13 @@ globalThis.fetch = async (input, options = {}) => {
       const limit = Number(url.searchParams.get("limit"));
       reply = { json: { results: Array.from({ length: Math.min(limit, Math.max(0, scenario.paginationCount - skip)) }, (_, index) => ({ _id: String(skip + index) })), count: scenario.paginationCount, skip, limit } };
     }
+  } else if (url.hostname === "booking.guesty.com" && url.pathname.startsWith("/api/") && !/oauth/i.test(url.pathname)) {
+    const replies = scenario.bookingResponses ?? [{ json: { ok: true } }];
+    reply = replies[Math.min(bookingIndex++, replies.length - 1)];
+  } else if (url.hostname === "cache.invalid" && url.pathname === "/rest/v1/guesty_tokens" && options.method === "GET" && url.searchParams.get("token_type") === "eq.beapi") {
+    trace.beapiCacheReads++;
+    const replies = scenario.beapiSharedReplies ?? [[beapiToken()]];
+    reply = { json: replies[Math.min(beapiSharedIndex++, replies.length - 1)] };
   } else if (url.href === "https://api.github.com/repos/164investments/guesty-cli/releases/latest") {
     reply = scenario.github ?? { status: 404, json: {} };
   } else if (url.hostname === "cache.invalid" && url.pathname === "/rest/v1/guesty_tokens" && options.method === "GET" && url.searchParams.get("token_type") === "eq.openapi") {
