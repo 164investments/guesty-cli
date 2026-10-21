@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import ts from "typescript";
-import { listOperations, operationSchemas, requestMatchesEndpoint } from "./api-reference.mjs";
+import { BOOKING_ENGINE_API, listOperations, OPEN_API, operationSchemas, requestMatchesEndpoint } from "./api-reference.mjs";
 
 const ROOT = process.cwd();
 const COMMANDS_DIR = join(ROOT, "src", "commands");
@@ -11,6 +11,12 @@ const OPTIONAL_REFERENCE_FILE = join(ROOT, "api-spec.json");
 const OPTIONAL_SCHEMAS_FILE = join(ROOT, "schemas.json");
 const OPENAPI_FILE = join(ROOT, "openapi-spec.json");
 const EXISTING_CONTRACT_FILE = join(ROOT, "guesty-cli-spec.json");
+const BOOKING_ENGINE_REFERENCE_FILE = join(ROOT, "booking-engine-api-spec.json");
+const BOOKING_ENGINE_OPENAPI_FILE = join(ROOT, "booking-engine-openapi-spec.json");
+const OPEN_API_DOCS_URL = "https://open-api-docs.guesty.com/reference";
+const BOOKING_ENGINE_DOCS_URL = "https://booking-api-docs.guesty.com/reference";
+// Request helpers in src/client.ts and the API each one calls.
+const REQUEST_HELPERS = { guestyFetch: "open-api", paginateAll: "open-api", bookingEngineFetch: "booking-engine" };
 
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
@@ -38,7 +44,11 @@ function getLiteralValue(node, seen = new Set()) {
   if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
   if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
   if (ts.isArrayLiteralExpression(node)) {
-    return node.elements.map((element) => getLiteralValue(element));
+    return node.elements.flatMap((element) => {
+      if (!ts.isSpreadElement(element)) return [getLiteralValue(element)];
+      const spread = getLiteralValue(element.expression, seen);
+      return Array.isArray(spread) ? spread : [null];
+    });
   }
   return null;
 }
@@ -173,26 +183,30 @@ function loadExistingContractSchemas() {
   }
 }
 
-function loadSchemas() {
-  if (existsSync(OPENAPI_FILE)) {
-    const schema = readJson(OPENAPI_FILE);
-    const operations = new Map(listOperations(schema).map((entry) =>
-      [`${entry.method} ${normalizePath(entry.path)}`, entry]
-    ));
-    const schemas = new Map();
-    const covered = new Set();
-    for (const entries of Object.values(readJson(OPTIONAL_REFERENCE_FILE))) {
-      for (const entry of entries) {
-        const key = `${entry.method} ${normalizePath(entry.path)}`;
-        const operation = operations.get(key);
-        if (!operation) throw new Error(`Catalog endpoint missing from OpenAPI: ${entry.method} ${entry.path}`);
-        covered.add(key);
-        schemas.set(entry.slug, operationSchemas(schema, operation.pathItem, operation.operation));
-      }
+// The catalog and the OpenAPI document come from the same refresh and must
+// list exactly the same operations.
+function loadCatalogSchemas(catalogFile, openapiFile, api, refreshCommand) {
+  const schema = readJson(openapiFile);
+  const operations = new Map(listOperations(schema, api).map((entry) =>
+    [`${entry.method} ${normalizePath(entry.path)}`, entry]
+  ));
+  const schemas = new Map();
+  const covered = new Set();
+  for (const entries of Object.values(readJson(catalogFile))) {
+    for (const entry of entries) {
+      const key = `${entry.method} ${normalizePath(entry.path)}`;
+      const operation = operations.get(key);
+      if (!operation) throw new Error(`Catalog endpoint missing from ${relative(ROOT, openapiFile)}: ${entry.method} ${entry.path}`);
+      covered.add(key);
+      schemas.set(entry.slug, operationSchemas(schema, operation.pathItem, operation.operation));
     }
-    if (covered.size !== operations.size) throw new Error("The endpoint catalog is missing current OpenAPI operations. Run npm run refresh:api-spec.");
-    return schemas;
   }
+  if (covered.size !== operations.size) throw new Error(`The ${api.label} endpoint catalog is missing current OpenAPI operations. Run ${refreshCommand}.`);
+  return schemas;
+}
+
+function loadSchemas() {
+  if (existsSync(OPENAPI_FILE)) return loadCatalogSchemas(OPTIONAL_REFERENCE_FILE, OPENAPI_FILE, OPEN_API, "npm run refresh:api-spec");
   const schemas = loadExistingContractSchemas();
   if (!existsSync(OPTIONAL_SCHEMAS_FILE)) return schemas;
 
@@ -207,13 +221,13 @@ function loadSchemas() {
   }
 }
 
-function parseReference() {
-  if (!existsSync(OPTIONAL_REFERENCE_FILE)) {
-    return { byKey: new Map(), byGroup: new Map(), totalEndpoints: 0, file: null, schemas: new Map() };
+function parseReference(catalogFile = OPTIONAL_REFERENCE_FILE, loadReferenceSchemas = loadSchemas, docsUrl = OPEN_API_DOCS_URL) {
+  if (!existsSync(catalogFile)) {
+    return { byKey: new Map(), byGroup: new Map(), totalEndpoints: 0, file: null, schemas: new Map(), docsUrl };
   }
 
-  const raw = readJson(OPTIONAL_REFERENCE_FILE);
-  const schemas = loadSchemas();
+  const raw = readJson(catalogFile);
+  const schemas = loadReferenceSchemas();
   const byKey = new Map();
   const byGroup = new Map();
   let totalEndpoints = 0;
@@ -242,9 +256,18 @@ function parseReference() {
     byKey,
     byGroup,
     totalEndpoints,
-    file: relative(ROOT, OPTIONAL_REFERENCE_FILE),
+    file: relative(ROOT, catalogFile),
     schemas,
+    docsUrl,
   };
+}
+
+function parseBookingEngineReference() {
+  return parseReference(
+    BOOKING_ENGINE_REFERENCE_FILE,
+    () => loadCatalogSchemas(BOOKING_ENGINE_REFERENCE_FILE, BOOKING_ENGINE_OPENAPI_FILE, BOOKING_ENGINE_API, "npm run refresh:booking-engine-spec"),
+    BOOKING_ENGINE_DOCS_URL,
+  );
 }
 
 function parseRootCommand(sourceFilePath) {
@@ -364,11 +387,11 @@ function collectParamAssignments(actionNode, sourceFile) {
   return [...params.values()];
 }
 
-function extractRequestDetails(actionNode, sourceFile, reference) {
+function extractRequestDetails(actionNode, sourceFile, references) {
   const collectedParams = collectParamAssignments(actionNode, sourceFile);
   const requests = [];
 
-  function matchReference(method, path, queryParams) {
+  function matchReference(reference, method, path, queryParams) {
     if (!path) return null;
     const matches = [...reference.byKey.values()].flat().filter((endpoint) =>
       requestMatchesEndpoint({ method, path, queryParams }, endpoint));
@@ -377,7 +400,7 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
         group: match.group,
         title: match.title,
         slug: match.slug,
-        docsUrl: match.slug ? `https://open-api-docs.guesty.com/reference/${match.slug}` : null,
+        docsUrl: match.slug ? `${reference.docsUrl}/${match.slug}` : null,
       };
       if (match.slug) {
         const schema = reference.schemas.get(match.slug);
@@ -395,7 +418,8 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
   function visit(node) {
     if (ts.isCallExpression(node)) {
       const helperName = ts.isIdentifier(node.expression) ? node.expression.text : null;
-      if (helperName === "guestyFetch" || helperName === "paginateAll") {
+      if (Object.hasOwn(REQUEST_HELPERS, helperName ?? "")) {
+        const api = REQUEST_HELPERS[helperName];
         const path = templateToPath(node.arguments[0]);
         let method = "GET";
         let responseType = "auto";
@@ -403,7 +427,7 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
         let paginated = helperName === "paginateAll";
         let resultsKey = helperName === "paginateAll" ? getLiteralValue(node.arguments[2]) : null;
 
-        if (helperName === "guestyFetch" && node.arguments[1] && ts.isObjectLiteralExpression(node.arguments[1])) {
+        if (helperName !== "paginateAll" && node.arguments[1] && ts.isObjectLiteralExpression(node.arguments[1])) {
           for (const property of node.arguments[1].properties) {
             if (!ts.isPropertyAssignment(property)) continue;
             const propertyName = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
@@ -441,6 +465,7 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
 
         requests.push({
           helper: helperName,
+          api,
           method,
           path,
           dynamicPath: path === null,
@@ -449,7 +474,7 @@ function extractRequestDetails(actionNode, sourceFile, reference) {
           responseType,
           queryParams: params,
           line: lineForNode(node, sourceFile),
-          reference: matchReference(method, path, params),
+          reference: matchReference(api === "booking-engine" ? references.bookingEngine : references.openApi, method, path, params),
         });
       }
     }
@@ -499,7 +524,7 @@ function parseArgumentSegment(segment, sourceFile) {
   };
 }
 
-function buildOperation(chain, sourceFile, rootCommand, reference) {
+function buildOperation(chain, sourceFile, rootCommand, references) {
   const commandSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "command");
   const descriptionSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "description");
   const optionSegments = chain.segments.filter(
@@ -548,17 +573,17 @@ function buildOperation(chain, sourceFile, rootCommand, reference) {
       readsTextFromStdin: actionText.includes("await readStdin()") && !jsonStdin,
       writesToOutputFile: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--output ")),
     },
-    requests: extractRequestDetails(actionNode, sourceFile, reference),
+    requests: extractRequestDetails(actionNode, sourceFile, references),
     sourceFile: relative(ROOT, sourceFile.fileName),
     line: lineForNode(actionSegment.node, sourceFile),
   };
 }
 
-function collectOperations(sourceFile, rootCommand, reference) {
+function collectOperations(sourceFile, rootCommand, references) {
   const operations = [];
 
   if (rootCommand.initializerChain?.segments.some((segment) => segment.kind === "call" && segment.name === "action")) {
-    const rootOperation = buildOperation(rootCommand.initializerChain, sourceFile, rootCommand, reference);
+    const rootOperation = buildOperation(rootCommand.initializerChain, sourceFile, rootCommand, references);
     if (rootOperation) operations.push(rootOperation);
   }
 
@@ -566,7 +591,7 @@ function collectOperations(sourceFile, rootCommand, reference) {
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "action") {
       const chain = unwrapChain(node);
       if (chain && chain.root === rootCommand.variableName) {
-        const operation = buildOperation(chain, sourceFile, rootCommand, reference);
+        const operation = buildOperation(chain, sourceFile, rootCommand, references);
         if (operation) operations.push(operation);
       }
     }
@@ -578,12 +603,12 @@ function collectOperations(sourceFile, rootCommand, reference) {
   return operations.sort((a, b) => a.line - b.line);
 }
 
-function summarizeCoverage(operations, reference) {
+function summarizeCoverage(operations, reference, api) {
   const implementedKeys = new Set();
   const implementedReferences = new Set();
   for (const operation of operations) {
     for (const request of operation.requests) {
-      if (!request.path) continue;
+      if (!request.path || request.api !== api) continue;
       implementedKeys.add(`${request.method} ${normalizePath(request.path)}`);
       for (const entry of request.reference ?? []) implementedReferences.add(entry.slug);
     }
@@ -636,6 +661,8 @@ function summarizeCoverage(operations, reference) {
 function main() {
   const packageJson = readJson(PACKAGE_FILE);
   const reference = parseReference();
+  const bookingEngineReference = parseBookingEngineReference();
+  const references = { openApi: reference, bookingEngine: bookingEngineReference };
   const commandFiles = [...listCommandFiles(), join(ROOT, "src", "cli.ts")];
   const commands = [];
   const allOperations = [];
@@ -644,7 +671,7 @@ function main() {
     const { rootCommand, sourceFile } = parseRootCommand(file);
     if (!rootCommand) continue;
 
-    const operations = collectOperations(sourceFile, rootCommand, reference);
+    const operations = collectOperations(sourceFile, rootCommand, references);
     if (rootCommand.name === "guesty") {
       for (const operation of operations) commands.push({
         name: operation.name, alias: null, description: operation.description,
@@ -673,20 +700,28 @@ function main() {
       packageFile: relative(ROOT, PACKAGE_FILE),
       commandFiles: commandFiles.map((file) => relative(ROOT, file)),
       optionalReferenceFile: reference.file,
+      bookingEngineReferenceFile: bookingEngineReference.file,
     },
     usageNotes: [
       "This file is the machine-readable contract for the Guesty CLI in this repository.",
       "Named operations describe the CLI syntax, accepted options, and the Guesty endpoint calls made by each command.",
-      "The raw command remains the escape hatch for endpoints or payload shapes that are not wrapped by a named command.",
-      "If api-spec.json is present when this file is generated, request entries include the matched Guesty reference group and title.",
+      "Each request names its API: open-api (open-api.guesty.com, cached openapi token) or booking-engine (booking.guesty.com, cached beapi token).",
+      "The raw command remains the escape hatch for Open API endpoints or payload shapes that are not wrapped by a named command.",
+      "If api-spec.json or booking-engine-api-spec.json is present when this file is generated, request entries include the matched Guesty reference group and title.",
+      "Schema references in Open API request entries resolve against components; in Booking Engine request entries, against bookingEngineComponents.",
     ],
     ...(existsSync(OPENAPI_FILE) ? {
       openapiSource: { file: "openapi-spec.json", ...readJson(OPENAPI_FILE)["x-cli-source"] },
       components: readJson(OPENAPI_FILE).components ?? {},
     } : {}),
+    ...(existsSync(BOOKING_ENGINE_OPENAPI_FILE) ? {
+      bookingEngineOpenapiSource: { file: "booking-engine-openapi-spec.json", ...readJson(BOOKING_ENGINE_OPENAPI_FILE)["x-cli-source"] },
+      bookingEngineComponents: readJson(BOOKING_ENGINE_OPENAPI_FILE).components ?? {},
+    } : {}),
     commands,
     operations: allOperations,
-    referenceCoverage: summarizeCoverage(allOperations, reference),
+    referenceCoverage: summarizeCoverage(allOperations, reference, "open-api"),
+    bookingEngineReferenceCoverage: summarizeCoverage(allOperations, bookingEngineReference, "booking-engine"),
   };
 
   mkdirSync(dirname(OUTPUT_FILE), { recursive: true });
