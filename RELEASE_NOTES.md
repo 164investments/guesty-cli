@@ -13,7 +13,7 @@ Users on 1.2.0 or later can run `guesty update` instead. The release includes `S
 
 ## Share one token across a team
 
-- `guesty setup` offers three choices: create a team on Simply VRM's free hosted token service (`https://guesty-tokens.simplyvrm.com`), create a team on a token service you run yourself, or join a team with an invite code.
+- `guesty setup` offers three choices: create a team on Simply VRM's free hosted token service (`https://guesty-tokens.simplyvacationrentalmanagement.com`), create a team on a token service you run yourself, or join a team with an invite code.
 - The admin enters the Guesty Open API client ID and secret once, plus optional booking-engine credentials. Guesty confirms them before the service saves them. Teammates never see the secret.
 - `guesty team invite "Name"` prints an invite code, and the teammate runs `guesty team join <code>`. `guesty team` also handles `revoke`, `status`, `refresh`, `credentials`, `limit` and `delete`.
 - The CLI saves only the service URL and the access key, in `~/.guesty-cli/.env`, readable only by you. When those are set, `guesty token` and every API command use the team's token.

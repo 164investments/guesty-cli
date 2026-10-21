@@ -1,7 +1,7 @@
 // Client for the team token service in server/. Simply VRM hosts one copy;
 // teams can also run their own and point the CLI at it.
 
-export const HOSTED_TOKEN_SERVICE_URL = "https://guesty-tokens.simplyvrm.com";
+export const HOSTED_TOKEN_SERVICE_URL = "https://guesty-tokens.simplyvacationrentalmanagement.com";
 export const TOKEN_SERVICE_URL_ENV = "GUESTY_TOKEN_SERVICE_URL";
 export const TOKEN_SERVICE_KEY_ENV = "GUESTY_TOKEN_SERVICE_KEY";
 

@@ -18,7 +18,7 @@
       "name": "guesty-token-service",
       "account_id": "52211577e087a1619838cda534d59d7b",
       "workers_dev": false,
-      "routes": [{ "pattern": "guesty-tokens.simplyvrm.com", "custom_domain": true }],
+      "routes": [{ "pattern": "guesty-tokens.simplyvacationrentalmanagement.com", "custom_domain": true }],
       "observability": { "enabled": true },
       "d1_databases": [
         {
