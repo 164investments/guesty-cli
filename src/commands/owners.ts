@@ -2,9 +2,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import { Command, Option } from "commander";
 import { guestyFetch } from "../client.js";
-import { print } from "../output.js";
+import { print, warnDeprecated } from "../output.js";
 import { readStdin } from "../stdin.js";
-import { collect, date, dateRange } from "./query-options.js";
+import { collect, date, dateRange, jsonObject } from "./query-options.js";
 import { ownerStatementParams } from "./owner-statement-options.js";
 
 export const owners = new Command("owners")
@@ -124,10 +124,11 @@ owners
 
 owners
   .command("reservations")
-  .description("List owner reservations")
+  .description("[deprecated] List owner reservations; Guesty documents no replacement")
   .option("--limit <n>", "Max results", "25")
   .option("--skip <n>", "Offset", "0")
   .action(async (opts) => {
+    warnDeprecated("owners reservations");
     const data = await guestyFetch("/v1/owners-reservations", {
       params: { limit: parseInt(opts.limit), skip: parseInt(opts.skip) },
     });
@@ -136,17 +137,19 @@ owners
 
 owners
   .command("reservation <id>")
-  .description("Get an owner reservation by ID")
+  .description("[deprecated] Get an owner reservation by ID — use 'reservations get' instead")
   .action(async (id: string) => {
+    warnDeprecated("owners reservation", "reservations get <id>");
     const data = await guestyFetch(`/v1/owners-reservations/${id}`);
     print(data);
   });
 
 owners
   .command("update-reservation <id>")
-  .description("Update an owner reservation (--data or stdin)")
+  .description("[deprecated] Update an owner reservation (--data or stdin); Guesty documents no replacement")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
+    warnDeprecated("owners update-reservation");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/owners-reservations/${id}`, {
       method: "PUT",
@@ -241,4 +244,59 @@ owners
       return;
     }
     print(data);
+  });
+
+// ─── Owner payout methods ────────────────────────────────────────────────────
+
+// Guesty's schema also lists IBAN and code as required for every payout type,
+// including US bank accounts, so the CLI checks only the fields that every
+// payout-method schema requires and leaves the rest to Guesty.
+function validatePayoutMethod(method: unknown, label: string): void {
+  const item = method as Record<string, unknown> | null;
+  if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error(`${label} must be an object.`);
+  for (const key of ["type", "accountHolderName", "bankName", "accountNumber", "accountType"]) {
+    if (typeof item[key] !== "string" || !(item[key] as string).trim()) throw new Error(`${label}.${key} is required.`);
+  }
+}
+
+owners
+  .command("payout-method <ownerId>")
+  .description("Get an owner's payout method")
+  .action(async (ownerId: string) => {
+    print(await guestyFetch(`/v1/payouts/owners/${ownerId}`));
+  });
+
+owners
+  .command("create-payout-method <ownerId>")
+  .description("Create an owner's payout method (--data or stdin: type, accountHolderName, bankName, accountNumber, accountType, ...)")
+  .option("--data <json>", "JSON body")
+  .action(async (ownerId: string, opts) => {
+    const body = jsonObject(opts.data ?? await readStdin(), "--data or stdin");
+    validatePayoutMethod(body, "body");
+    print(await guestyFetch(`/v1/payouts/owners/${ownerId}`, { method: "POST", body }));
+  });
+
+owners
+  .command("update-payout-method <ownerId>")
+  .description("Replace an owner's payout method (--data or stdin: type, accountHolderName, bankName, accountNumber, accountType, ...)")
+  .option("--data <json>", "JSON body")
+  .action(async (ownerId: string, opts) => {
+    const body = jsonObject(opts.data ?? await readStdin(), "--data or stdin");
+    validatePayoutMethod(body, "body");
+    print(await guestyFetch(`/v1/payouts/owners/${ownerId}`, { method: "PUT", body }));
+  });
+
+owners
+  .command("bulk-create-payout-methods")
+  .description("Create payout methods for several owners (--data or stdin: {items: [{entityId, payoutMethod}]})")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = jsonObject(opts.data ?? await readStdin(), "--data or stdin");
+    if (!Array.isArray(body.items) || !body.items.length) throw new Error("The request body needs a nonempty items array.");
+    body.items.forEach((entry: unknown, index: number) => {
+      const item = entry as Record<string, unknown> | null;
+      if (typeof item?.entityId !== "string" || !item.entityId) throw new Error(`items[${index}].entityId is required.`);
+      validatePayoutMethod(item.payoutMethod, `items[${index}].payoutMethod`);
+    });
+    print(await guestyFetch("/v1/payouts/owners/bulk", { method: "POST", body }));
   });

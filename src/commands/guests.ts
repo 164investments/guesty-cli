@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { guestyFetch } from "../client.js";
-import { print } from "../output.js";
+import { print, warnDeprecated } from "../output.js";
 import { readStdin } from "../stdin.js";
 import { fields, integer, jsonObject } from "./query-options.js";
 
@@ -68,9 +68,10 @@ guests
 
 guests
   .command("add-payment-method <id>")
-  .description("Add a payment method to a guest (--data or stdin)")
+  .description("[deprecated] Add a payment method to a guest (--data or stdin) — use 'payments create-method' instead")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
+    warnDeprecated("guests add-payment-method", "payments create-method");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/guests/${id}/payment-methods`, { method: "POST", body });
     print(data);
@@ -78,9 +79,10 @@ guests
 
 guests
   .command("payment-methods <id>")
-  .description("List payment methods for a guest")
+  .description("[deprecated] List payment methods for a guest — use 'payments methods' instead")
   .option("--reservation <id>", "Reservation context for its payment methods, including virtual credit cards")
   .action(async (id: string, opts) => {
+    warnDeprecated("guests payment-methods", "payments methods --guest <id>", "payments methods --reservation <id>");
     const params: Record<string, string> = {};
     if (opts.reservation) params.reservationId = opts.reservation;
     const data = await guestyFetch(`/v1/guests/${id}/payment-methods`, { params });

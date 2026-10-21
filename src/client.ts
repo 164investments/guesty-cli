@@ -1,4 +1,4 @@
-import { cacheGuidance, getToken, invalidateToken } from "./auth.js";
+import { cacheGuidance, getCachedToken, getToken, invalidateToken } from "./auth.js";
 
 const BASE_URL = "https://open-api.guesty.com";
 const MAX_ATTEMPTS = 3;
@@ -25,22 +25,23 @@ async function sleep(ms: number): Promise<void> {
   }
 }
 
-async function enforceRateLimit(): Promise<void> {
+// Each API keeps its own request history and limits; every window is at most an hour.
+async function enforceRateLimit(timestamps = requestTimestamps, limits = RATE_LIMITS, api = "Guesty"): Promise<void> {
   while (true) {
     const now = Date.now();
-    while (requestTimestamps.length && requestTimestamps[0] <= now - 3_600_000) {
-      requestTimestamps.shift();
+    while (timestamps.length && timestamps[0] <= now - 3_600_000) {
+      timestamps.shift();
     }
     let waitMs = 0;
-    for (const { window, max } of RATE_LIMITS) {
-      const oldest = requestTimestamps[requestTimestamps.length - max];
+    for (const { window, max } of limits) {
+      const oldest = timestamps[timestamps.length - max];
       if (oldest !== undefined) waitMs = Math.max(waitMs, oldest + window - now);
     }
     if (waitMs <= 0) {
-      requestTimestamps.push(now);
+      timestamps.push(now);
       return;
     }
-    process.stderr.write(`Guesty rate limit reached. Waiting ${Math.ceil(waitMs / 1000)}s...\n`);
+    process.stderr.write(`${api} rate limit reached. Waiting ${Math.ceil(waitMs / 1000)}s...\n`);
     await sleep(waitMs);
   }
 }
@@ -318,4 +319,140 @@ export async function paginateAll<T = unknown>(path: string, params: QueryParams
     // Without count/limit metadata, a short page may reflect the server's cap.
     // Continue by the actual item count until an empty page confirms completion.
   }
+}
+
+// ─── Booking Engine API ──────────────────────────────────────────────────────
+// Every operation in Guesty's Booking Engine reference names this server, and
+// its paths start with /api/. Requests use only the cached beapi token.
+const BOOKING_ENGINE_BASE_URL = "https://booking.guesty.com";
+// https://booking-api-docs.guesty.com/reference/quick-start-guide#rate-limits
+const BOOKING_ENGINE_RATE_LIMITS = [
+  { window: 1_000, max: 5 },
+  { window: 60_000, max: 275 },
+  { window: 3_600_000, max: 16_500 },
+];
+const bookingEngineRequestTimestamps: number[] = [];
+
+export interface BookingEngineFetchOptions {
+  method?: "GET" | "POST" | "PUT";
+  body?: unknown;
+  params?: QueryParams;
+  timeoutMs?: number;
+}
+
+function bookingEngineUrl(path: string, params?: QueryParams): URL {
+  if (!path.startsWith("/api/")) {
+    throw new Error("Use a Guesty Booking Engine API resource path, such as /api/listings.");
+  }
+  // resourceUrl applies the shared path, OAuth and query-parameter checks.
+  const checked = resourceUrl(path, params);
+  const url = new URL(`${checked.pathname}${checked.search}`, BOOKING_ENGINE_BASE_URL);
+  if (!url.pathname.startsWith("/api/")) {
+    throw new Error("Booking Engine API paths must stay under /api/.");
+  }
+  return url;
+}
+
+export async function bookingEngineFetch<T = unknown>(path: string, options: BookingEngineFetchOptions = {}): Promise<T> {
+  const { body, params, timeoutMs = REQUEST_TIMEOUT_MS } = options;
+  const method = (options.method ?? "GET").toUpperCase();
+  if (!["GET", "POST", "PUT"].includes(method)) {
+    throw new Error("The Booking Engine API documents only GET, POST, and PUT requests.");
+  }
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > MAX_TIMER_MS) {
+    throw new Error("Request timeout must be a positive integer number of milliseconds, at most 2147483647.");
+  }
+  if (method === "GET" && body !== undefined) {
+    throw new Error("GET requests cannot contain a body. Use query params or a different HTTP method.");
+  }
+  const url = bookingEngineUrl(path, params);
+  const headers: Record<string, string> = { accept: "application/json" };
+  if (body !== undefined) headers["content-type"] = "application/json";
+  const serializedBody = body === undefined ? undefined : JSON.stringify(body);
+  const tokens = new Set<string>();
+  let cacheReread = false;
+  const isRead = method === "GET";
+  const label = `Guesty Booking Engine API ${method} ${url.pathname}`;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    await enforceRateLimit(bookingEngineRequestTimestamps, BOOKING_ENGINE_RATE_LIMITS, "Guesty Booking Engine API");
+    // Read after any rate-limit wait, which may outlive the token's usable window.
+    const token = (await getCachedToken("beapi")).access_token;
+    tokens.add(token);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method,
+        headers: { ...headers, Authorization: `Bearer ${token}` },
+        body: serializedBody,
+        signal: AbortSignal.timeout(timeoutMs),
+        // The OAuth endpoint shares this host; never follow a redirect anywhere.
+        redirect: "manual",
+      });
+    } catch {
+      if (isRead && attempt < MAX_ATTEMPTS) {
+        process.stderr.write("Guesty Booking Engine request could not complete. Retrying the read request...\n");
+        await sleep(attempt * 1000);
+        continue;
+      }
+      throw new Error(`${label} could not complete (network error or ${timeoutMs / 1000}s timeout).` +
+        (isRead ? "" : " Its outcome is unknown; check Guesty before trying again."));
+    }
+
+    if (res.status === 401) {
+      await discardResponse(res);
+      // Marks this token rejected for the process; the shared cache is untouched.
+      invalidateToken(token);
+      if (cacheReread || attempt === MAX_ATTEMPTS) {
+        throw new Error(`Guesty rejected the cached Booking Engine API token (401); the CLI cannot refresh it. ${cacheGuidance("beapi")}`);
+      }
+      process.stderr.write("Guesty rejected the cached booking-engine token (401). Re-reading the cache once...\n");
+      cacheReread = true;
+      continue;
+    }
+
+    if ((res.status === 429 || (isRead && [408, 500, 502, 503, 504].includes(res.status))) && attempt < MAX_ATTEMPTS) {
+      const waitMs = retryDelay(res.headers.get("retry-after"), attempt * (res.status === 429 ? 5000 : 1000));
+      await discardResponse(res);
+      process.stderr.write(`Guesty Booking Engine API returned HTTP ${res.status}. Retrying in ${Math.ceil(waitMs / 1000)}s...\n`);
+      await sleep(waitMs);
+      continue;
+    }
+
+    if (!res.ok) {
+      if (res.status === 403 || (res.status >= 300 && res.status < 400)) {
+        await discardResponse(res);
+        throw new Error(`${label} failed: HTTP ${res.status}.` +
+          (res.status === 403 ? " Check the booking-engine instance's permissions and listings." : " Redirects are not followed; use the documented resource path."));
+      }
+      let detail = await res.text().catch(() => "");
+      for (const secret of [...tokens, process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.GUESTY_TOKEN_SERVICE_KEY]) {
+        if (secret) detail = detail.replaceAll(secret, "[redacted]");
+      }
+      detail = detail.slice(0, 2000);
+      throw new Error(`${label} failed: HTTP ${res.status}` +
+        (!isRead && res.status >= 500 ? ". Its outcome is unknown; check Guesty before trying again." : "") +
+        (detail ? `\n${detail}` : ""));
+    }
+
+    if (res.status === 204 || res.status === 205) {
+      await discardResponse(res);
+      return undefined as T;
+    }
+    let text: string;
+    try {
+      text = await res.text();
+    } catch {
+      throw new Error(`${label} response could not be read; the request was not retried.`);
+    }
+    const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+    if (!contentType.includes("json")) return text as T;
+    if (!text.trim()) return undefined as T;
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new Error(`${label} returned invalid JSON; the request was not retried.`);
+    }
+  }
+  throw new Error(`${label} failed after ${MAX_ATTEMPTS} attempts`);
 }

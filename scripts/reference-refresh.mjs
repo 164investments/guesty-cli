@@ -1,15 +1,24 @@
-// Rebuild openapi-spec.json and api-spec.json from Guesty's public
-// documentation site. The site publishes no complete OpenAPI download, so this
-// reads the reference navigation, then each reference page's Markdown copy,
-// one request at a time. It contacts only the documentation site.
+// Rebuild an API's OpenAPI document and endpoint catalog from Guesty's public
+// documentation site: openapi-spec.json and api-spec.json for the Open API,
+// booking-engine-openapi-spec.json and booking-engine-api-spec.json for the
+// Booking Engine API. Neither site publishes a complete OpenAPI download, so
+// this reads the reference navigation, then each reference page's Markdown
+// copy, one request at a time. It contacts only the documentation site.
 import { readFile, writeFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import {
-  assertOperationCount, buildReference, diffOperations, listReferencePages,
-  mergeReferenceSchemas, readDocumentationIndex, readReferenceMarkdown,
+  assertOperationCount, BOOKING_ENGINE_API, buildReference, diffOperations, listReferencePages,
+  mergeReferenceSchemas, OPEN_API, readDocumentationIndex, readReferenceMarkdown,
 } from "./api-reference.mjs";
 
-export const DOCS_BASE_URL = "https://open-api-docs.guesty.com";
+export const OPEN_API_DOCS = {
+  api: OPEN_API, baseUrl: "https://open-api-docs.guesty.com", schemaFile: "openapi-spec.json", catalogFile: "api-spec.json",
+};
+export const BOOKING_ENGINE_DOCS = {
+  api: BOOKING_ENGINE_API, baseUrl: "https://booking-api-docs.guesty.com",
+  schemaFile: "booking-engine-openapi-spec.json", catalogFile: "booking-engine-api-spec.json",
+};
+export const DOCS_BASE_URL = OPEN_API_DOCS.baseUrl;
 export const DOCS_INDEX_URL = `${DOCS_BASE_URL}/reference`;
 const USER_AGENT = "guesty-cli documentation-refresh (+https://github.com/164investments/guesty-cli)";
 const NOT_UPDATED = "no reference files were updated";
@@ -113,36 +122,37 @@ async function writeArtifacts(root, artifacts) {
 }
 
 export async function refreshApiSpec({
-  root, fetch, sleep, now = Date.now, log = () => {}, warn = log,
+  root, fetch, sleep, now = Date.now, log = () => {}, warn = log, docs = OPEN_API_DOCS,
   intervalMs, maxAttempts, maxRuntimeMs = 25 * 60_000, minimumRatio = 0.9, allowShrink = false,
 }) {
   const startedAt = now();
   const client = createDocsClient({ fetch, sleep, now, log: warn, intervalMs, maxAttempts, deadline: startedAt + maxRuntimeMs });
-  const previousSchema = await readJsonIfPresent(join(root, "openapi-spec.json"));
-  const previousCatalog = (await readJsonIfPresent(join(root, "api-spec.json"))) ?? {};
-  const previousCount = diffOperations(previousSchema, null).previous;
+  const previousSchema = await readJsonIfPresent(join(root, docs.schemaFile));
+  const previousCatalog = (await readJsonIfPresent(join(root, docs.catalogFile))) ?? {};
+  const previousCount = diffOperations(previousSchema, null, docs.api).previous;
   const minimum = allowShrink ? 0 : minimumRatio;
+  const indexUrl = `${docs.baseUrl}/reference`;
 
-  const index = readDocumentationIndex((await client.get(DOCS_INDEX_URL, "text/html")).text);
+  const index = readDocumentationIndex((await client.get(indexUrl, "text/html")).text);
   const references = listReferencePages(index.sidebar);
   assertOperationCount(references.length, previousCount, minimum, "reference pages");
   log(`Found ${references.length} reference pages; reading one every ${client.stats.intervalMs / 1000}s.`);
 
   const pages = [];
   for (const reference of references) {
-    const { text } = await client.get(`${DOCS_BASE_URL}/reference/${encodeURIComponent(reference.slug)}.md`, "text/markdown");
+    const { text } = await client.get(`${docs.baseUrl}/reference/${encodeURIComponent(reference.slug)}.md`, "text/markdown");
     pages.push({ slug: reference.slug, method: reference.api_method, schema: readReferenceMarkdown(text, reference.slug) });
     if (pages.length % 50 === 0) log(`Read ${pages.length}/${references.length} reference pages.`);
   }
 
   const { schema, operationSlugs } = mergeReferenceSchemas(pages);
   schema["x-cli-source"] = {
-    url: DOCS_INDEX_URL,
+    url: indexUrl,
     updatedAt: index.apiDefinitions?.[0]?.updated_at ?? index.gitVersion?.updated_at ?? index.document?.updated_at ?? null,
   };
-  const catalog = buildReference({ document: { api: { schema } }, sidebar: index.sidebar, operationSlugs }, previousCatalog);
-  const changes = diffOperations(previousSchema, schema);
+  const catalog = buildReference({ document: { api: { schema } }, sidebar: index.sidebar, operationSlugs }, previousCatalog, docs.api);
+  const changes = diffOperations(previousSchema, schema, docs.api);
   assertOperationCount(changes.current, previousCount, minimum);
-  await writeArtifacts(root, [["openapi-spec.json", schema], ["api-spec.json", catalog]]);
+  await writeArtifacts(root, [[docs.schemaFile, schema], [docs.catalogFile, catalog]]);
   return { ...changes, pages: references.length, source: schema["x-cli-source"], ...client.stats, elapsedMs: now() - startedAt };
 }

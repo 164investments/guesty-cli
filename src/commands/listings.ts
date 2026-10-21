@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { Command } from "commander";
 import { guestyFetch, paginateAll } from "../client.js";
-import { print } from "../output.js";
+import { print, warnDeprecated } from "../output.js";
 import { readStdin } from "../stdin.js";
 import { fields, integer } from "./query-options.js";
 
@@ -137,17 +137,19 @@ listings
 
 listings
   .command("custom-fields <id>")
-  .description("Get custom fields for a listing")
+  .description("[deprecated] Get custom fields for a listing — use 'properties custom-fields' instead")
   .action(async (id: string) => {
+    warnDeprecated("listings custom-fields", "properties custom-fields <propertyId>");
     const data = await guestyFetch(`/v1/listings/${id}/custom-fields`);
     print(data);
   });
 
 listings
   .command("set-custom-fields <id>")
-  .description("Update listing custom fields (--data or stdin)")
+  .description("[deprecated] Update listing custom fields (--data or stdin) — use 'properties set-custom-fields' instead")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
+    warnDeprecated("listings set-custom-fields", "properties set-custom-fields <propertyId>");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/listings/${id}/custom-fields`, {
       method: "PUT",
@@ -158,16 +160,18 @@ listings
 
 listings
   .command("custom-field <id> <fieldId>")
-  .description("Get a single listing custom field")
+  .description("[deprecated] Get a single listing custom field — use 'properties custom-field' instead")
   .action(async (id: string, fieldId: string) => {
+    warnDeprecated("listings custom-field", "properties custom-field <propertyId> <fieldId>");
     const data = await guestyFetch(`/v1/listings/${id}/custom-fields/${fieldId}`);
     print(data);
   });
 
 listings
   .command("delete-custom-field <id> <fieldId>")
-  .description("Delete a listing custom field")
+  .description("[deprecated] Delete a listing custom field — use 'properties delete-custom-field' instead")
   .action(async (id: string, fieldId: string) => {
+    warnDeprecated("listings delete-custom-field", "properties delete-custom-field <propertyId> <fieldId>");
     const data = await guestyFetch(`/v1/listings/${id}/custom-fields/${fieldId}`, {
       method: "DELETE",
     });

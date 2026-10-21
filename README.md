@@ -1,11 +1,11 @@
 # Guesty CLI
 
-Command-line access to the [Guesty](https://guesty.com) Open API with read-only cached-token authentication, rate limiting, and a `raw` escape hatch for resource endpoints.
+Command-line access to the [Guesty](https://guesty.com) Open API and Booking Engine API with read-only cached-token authentication and rate limiting. Every operation in Guesty's current reference documentation for both APIs has a named command, and `raw` remains an escape hatch for Open API resource paths.
 
 ## Quick Start
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.3.0/guesty-cli-1.3.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.0/guesty-cli-1.4.0.tgz
 guesty setup
 ```
 
@@ -14,7 +14,7 @@ guesty setup
 ## Install
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.3.0/guesty-cli-1.3.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.0/guesty-cli-1.4.0.tgz
 ```
 
 Download the compiled package and checksum from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
@@ -162,6 +162,14 @@ guesty raw POST /v1/reservations.csv --accept text/csv --output reservations.csv
 
 # Download an owner document
 guesty owners download-document <ownerId> <documentId> --output owner-doc.pdf
+
+# Refund part of a reservation payment (Payments API)
+guesty payments list --reservation <reservationId>
+guesty payments refund <paymentId> --amount 50 --note "Late checkout credit"
+
+# Booking Engine API: search availability, then quote a stay
+guesty be listings --check-in 2026-11-01 --check-out 2026-11-04 --min-occupancy 4
+guesty be create-quote --listing <listingId> --check-in 2026-11-01 --check-out 2026-11-04 --guests 4
 ```
 
 ## Commands
@@ -190,25 +198,30 @@ guesty owners download-document <ownerId> <documentId> --output owner-doc.pdf
 | `contacts` | | Contact management |
 | `icalendar` | `ical` | Import/export iCalendars |
 | `saved-replies` | `replies` | Saved reply templates |
-| `marketing` | `mkt` | Translations, languages, descriptions |
+| `marketing` | | Translations, languages, descriptions |
 | `rate-plans` | `rp` | Revenue management rate plans |
 | `rate-strategies` | `rs` | Rate strategies |
 | `additional-fees` | `fees` | Additional fees |
 | `taxes` | | Tax configuration |
 | `payment-providers` | `pp` | Payment providers |
-| `channel-commission` | `cc` | Channel commissions |
+| `channel-commission` | `cc` | Channel commissions (v2; the v1 commands are deprecated) |
 | `promotions` | `promo` | Promotions |
 | `price-adjustments` | `pa` | Price adjustments |
-| `accounts` | | Account custom fields |
+| `accounts` | `acct-fields` | Account custom fields |
 | `invoice-items` | `ii` | Invoice items |
 | `address` | | Geocoding and addresses |
 | `block-logs` | | Calendar block logs |
 | `guest-app` | | Guest app data |
 | `guest-code` | | Guest codes |
 | `user-scope` | | User scope management |
-| `raw` | | Raw API call to any endpoint |
+| `airbnb` | | Airbnb listing expectations and resolutions |
+| `payments` | `pay` | Payments API: payments, holds, refunds, chargebacks, recorded payments, payment methods |
+| `basic-fees` | `bf` | Listing basic fees (cleaning fee) and channel overrides (beta) |
+| `booking-engine` | `be` | Booking Engine API: listings, availability, quotes, reservations, upsells, reviews, metasearch |
+| `raw` | | Raw call to any Open API resource endpoint |
+| `update` | | Install the latest release |
 
-Run `guesty <command> --help` for subcommands and options.
+Run `guesty <command> --help` for subcommands and options. Commands that call an endpoint Guesty has deprecated still work; their help text starts with `[deprecated]`, and they print a notice on stderr that names the replacement when Guesty documents one.
 
 ## Raw Requests
 
@@ -243,6 +256,19 @@ cat reservation.json | guesty res create
 guesty raw POST /v1/reservations-v3 --data-file reservation.json --content-type application/json
 ```
 
+## Booking Engine API
+
+The `booking-engine` (`be`) commands call Guesty's Booking Engine API, the API behind direct-booking websites, at `https://booking.guesty.com/api/...`. They use only the cached `beapi` token (the token `guesty token --beapi` prints), under the same read-only rules as the Open API: the CLI never requests a token, and a 401 re-reads the cache once. `raw` does not reach this API.
+
+```bash
+guesty be listings --city Portland --limit 10
+guesty be calendar <listingId> --from 2026-11-01 --to 2026-11-30
+guesty be create-quote --listing <listingId> --check-in 2026-11-01 --check-out 2026-11-04 --guests 2
+guesty be create-instant-reservation <quoteId> --data '{"ratePlanId":"...","ccToken":"pm_...","guest":{"firstName":"Ada","lastName":"Lovelace","email":"ada@example.com"}}'
+```
+
+Guesty's guides also show a `booking-api.guesty.com` host, but every reference page names `https://booking.guesty.com`, and that is the host the CLI uses. See the [endpoint coverage record](./docs/endpoint-coverage-2026-10-21.md) for this and other documentation conflicts.
+
 ## Authentication
 
 Authentication is read-only throughout the CLI, including `init`, normal API commands, and 401 recovery. Guesty allows only **5 OAuth tokens per 24 hours**, so token creation and refresh belong exclusively to the token service or the designated server workflow. The CLI never calls an OAuth endpoint or writes to the shared or local token cache. `raw` also rejects OAuth paths.
@@ -264,15 +290,17 @@ For the token service, run `npm ci --prefix server` once, then `npm run check:se
 
 ## Rate Limiting
 
-The CLI observes Guesty's documented Open API limits of 15 requests/second, 120/minute, and 5,000/hour within each process. Guesty applies account-wide limits across tokens and processes, so the CLI also honors `Retry-After` on 429 responses. See [Guesty's current rate limits](https://open-api-docs.guesty.com/docs/rate-limits).
+The CLI observes Guesty's documented Open API limits of 15 requests/second, 120/minute, and 5,000/hour within each process. Booking Engine commands keep a separate count against that API's documented limits of 5 requests/second, 275/minute, and 16,500/hour. Guesty applies account-wide limits across tokens and processes, so the CLI also honors `Retry-After` on 429 responses. See Guesty's current [Open API](https://open-api-docs.guesty.com/docs/rate-limits) and [Booking Engine](https://booking-api-docs.guesty.com/reference/quick-start-guide#rate-limits) rate limits.
 
 Requests time out after 60 seconds by default; `raw --timeout <seconds>` can adjust that limit. Transient network/server failures are retried for reads. A mutation with an uncertain network/server outcome is not automatically repeated. Explicit 401 recovery only retries with a different valid cached token.
 
 ## Machine-Readable Contract
 
-The repo includes [`guesty-cli-spec.json`](./guesty-cli-spec.json) as the machine-readable reference for all commands, options, and the Guesty endpoints they call. Each endpoint includes a `docsUrl` linking to the official Guesty API documentation.
+The repo includes [`guesty-cli-spec.json`](./guesty-cli-spec.json) as the machine-readable reference for all commands, options, and the Guesty endpoints they call. Each request names its API (`open-api` or `booking-engine`) and includes a `docsUrl` linking to the official Guesty API documentation.
 
-[`api-spec.json`](./api-spec.json) catalogs all 346 documented Open API operations (Guesty documentation of 2026-10-18); [`openapi-spec.json`](./openapi-spec.json) preserves the current full request/response schemas and deprecation flags. Booking Engine documentation is reviewed separately; normal CLI commands continue to use Open API credentials and endpoints.
+[`api-spec.json`](./api-spec.json) catalogs all 362 documented Open API operations (Guesty documentation of 2026-10-21); [`openapi-spec.json`](./openapi-spec.json) preserves their full request/response schemas and deprecation flags. [`booking-engine-api-spec.json`](./booking-engine-api-spec.json) and [`booking-engine-openapi-spec.json`](./booking-engine-openapi-spec.json) do the same for the 19 documented Booking Engine API operations.
+
+The contract's `referenceCoverage` checks the commands against the Open API catalog, and `bookingEngineReferenceCoverage` against the Booking Engine catalog. Each lists any documented operation without a named command under `missingImplementedEndpoints`; both lists are currently empty. Schema references in Booking Engine request entries resolve against `bookingEngineComponents`.
 
 Regenerate with:
 
@@ -284,17 +312,18 @@ Refresh from Guesty's current published schema before regenerating:
 
 ```bash
 npm run refresh:api-spec
+npm run refresh:booking-engine-spec
 npm run generate:cli-spec
 npm run check
 ```
 
-Guesty's documentation site publishes no complete OpenAPI download; each reference page carries only its own operation. The refresh reads the reference navigation from `https://open-api-docs.guesty.com/reference`, then each reference page's Markdown copy (`/reference/<slug>.md`), one request every two seconds, and merges them into one document. It takes about 12 minutes. A 429 response waits for `Retry-After` and slows the rest of the run; other server and network errors back off and retry.
+Neither Guesty documentation site publishes a complete OpenAPI download; each reference page carries only its own operation. The refresh reads the reference navigation from `https://open-api-docs.guesty.com/reference` (or `https://booking-api-docs.guesty.com/reference` for `refresh:booking-engine-spec`), then each reference page's Markdown copy (`/reference/<slug>.md`), one request every two seconds, and merges them into one document. The Open API refresh takes about 12 minutes; the Booking Engine refresh under a minute. A 429 response waits for `Retry-After` and slows the rest of the run; other server and network errors back off and retry.
 
 The refresh writes nothing and exits non-zero if any page cannot be read, if pages disagree, if the result does not cover every reference page, if the operation count falls below 90% of the previous `openapi-spec.json`, or if it runs past 25 minutes. Options: `--interval-ms <ms>`, `--max-minutes <minutes>`, and `--allow-shrink` after you have confirmed that Guesty removed the missing operations.
 
 `node scripts/scrape-api-docs.mjs` downloads pages from the current documentation index into the ignored `docs/api/open` cache. Add `--booking` for Booking Engine documentation or `--guides` for guides only. The historical `.ts` script names remain compatibility entry points. `node scripts/build-knowledge-base.mjs --output <directory>` generates a condensed reference from the current schema.
 
-See the [September 2026 audit and verification record](./docs/api-audit-2026-09-07.md) and [release notes](./RELEASE_NOTES.md) for fixes, migrations, endpoint coverage, and testing limits.
+See the [October 2026 endpoint coverage record](./docs/endpoint-coverage-2026-10-21.md), the [September 2026 audit and verification record](./docs/api-audit-2026-09-07.md), and the [release notes](./RELEASE_NOTES.md) for fixes, migrations, endpoint coverage, and testing limits.
 
 ## License
 

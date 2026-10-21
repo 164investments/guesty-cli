@@ -73,3 +73,18 @@ export function fields(value: string): string {
   if (!normalized) throw new Error("Field selection must not be empty.");
   return normalized;
 }
+
+export function decimal(value: string, option: string, minimum = -Infinity, maximum = Infinity): number {
+  const parsed = /^-?\d+(?:\.\d+)?$/.test(value) ? Number(value) : NaN;
+  if (!Number.isFinite(parsed) || parsed < minimum || parsed > maximum) {
+    const range = [Number.isFinite(minimum) ? `at least ${minimum}` : "", Number.isFinite(maximum) ? `at most ${maximum}` : ""].filter(Boolean).join(" and ");
+    throw new Error(`${option} must be a number${range ? ` ${range}` : ""}.`);
+  }
+  return parsed;
+}
+
+export function list(value: string, option: string): string[] {
+  const values = value.split(",").map((item) => item.trim());
+  if (!values.length || values.some((item) => !item)) throw new Error(`${option} must be a comma-separated list of nonempty values.`);
+  return values;
+}

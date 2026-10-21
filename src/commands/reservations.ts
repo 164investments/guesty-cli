@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { Command, Option } from "commander";
 import { guestyFetch, paginateAll } from "../client.js";
-import { print } from "../output.js";
+import { print, warnDeprecated } from "../output.js";
 import { readStdin } from "../stdin.js";
 import { date, dateRange, dateTime, fields, integer, jsonObject } from "./query-options.js";
 
@@ -43,7 +43,7 @@ export const reservations = new Command("reservations")
 
 reservations
   .command("list")
-  .description("List reservations with legacy v1 fields and filters; use list-v3 for the current API")
+  .description("[deprecated] List reservations with legacy v1 fields and filters — use 'list-v3' instead")
   .option("--from <date>", "Check-in from date (YYYY-MM-DD)")
   .option("--to <date>", "Check-in to date (YYYY-MM-DD)")
   .option("--status <status>", "Filter by status (confirmed, canceled, inquiry, etc.)")
@@ -86,10 +86,11 @@ reservations
 
 reservations
   .command("search <query>")
-  .description("Search the legacy API by exact confirmation code (or exact name with --guest-name)")
+  .description("[deprecated] Search the legacy API by exact confirmation code (or exact name with --guest-name) — use 'list-v3 --confirmation-code' instead")
   .option("--guest-name", "Treat the query as an exact guest full name")
   .option("--limit <n>", "Max results", "25")
   .action(async (query: string, opts) => {
+    deprecated("search", "list-v3 --confirmation-code <code>");
     if (!query.trim()) throw new Error("Search query must be a non-empty confirmation code or guest name.");
     const data = await guestyFetch("/v1/reservations", {
       params: {
@@ -597,7 +598,7 @@ reservations
     print(data);
   });
 
-// ─── payments & invoices (v1 — no v3 equivalent) ───────────────────────────
+// ─── payments & invoices (v1, deprecated; see the payments group) ───────────
 
 reservations
   .command("balance <id>")
@@ -609,9 +610,10 @@ reservations
 
 reservations
   .command("add-payment <id>")
-  .description("Add a payment to a reservation (--data or stdin)")
+  .description("[deprecated] Add a payment to a reservation (--data or stdin) — use 'payments create', or 'payments record' for offline payments")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
+    warnDeprecated("reservations add-payment", "payments create", "payments record");
     const body = opts.data
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
@@ -624,9 +626,10 @@ reservations
 
 reservations
   .command("update-payment <id> <paymentId>")
-  .description("Update or cancel a payment on a reservation (--data or stdin)")
+  .description("[deprecated] Update or cancel a payment on a reservation (--data or stdin) — use 'payments update' or 'payments cancel' instead")
   .option("--data <json>", "JSON body")
   .action(async (id: string, paymentId: string, opts) => {
+    warnDeprecated("reservations update-payment", "payments update", "payments cancel");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/reservations/${id}/payments/${paymentId}`, {
       method: "PUT",
@@ -637,9 +640,10 @@ reservations
 
 reservations
   .command("refund-payment <id> <paymentId>")
-  .description("Refund a payment on a reservation (--data or stdin)")
+  .description("[deprecated] Refund a payment on a reservation (--data or stdin) — use 'payments refund', or 'payments record-refund' for recorded payments")
   .option("--data <json>", "JSON body")
   .action(async (id: string, paymentId: string, opts) => {
+    warnDeprecated("reservations refund-payment", "payments refund", "payments record-refund");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/reservations/${id}/payments/${paymentId}/refund`, {
       method: "POST",
@@ -650,9 +654,10 @@ reservations
 
 reservations
   .command("cancel-payment <id> <paymentId>")
-  .description("Cancel a pending or recorded payment (--data or stdin)")
+  .description("[deprecated] Cancel a pending or recorded payment (--data or stdin) — use 'payments cancel' instead")
   .option("--data <json>", "JSON body")
   .action(async (id: string, paymentId: string, opts) => {
+    warnDeprecated("reservations cancel-payment", "payments cancel");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/reservations/${id}/payments/${paymentId}/cancel`, {
       method: "PATCH",
@@ -663,9 +668,10 @@ reservations
 
 reservations
   .command("add-invoice-item <id>")
-  .description("Create an invoice item on a reservation (--data or stdin)")
+  .description("[deprecated] Create an invoice item on a reservation (--data or stdin) — use 'invoice-items create' instead")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
+    warnDeprecated("reservations add-invoice-item", "invoice-items create <reservationId>");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/reservations/${id}/invoiceItems`, {
       method: "POST",
@@ -678,9 +684,11 @@ reservations
 
 reservations
   .command("update <id>")
-  .description("Update a reservation (pass JSON body via stdin or --data)")
+  .description("[deprecated] Update a reservation (--data or stdin) — use update-dates, update-guests, update-status, relocate, or update-notes instead")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
+    warnDeprecated("reservations update", "reservations update-dates", "reservations update-guests", "reservations update-status",
+      "reservations relocate", "reservations update-notes");
     const body = opts.data
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
@@ -695,10 +703,11 @@ reservations
 
 reservations
   .command("export-csv")
-  .description("Export reservations as CSV (--data or stdin)")
+  .description("[deprecated] Export reservations as CSV (--data or stdin); Guesty documents no replacement")
   .option("--data <json>", "JSON body")
   .option("--output <path>", "Write CSV output to a file")
   .action(async (opts) => {
+    warnDeprecated("reservations export-csv");
     const body = opts.data
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
@@ -717,9 +726,10 @@ reservations
 
 reservations
   .command("export-email")
-  .description("Send reservations results in email (--data or stdin)")
+  .description("[deprecated] Send reservations results in email (--data or stdin); Guesty documents no replacement")
   .option("--data <json>", "JSON body")
   .action(async (opts) => {
+    warnDeprecated("reservations export-email");
     const body = opts.data
       ? JSON.parse(opts.data)
       : JSON.parse(await readStdin());
@@ -773,8 +783,9 @@ reservations
 
 reservations
   .command("request-cancellation-sync <id>")
-  .description("Request Airbnb reservation cancellation sync")
+  .description("[deprecated] Request Airbnb reservation cancellation sync — use 'request-cancellation' instead")
   .action(async (id: string) => {
+    deprecated("request-cancellation-sync", "request-cancellation");
     const data = await guestyFetch(`/v1/reservations/${id}/request-cancellation-sync`, {
       method: "POST",
     });

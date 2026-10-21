@@ -116,6 +116,21 @@ financials
     });
 
 financials
+  .command("folio-settings-snapshot")
+  .description("Read the tax, fee, commission, and currency settings used to calculate up to 200 reservations")
+    .requiredOption("--reservations <ids>", "Comma-separated reservation IDs (max 200)")
+    .requiredOption("--fields <fields>", "Comma-separated snapshot fields, such as taxes.name,taxes.amount,currencyConversion")
+    .action(async (opts) => {
+      const ids = String(opts.reservations).split(",").map((value) => value.trim());
+      if (!ids.length || ids.length > 200 || ids.some((id) => id.length !== 24)) {
+        throw new Error("--reservations must contain 1-200 comma-separated reservation IDs of 24 characters each.");
+      }
+      const fields = String(opts.fields).split(",").map((value) => value.trim());
+      if (fields.some((value) => !value)) throw new Error("--fields must contain at least one field and no empty entries.");
+      print(await guestyFetch("/v1/guest-folio/settings-snapshot", { params: { reservationIds: ids.join(","), fields: fields.join(",") } }));
+    });
+
+financials
   .command("update-listing <listingId>")
   .description("Update financial data for a listing (--data or stdin)")
   .option("--data <json>", "JSON body")

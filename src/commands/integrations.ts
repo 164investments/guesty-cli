@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { guestyFetch } from "../client.js";
-import { print } from "../output.js";
+import { print, warnDeprecated } from "../output.js";
 import { readStdin } from "../stdin.js";
 import { integer } from "./query-options.js";
 
@@ -18,9 +18,10 @@ integrations
 
 integrations
   .command("create")
-  .description("Create an integration (--data or stdin)")
+  .description("[deprecated] Create an integration (--data or stdin); Guesty documents no replacement")
   .option("--data <json>", "JSON body")
   .action(async (opts) => {
+    warnDeprecated("integrations create");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch("/v1/integrations", { method: "POST", body });
     print(data);
@@ -36,9 +37,10 @@ integrations
 
 integrations
   .command("update <id>")
-  .description("Update an integration (--data or stdin)")
+  .description("[deprecated] Update an integration (--data or stdin); Guesty documents no replacement")
   .option("--data <json>", "JSON body")
   .action(async (id: string, opts) => {
+    warnDeprecated("integrations update");
     const body = opts.data ? JSON.parse(opts.data) : JSON.parse(await readStdin());
     const data = await guestyFetch(`/v1/integrations/${id}`, { method: "PUT", body });
     print(data);

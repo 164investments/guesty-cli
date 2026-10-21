@@ -3,6 +3,11 @@ import { isDeepStrictEqual } from "node:util";
 const METHOD_ORDER = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
 const HTTP_METHODS = new Set(METHOD_ORDER);
 
+// Each API has its own server, token type and path prefix. A reference document
+// must name its API's server, so the two token scopes are never mixed.
+export const OPEN_API = { label: "Open API", server: "https://open-api.guesty.com/v1", pathPrefix: "/v1" };
+export const BOOKING_ENGINE_API = { label: "Booking Engine API", server: "https://booking.guesty.com/", pathPrefix: "" };
+
 export function normalizePath(path) {
   return path.replace(/\{[^}]+\}/g, "{param}");
 }
@@ -138,8 +143,8 @@ function resolvePointer(schema, ref) {
   return target;
 }
 
-export function diffOperations(previous, current) {
-  const keys = (schema) => new Set(schema ? listOperations(schema).map(({ method, path }) => `${method} ${path}`) : []);
+export function diffOperations(previous, current, api = OPEN_API) {
+  const keys = (schema) => new Set(schema ? listOperations(schema, api).map(({ method, path }) => `${method} ${path}`) : []);
   const before = keys(previous);
   const after = keys(current);
   return {
@@ -156,17 +161,17 @@ export function assertOperationCount(current, previous, minimumRatio, subject = 
   }
 }
 
-export function listOperations(schema) {
+export function listOperations(schema, api = OPEN_API) {
   const server = schema.servers?.[0]?.url;
-  if (server !== "https://open-api.guesty.com/v1") {
-    throw new Error("Expected the Guesty Open API server; refusing to mix API token scopes.");
+  if (server !== api.server) {
+    throw new Error(`Expected the Guesty ${api.label} server; refusing to mix API token scopes.`);
   }
   const operations = [];
   for (const [path, item] of Object.entries(schema.paths ?? {})) {
     if (item.$ref) throw new Error(`Path Item references require explicit support before refreshing: ${path}`);
     for (const [method, operation] of Object.entries(item)) {
       if (!HTTP_METHODS.has(method)) continue;
-      operations.push({ method: method.toUpperCase(), path: `/v1${path}`, schemaPath: path, operation, pathItem: item });
+      operations.push({ method: method.toUpperCase(), path: `${api.pathPrefix}${path}`, schemaPath: path, operation, pathItem: item });
     }
   }
   if (!operations.length) throw new Error("The reference contains no HTTP operations.");
@@ -175,7 +180,7 @@ export function listOperations(schema) {
 
 // page.operationSlugs, when present, maps "METHOD /schema/path" to the page the
 // operation was read from, which is the most reliable match.
-export function buildReference(page, previous = {}) {
+export function buildReference(page, previous = {}, api = OPEN_API) {
   const pages = listReferencePages(page.sidebar);
   const slugs = new Set(pages.map((item) => item.slug));
   const matched = new Set();
@@ -183,9 +188,9 @@ export function buildReference(page, previous = {}) {
     entries.map((entry) => [`${entry.method} ${normalizePath(entry.path)}`, { ...entry, group }])
   ));
   const result = {};
-  for (const { method, path, schemaPath, operation } of listOperations(page.document.api.schema)) {
+  for (const { method, path, schemaPath, operation } of listOperations(page.document.api.schema, api)) {
     const existing = old.get(`${method} ${normalizePath(path)}`);
-    const inferred = `${method.toLowerCase()}_${path.slice(4).replace(/[{}]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`.toLowerCase();
+    const inferred = `${method.toLowerCase()}_${path.slice(api.pathPrefix.length + 1).replace(/[{}]/g, "").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "")}`.toLowerCase();
     let slug = [page.operationSlugs?.get(`${method} ${schemaPath}`), operation.operationId?.toLowerCase(), inferred, existing?.slug].find((value) => slugs.has(value));
     if (!slug) {
       const matches = pages.filter((item) => item.api_method === method.toLowerCase() && item.title === operation.summary);
