@@ -45,7 +45,7 @@ npm link
 - **A team token service**, which `guesty setup` configures:
 
   ```bash
-  GUESTY_TOKEN_SERVICE_URL=https://guesty-tokens.simplyvrm.com   # or your own service
+  GUESTY_TOKEN_SERVICE_URL=https://guesty-tokens.simplyvacationrentalmanagement.com  # or your own service
   GUESTY_TOKEN_SERVICE_KEY=gts_...                              # your personal access key
   ```
 
