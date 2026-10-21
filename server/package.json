@@ -1,0 +1,23 @@
+{
+  "name": "guesty-token-service",
+  "private": true,
+  "description": "Shares one cached Guesty token per team with every Guesty CLI on that team",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsrs --version && tsrs --noEmit",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "test": "npm run build && node --test test/service.test.mjs",
+    "test:cli": "npm run build && node --test test/cli.test.mjs",
+    "check": "npm run typecheck && npm test && npm run test:cli",
+    "predeploy": "npm run typecheck && npm test",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261021.1",
+    "miniflare": "^4.20260730.0",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.151.3"
+  }
+}

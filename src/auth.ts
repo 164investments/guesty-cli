@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { TOKEN_SERVICE_KEY_ENV, TOKEN_SERVICE_URL_ENV, TokenServiceError, callTokenService, serviceUrl } from "./token-service.js";
 
 const TOKEN_FILE = join(homedir(), ".guesty-cli", "token.json");
 const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 const CACHE_TIMEOUT_MS = 10_000;
-const TEAM_CACHE_ENV = ["GUESTY_TEAM_CACHE_URL", "GUESTY_TEAM_CACHE_API_KEY", "GUESTY_TEAM_CACHE_ACCESS_KEY"] as const;
 
 export type TokenType = "openapi" | "beapi";
 
@@ -33,16 +33,16 @@ function isUsableToken(value: unknown, tokenType: TokenType): value is CachedTok
   );
 }
 
-// Any team-cache variable selects the team cache, so a partial setup fails
-// instead of silently reading an unrelated SUPABASE_URL project.
-function usesTeamCache(): boolean {
-  return TEAM_CACHE_ENV.some((name) => process.env[name]);
+// Either token-service variable selects the token service, so a partial setup
+// fails instead of silently reading an unrelated SUPABASE_URL project.
+function usesTokenService(): boolean {
+  return !!(process.env[TOKEN_SERVICE_URL_ENV] || process.env[TOKEN_SERVICE_KEY_ENV]);
 }
 
 export function cacheGuidance(tokenType: TokenType): string {
-  return usesTeamCache()
-    ? `Check ${TEAM_CACHE_ENV.join(", ")}. The team cache renews its own tokens; its admin can ` +
-      `check guesty_cli.status, and select guesty_cli.refresh_token('${tokenType}', true) replaces a token Guesty rejected.`
+  return usesTokenService()
+    ? `Check ${TOKEN_SERVICE_URL_ENV} and ${TOKEN_SERVICE_KEY_ENV}, or run guesty setup. The token service renews ` +
+      `the team's token; an admin can run guesty team status, and guesty team refresh${tokenType === "beapi" ? " --beapi" : ""} replaces a token Guesty rejected.`
     : "Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and have the designated " +
       `server refresh workflow restore a valid ${tokenType} token in the shared cache.`;
 }
@@ -68,35 +68,43 @@ function readLocalOpenApiToken(): CachedToken | null {
   }
 }
 
-async function fetchCachedToken(
-  tokenType: TokenType,
-  source: "shared cache" | "team cache",
-  url: string,
-  init: RequestInit
-): Promise<CachedToken> {
+async function readSharedToken(tokenType: TokenType): Promise<CachedToken> {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw cacheUnavailable(tokenType, "shared-cache configuration is missing");
+  }
+
   let res: Response;
   try {
-    res = await fetch(url, { ...init, signal: AbortSignal.timeout(CACHE_TIMEOUT_MS), redirect: "error" });
+    res = await fetch(
+      `${url.replace(/\/$/, "")}/rest/v1/guesty_tokens?select=access_token,expires_at,token_type&token_type=eq.${tokenType}&order=created_at.desc&limit=1`,
+      {
+        method: "GET",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(CACHE_TIMEOUT_MS),
+        redirect: "error",
+      }
+    );
   } catch {
-    throw cacheUnavailable(tokenType, `the ${source} request could not complete`);
+    throw cacheUnavailable(tokenType, "the shared-cache request could not complete");
   }
 
   if (!res.ok) {
-    throw cacheUnavailable(tokenType, source === "team cache" && (res.status === 401 || res.status === 403)
-      ? `the team cache rejected the access key or API key (HTTP ${res.status})`
-      : `the ${source} returned HTTP ${res.status}`);
+    throw cacheUnavailable(tokenType, `the shared cache returned HTTP ${res.status}`);
   }
 
   let rows: unknown;
   try {
     rows = await res.json();
   } catch {
-    throw cacheUnavailable(tokenType, `the ${source} returned invalid JSON`);
+    throw cacheUnavailable(tokenType, "the shared cache returned invalid JSON");
   }
 
-  if (source === "team cache" && Array.isArray(rows) && rows.length === 0) {
-    throw cacheUnavailable(tokenType, "the team cache has no unexpired token");
-  }
   if (!Array.isArray(rows) || !isUsableToken(rows[0], tokenType)) {
     throw cacheUnavailable(tokenType, "the cached row is missing, expired, rejected, or has invalid token metadata");
   }
@@ -105,55 +113,40 @@ async function fetchCachedToken(
   return { access_token, expires_at, token_type };
 }
 
-async function readSharedToken(tokenType: TokenType): Promise<CachedToken> {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw cacheUnavailable(tokenType, "shared-cache configuration is missing");
-  }
-
-  return fetchCachedToken(
-    tokenType,
-    "shared cache",
-    `${url.replace(/\/$/, "")}/rest/v1/guesty_tokens?select=access_token,expires_at,token_type&token_type=eq.${tokenType}&order=created_at.desc&limit=1`,
-    {
-      method: "GET",
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        Accept: "application/json",
-      },
-    }
-  );
-}
-
-// A team's own Supabase project, set up with sql/team-token-cache.sql. Its
-// scheduled job requests tokens; members only read them with an access key.
-async function readTeamToken(tokenType: TokenType): Promise<CachedToken> {
-  const [url, apiKey, accessKey] = TEAM_CACHE_ENV.map((name) => process.env[name]);
-  if (!url || !apiKey || !accessKey) {
-    throw cacheUnavailable(tokenType, "team-cache configuration is incomplete");
-  }
-  let base: URL;
+// The team token service (server/) requests tokens; the CLI only reads them.
+async function readServiceToken(tokenType: TokenType): Promise<CachedToken> {
+  const url = process.env[TOKEN_SERVICE_URL_ENV];
+  const key = process.env[TOKEN_SERVICE_KEY_ENV];
+  if (!url || !key) throw cacheUnavailable(tokenType, "token-service configuration is incomplete");
+  let base: string;
   try {
-    base = new URL(url);
-  } catch {
-    throw cacheUnavailable(tokenType, "GUESTY_TEAM_CACHE_URL is not a valid URL");
-  }
-  const local = ["localhost", "127.0.0.1", "[::1]"].includes(base.hostname);
-  if (base.protocol !== "https:" && !(base.protocol === "http:" && local)) {
-    throw cacheUnavailable(tokenType, "GUESTY_TEAM_CACHE_URL must use https");
+    base = serviceUrl(url);
+  } catch (error) {
+    throw cacheUnavailable(tokenType, (error as Error).message.replace(/\.$/, ""));
   }
 
-  return fetchCachedToken(tokenType, "team cache", `${url.replace(/\/$/, "")}/rest/v1/rpc/guesty_cli_token`, {
-    method: "POST",
-    headers: {
-      apikey: apiKey,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ p_access_key: accessKey, p_token_type: tokenType }),
-  });
+  let token: unknown;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      token = await callTokenService(base, "POST", "/v1/token", { key, body: { token_type: tokenType } });
+      break;
+    } catch (error) {
+      if (!(error instanceof TokenServiceError)) throw error;
+      // Another member's request is renewing the token right now.
+      if (error.code === "refreshing" && attempt === 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+        continue;
+      }
+      throw cacheUnavailable(tokenType, error.status === 401
+        ? "the token service rejected the access key (HTTP 401)"
+        : error.status === 0 ? "the token service request could not complete" : error.message.replace(/\.$/, ""));
+    }
+  }
+  if (!isUsableToken(token, tokenType)) {
+    throw cacheUnavailable(tokenType, "the token service returned a missing, expired, rejected, or invalid token");
+  }
+  const { access_token, expires_at, token_type } = token;
+  return { access_token, expires_at, token_type };
 }
 
 export function invalidateToken(rejectedToken?: string): void {
@@ -173,7 +166,7 @@ export async function getCachedToken(tokenType: TokenType = "openapi"): Promise<
   if (isUsableToken(memoryToken, tokenType)) return { ...memoryToken };
 
   const diskToken = tokenType === "openapi" ? readLocalOpenApiToken() : null;
-  const token = diskToken ?? await (usesTeamCache() ? readTeamToken(tokenType) : readSharedToken(tokenType));
+  const token = diskToken ?? await (usesTokenService() ? readServiceToken(tokenType) : readSharedToken(tokenType));
   cached.set(tokenType, token);
   return { ...token };
 }

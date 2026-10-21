@@ -25,10 +25,10 @@ if (scenario.noConfig) {
   delete process.env.SUPABASE_URL;
   delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 }
+const fakeServiceKey = `gts_${"F".repeat(43)}`;
 if (scenario.team) {
-  process.env.GUESTY_TEAM_CACHE_URL = "https://team-cache.invalid";
-  process.env.GUESTY_TEAM_CACHE_API_KEY = "fake-team-api-key-must-not-be-printed";
-  process.env.GUESTY_TEAM_CACHE_ACCESS_KEY = "fake-team-access-key-must-not-be-printed";
+  process.env.GUESTY_TOKEN_SERVICE_URL = "https://team-cache.invalid";
+  process.env.GUESTY_TOKEN_SERVICE_KEY = fakeServiceKey;
   for (const [name, value] of Object.entries(scenario.teamEnv ?? {})) {
     if (value === null) delete process.env[name];
     else process.env[name] = value;
@@ -75,23 +75,22 @@ let teamIndex = 0;
 let apiIndex = 0;
 globalThis.fetch = async (input, options = {}) => {
   const url = new URL(String(input));
-  const teamRequest = url.pathname === "/rest/v1/rpc/guesty_cli_token";
+  const teamRequest = url.pathname === "/v1/token";
   trace.requests.push({
     url: url.href,
     method: options.method ?? "GET",
     authorization: url.hostname === "open-api.guesty.com" || teamRequest ? options.headers?.Authorization : undefined,
-    apikey: teamRequest ? options.headers?.apikey : undefined,
     body: teamRequest ? JSON.parse(options.body) : undefined,
     timeout: options.signal instanceof AbortSignal,
   });
   if (teamRequest && ["team-cache.invalid", "127.0.0.1"].includes(url.hostname)) {
-    if (options.method !== "POST") throw new Error("The team cache is read through its POST function");
+    if (options.method !== "POST") throw new Error("The token service is read through POST /v1/token");
     if (scenario.teamError) throw new Error("fake-secret-in-team-network-error");
     if (scenario.teamRaw !== undefined) return new Response(scenario.teamRaw, { status: 200 });
-    const replies = scenario.teamReplies ?? [scenario.teamRows ?? []];
-    const body = replies[Math.min(teamIndex++, replies.length - 1)];
-    return new Response(JSON.stringify(body), {
-      status: scenario.teamStatus ?? 200,
+    const replies = scenario.teamReplies ?? [{ status: scenario.teamStatus ?? 200, body: scenario.teamBody ?? {} }];
+    const reply = replies[Math.min(teamIndex++, replies.length - 1)];
+    return new Response(JSON.stringify(reply.body), {
+      status: reply.status,
       headers: { "Content-Type": "application/json" },
     });
   }

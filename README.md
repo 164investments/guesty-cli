@@ -6,10 +6,10 @@ Command-line access to the [Guesty](https://guesty.com) Open API with read-only 
 
 ```bash
 npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.1/guesty-cli-1.2.1.tgz
-guesty init
+guesty setup
 ```
 
-This installs the CLI and displays cache setup instructions. The CLI does not request OAuth tokens or collect Guesty client credentials. To share one token across a team, see [Share one token across a team](#share-one-token-across-a-team).
+`guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use Simply VRM's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens. `guesty setup` and `guesty team` need a CLI release newer than 1.2.1.
 
 ## Install
 
@@ -40,18 +40,13 @@ npm link
 
 ## Configure
 
-```bash
-guesty init
-```
+`guesty setup` is the easiest way to configure the CLI. It saves its settings in `~/.guesty-cli/.env`. The CLI reads a cached token from one of two places, set either in your shell or in that file:
 
-The CLI reads a cached token from one of two places. It reads these environment variables, or loads them from `~/.guesty-cli/.env`:
-
-- **A team token cache** in a Supabase project your team owns, set up with the steps in [Share one token across a team](#share-one-token-across-a-team):
+- **A team token service**, which `guesty setup` configures:
 
   ```bash
-  export GUESTY_TEAM_CACHE_URL=https://<project-ref>.supabase.co
-  export GUESTY_TEAM_CACHE_API_KEY=...      # the project's publishable (or legacy anon) key
-  export GUESTY_TEAM_CACHE_ACCESS_KEY=...   # your personal access key
+  GUESTY_TOKEN_SERVICE_URL=https://guesty-tokens.simplyvrm.com   # or your own service
+  GUESTY_TOKEN_SERVICE_KEY=gts_...                              # your personal access key
   ```
 
 - **A server-managed `guesty_tokens` table**, kept current by your own refresh service:
@@ -61,64 +56,66 @@ The CLI reads a cached token from one of two places. It reads these environment 
   export SUPABASE_SERVICE_ROLE_KEY=...
   ```
 
-When any `GUESTY_TEAM_CACHE_` variable is set, the CLI reads only the team cache and ignores `SUPABASE_URL`. Keep secret files private and outside Git. `guesty init` prints guidance only; it does not write files, verify credentials, or refresh tokens. Existing Guesty client credentials are unused by the CLI.
+When either `GUESTY_TOKEN_SERVICE_` variable is set, the CLI reads only the token service and ignores `SUPABASE_URL`. Keep secret files private and outside Git. `guesty init` prints this guidance; it does not write files, verify credentials, or refresh tokens.
 
 ## Share one token across a team
 
-Guesty allows five OAuth tokens per client in any 24 hours. If everyone on a team requests their own, five people use the whole allowance, and one more request locks the account out for a day. A team token cache keeps one token in a Supabase project your team owns, and everyone's CLI reads that token. The team cache needs a CLI release newer than 1.2.1.
+Guesty allows five OAuth tokens per client ID in any 24 hours. If everyone on a team requests their own, five people use the whole allowance, and one more request locks the account out for a day. A token service keeps one token per team, and every teammate's CLI reads it.
 
-### How it works
+### Set up a team
 
-- A scheduled job in the project requests a new token when the cached one has less than an hour left, so the team uses about one token a day. The Guesty credentials stay in Supabase Vault; members never see them.
-- The job makes at most three token requests in any 24 hours, counting failures, which leaves two of Guesty's five for anything else. After a failed request it waits 30 minutes, or two hours after a 429. It records every request in `guesty_cli.token_requests`.
-- Each member has a personal access key. The CLI sends it to one database function, `guesty_cli_token`, which returns the shared token and records when the key was last used. A revoked key gets no further tokens; a token the member already has works until it expires, at most 24 hours later.
-- The CLI still never requests a token itself.
+The admin runs `guesty setup` and chooses where the team's token lives:
 
-### Set up the cache (admin, once)
+1. **Simply VRM's hosted token service.** It's free, and there's nothing to run.
+2. **A token service you run yourself.** See [Run your own token service](#run-your-own-token-service).
 
-1. Create a Supabase project for the cache. A dedicated project keeps the cache apart from other data.
-2. In its SQL editor, run the setup SQL. Print it with `guesty init --team-sql`, or copy [`sql/team-token-cache.sql`](./sql/team-token-cache.sql).
-3. In **Integrations → Vault**, add your Guesty Open API credentials as secrets named `guesty_openapi_client_id` and `guesty_openapi_client_secret`. For booking-engine tokens (`guesty token --beapi`), also add `guesty_beapi_client_id` and `guesty_beapi_client_secret`.
-4. Get the first token now instead of at the next scheduled run, which happens every 10 minutes, and check the result:
+Setup asks for a team name, your name, and the Guesty Open API client ID and secret; Guesty's help article "Using Guesty's Open API" shows how to create them. Booking-engine API credentials are optional. The service checks the credentials with Guesty before saving them. That check uses one of the day's five tokens, and the team then uses that token.
 
-   ```sql
-   select * from guesty_cli.refresh_due_tokens();
-   select * from guesty_cli.status;
-   ```
-
-5. For each member, create an access key and send it to them privately, for example through your password manager. It is shown only once.
-
-   ```sql
-   select guesty_cli.create_access_key('Alex Smith');
-   ```
-
-6. Give members the project URL and its publishable key from **Project Settings → API Keys**.
-
-Use credentials that nothing else refreshes. Every service that requests tokens with the same credentials draws from the same five.
-
-### Connect a member's CLI
-
-Add the three values to `~/.guesty-cli/.env`:
+Then invite each teammate:
 
 ```bash
-GUESTY_TEAM_CACHE_URL=https://<project-ref>.supabase.co
-GUESTY_TEAM_CACHE_API_KEY=<publishable key>
-GUESTY_TEAM_CACHE_ACCESS_KEY=<your access key>
+guesty team invite "Alex Smith"      # prints an invite code; send it privately
 ```
 
-Then check it with `guesty token --json`, which prints the token and its expiry. The URL must use HTTPS; plain HTTP is accepted only for `localhost` and `127.0.0.1`.
+The teammate runs `guesty team join <code>`, or `guesty setup` and chooses **Join a team**. Their CLI then uses the team's token.
 
-### Look after the cache
+### How the service protects the allowance
 
-| Task | SQL |
-|------|-----|
-| Check each token's expiry and the last request | `select * from guesty_cli.status;` |
-| List members' keys | `select label, created_at, last_used_at, revoked_at from guesty_cli.access_keys;` |
-| Remove a member | `select guesty_cli.revoke_access_key('Alex Smith');` |
-| Replace a token Guesty rejected (the CLI reports a 401) | `select guesty_cli.refresh_token('openapi', true);` |
-| Change the limits | `update guesty_cli.settings set max_requests_per_day = 4;` (1 to 5) |
+- It requests a new token only when a teammate needs one and the cached token has less than an hour left, so a busy team uses about one token a day. Teammates asking at the same moment share one request.
+- It makes at most three token requests per Guesty client in any 24 hours, counting failures, which leaves two of Guesty's five. After a failed request it waits 30 minutes, or two hours after a 429. A rejected client ID or secret doesn't trigger the wait, so a typo can be fixed straight away, but it still counts toward the three.
+- One team per Guesty client. The request history is kept even after a team is deleted, so recreating a team can't reset the count. If an admin loses their key, running `guesty setup` again with the same client ID and secret gives them a new admin key for the existing team.
+- The service encrypts Guesty credentials and tokens at rest, with a key kept outside the database. It stores access keys only as keyed hashes. Teammates never see the client secret.
 
-Replacing a token uses one of the day's requests. Running the setup SQL again is safe and applies updates.
+### Team commands
+
+| Command | What it does |
+|---------|--------------|
+| `guesty team invite <name> [--admin]` | Creates a teammate's access key and prints their invite code |
+| `guesty team join <code>` | Joins a team |
+| `guesty team status` | Shows token expiry, recent token requests and every key (admin) |
+| `guesty team revoke <name>` | Revokes a key. A token the teammate already has works until it expires, at most 24 hours later |
+| `guesty team refresh [--beapi]` | Replaces a token Guesty rejected before it expired; uses one of the day's requests (admin) |
+| `guesty team credentials [--beapi]` | Adds or replaces Guesty credentials, after Guesty confirms them (admin) |
+| `guesty team limit <1-5>` | Changes the team's token requests per 24 hours (admin) |
+| `guesty team delete` | Deletes the team, its stored credentials and every key (admin) |
+
+Use credentials that nothing else refreshes. Every service that requests tokens with the same client ID draws from the same five.
+
+### Run your own token service
+
+The service in [`server/`](./server) is a Cloudflare Worker with a D1 database, and it runs on Cloudflare's free plan. To run your own copy:
+
+```bash
+git clone https://github.com/164investments/guesty-cli.git
+cd guesty-cli/server
+npm ci
+npx wrangler login
+npx wrangler d1 create guesty-token-service   # add the database_id it prints to wrangler.jsonc
+openssl rand -base64 32 | npx wrangler secret put CREDENTIALS_KEY
+npm run deploy                                 # type-checks, tests, applies the migration, deploys
+```
+
+Then run `guesty setup`, choose **A token service you run yourself**, and enter the Worker's URL. Keep a copy of `CREDENTIALS_KEY` somewhere safe: without it, the stored credentials can't be decrypted, and every team must be set up again.
 
 ## Getting a raw token
 
@@ -131,7 +128,7 @@ guesty token --beapi                # cached BEAPI (booking-engine) token
 guesty token --json                 # token + expiry metadata
 ```
 
-Both token types must have more than five minutes remaining. Missing, expired, rejected, malformed, or incorrectly typed cache entries produce an error and no token output. The team cache's scheduled job or your server refresh workflow restores the cache; the CLI cannot create a replacement.
+Both token types must have more than five minutes remaining. Missing, expired, rejected, malformed, or incorrectly typed cache entries produce an error and no token output. The token service or your server refresh workflow restores the cache; the CLI cannot create a replacement.
 
 ## Examples
 
@@ -170,7 +167,9 @@ guesty owners download-document <ownerId> <documentId> --output owner-doc.pdf
 
 | Command | Alias | Description |
 |---------|-------|-------------|
-| `init` | | Show cache setup instructions; `--team-sql` prints the team-cache setup SQL |
+| `setup` | | Connect to a token service: hosted, your own, or join a team |
+| `team` | | Invite, revoke and manage your team's shared token |
+| `init` | | Show cache setup instructions |
 | `token` | | Read a valid cached Open API or BEAPI token |
 | `reservations` | `res` | Reservations (v1 + v3), exports, reports |
 | `listings` | `ls` | Listings CRUD, exports |
@@ -245,7 +244,7 @@ guesty raw POST /v1/reservations-v3 --data-file reservation.json --content-type 
 
 ## Authentication
 
-Authentication is read-only throughout the CLI, including `init`, normal API commands, and 401 recovery. Guesty allows only **5 OAuth tokens per 24 hours**, so token creation and refresh belong exclusively to the team cache's scheduled job or the designated server workflow. The CLI never calls an OAuth endpoint or writes to the shared or local token cache. `raw` also rejects OAuth paths.
+Authentication is read-only throughout the CLI, including `init`, normal API commands, and 401 recovery. Guesty allows only **5 OAuth tokens per 24 hours**, so token creation and refresh belong exclusively to the token service or the designated server workflow. The CLI never calls an OAuth endpoint or writes to the shared or local token cache. `raw` also rejects OAuth paths.
 
 Open API commands use `token_type=openapi`; `guesty token --beapi` reads only `token_type=beapi`. Each cache read requests one type and validates the returned row's type, token string, and numeric `expires_at` timestamp in milliseconds. Custom Authorization headers cannot override that scope. A 401 clears only the process's copy and permits one retry if a different valid cached token is available.
 
@@ -260,7 +259,7 @@ npm run check
 
 The check compiles strict TypeScript, runs offline authentication, transport, command, and update regression tests, and verifies that the generated CLI contract matches the source. Authentication tests replace all network calls and private-cache reads with fake data and prove that cache failures cannot request OAuth tokens. Endpoint tests assert methods, paths, query parameters, bodies, and meaningful validation failures. Live write tests are not part of this suite.
 
-`npm run test:team-cache` tests the team-cache SQL against a local Supabase stack (`supabase start`) and a mock OAuth server; it never contacts Guesty. Set `TEAM_CACHE_API_KEY` to the local stack's publishable or anon key. It resets the cache tables, so it refuses any database that is not on this machine.
+For the token service, run `npm ci --prefix server` once, then `npm run check:server`. It type-checks the Worker with tsrs and runs the bundled Worker in Miniflare with a local D1 database and a mock of Guesty's token endpoint, so it never contacts Guesty. It also drives the built CLI through setup, invites, revocation and team deletion against that Worker.
 
 ## Rate Limiting
 

@@ -8,7 +8,6 @@
   },
   "files": [
     "dist",
-    "sql",
     "README.md",
     "RELEASE_NOTES.md",
     "docs/api-audit-2026-09-07.md",
@@ -24,7 +23,7 @@
     "typecheck": "tsc -v | grep 'Version 7' && tsc --noEmit",
     "check": "npm run typecheck && npm test && npm run check:cli-spec",
     "check:cli-spec": "node scripts/generate-cli-spec.mjs --check",
-    "test:team-cache": "npm run build && node --test test/team-cache.integration.mjs",
+    "check:server": "npm run build && npm --prefix server run check",
     "generate:cli-spec": "node scripts/generate-cli-spec.mjs",
     "link": "npm run build && npm link",
     "refresh:api-spec": "node scripts/refresh-api-spec.mjs",

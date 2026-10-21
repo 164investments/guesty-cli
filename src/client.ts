@@ -225,7 +225,7 @@ export async function guestyFetch<T = unknown>(path: string, options: FetchOptio
           (res.status === 403 ? " Check the cached token's account permissions." : " Redirects are not followed; use the documented resource path."));
       }
       let detail = await res.text().catch(() => "");
-      for (const secret of [...tokens, process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.GUESTY_TEAM_CACHE_ACCESS_KEY]) {
+      for (const secret of [...tokens, process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.GUESTY_TOKEN_SERVICE_KEY]) {
         if (secret) detail = detail.replaceAll(secret, "[redacted]");
       }
       detail = detail.slice(0, 2000);
