@@ -5,16 +5,16 @@ Command-line access to the [Guesty](https://guesty.com) Open API with read-only 
 ## Quick Start
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.1/guesty-cli-1.2.1.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.3.0/guesty-cli-1.3.0.tgz
 guesty setup
 ```
 
-`guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use Simply VRM's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens. `guesty setup` and `guesty team` need a CLI release newer than 1.2.1.
+`guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use Simply VRM's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
 
 ## Install
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.1/guesty-cli-1.2.1.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.3.0/guesty-cli-1.3.0.tgz
 ```
 
 Download the compiled package and checksum from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
