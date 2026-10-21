@@ -6,11 +6,15 @@ export const init = new Command("init")
   .action(() => {
     process.stdout.write(
       "Guesty CLI uses existing cached tokens only.\n\n" +
-      "Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your shell or " +
+      "Team token service (one token shared by everyone on your team):\n" +
+      "  Run guesty setup to create a team on Simply VRM's hosted service or your own, " +
+      "or to join a team with an invite code.\n\n" +
+      "Server-managed cache:\n" +
+      "  Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your shell or " +
       "~/.guesty-cli/.env using your approved secret source.\n" +
-      "The shared guesty_tokens cache must contain a valid token_type=openapi " +
+      "  The shared guesty_tokens cache must contain a valid token_type=openapi " +
       "row for Open API commands, or token_type=beapi for guesty token --beapi.\n\n" +
-      "Token refresh belongs to the designated server workflow. This command " +
-      "does not request tokens, verify OAuth credentials, or write configuration.\n"
+      "Token refresh belongs to the token service or the designated server workflow. " +
+      "This command does not request tokens, verify OAuth credentials, or write configuration.\n"
     );
   });

@@ -1,4 +1,4 @@
-import { getToken, invalidateToken } from "./auth.js";
+import { cacheGuidance, getToken, invalidateToken } from "./auth.js";
 
 const BASE_URL = "https://open-api.guesty.com";
 const MAX_ATTEMPTS = 3;
@@ -199,7 +199,7 @@ export async function guestyFetch<T = unknown>(path: string, options: FetchOptio
       await discardResponse(res);
       invalidateToken(token);
       if (cacheReread || attempt === MAX_ATTEMPTS) {
-        throw new Error("Guesty rejected the cached Open API token (401). The designated server refresh workflow must restore a valid token; the CLI cannot refresh it.");
+        throw new Error(`Guesty rejected the cached Open API token (401); the CLI cannot refresh it. ${cacheGuidance("openapi")}`);
       }
       process.stderr.write("Guesty rejected the cached token (401). Re-reading the cache once...\n");
       cacheReread = true;
@@ -225,7 +225,7 @@ export async function guestyFetch<T = unknown>(path: string, options: FetchOptio
           (res.status === 403 ? " Check the cached token's account permissions." : " Redirects are not followed; use the documented resource path."));
       }
       let detail = await res.text().catch(() => "");
-      for (const secret of [...tokens, process.env.SUPABASE_SERVICE_ROLE_KEY]) {
+      for (const secret of [...tokens, process.env.SUPABASE_SERVICE_ROLE_KEY, process.env.GUESTY_TOKEN_SERVICE_KEY]) {
         if (secret) detail = detail.replaceAll(secret, "[redacted]");
       }
       detail = detail.slice(0, 2000);

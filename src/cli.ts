@@ -43,6 +43,8 @@ import { airbnb } from "./commands/airbnb.js";
 import { invoiceItems } from "./commands/invoice-items.js";
 import { accounts } from "./commands/accounts.js";
 import { token } from "./commands/token.js";
+import { setup } from "./commands/setup.js";
+import { team } from "./commands/team.js";
 import { checkForUpdate, runSelfUpdate } from "./update-check.js";
 
 function getCliVersion(): string {
@@ -60,6 +62,8 @@ const program = new Command()
   .description("Guesty Open API CLI with read-only cached-token authentication. Named commands cover common workflows, and 'raw' handles other resource endpoints.");
 
 program.addCommand(init);
+program.addCommand(setup);
+program.addCommand(team);
 program.addCommand(reservations);
 program.addCommand(listings);
 program.addCommand(calendar);

@@ -1,0 +1,33 @@
+// Self-hosting: see "Run your own token service" in the repository README.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "guesty-token-service",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "guesty-token-service",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "env": {
+    // Simply VRM's hosted copy, which guesty setup offers first. Deploy with --env hosted.
+    "hosted": {
+      "name": "guesty-token-service",
+      "account_id": "52211577e087a1619838cda534d59d7b",
+      "workers_dev": false,
+      "routes": [{ "pattern": "guesty-tokens.simplyvrm.com", "custom_domain": true }],
+      "observability": { "enabled": true },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "guesty-token-service",
+          "database_id": "e965b62e-90b7-4c78-8c47-3c00a21c3895",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}

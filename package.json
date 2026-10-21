@@ -1,6 +1,6 @@
 {
   "name": "guesty-cli",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "CLI for the Guesty property management API with read-only cached-token authentication and rate limiting",
   "type": "module",
   "bin": {
@@ -23,6 +23,7 @@
     "typecheck": "tsc -v | grep 'Version 7' && tsc --noEmit",
     "check": "npm run typecheck && npm test && npm run check:cli-spec",
     "check:cli-spec": "node scripts/generate-cli-spec.mjs --check",
+    "check:server": "npm run build && npm --prefix server run check",
     "generate:cli-spec": "node scripts/generate-cli-spec.mjs",
     "link": "npm run build && npm link",
     "refresh:api-spec": "node scripts/refresh-api-spec.mjs",

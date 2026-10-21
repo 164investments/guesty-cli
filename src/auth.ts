@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { TOKEN_SERVICE_KEY_ENV, TOKEN_SERVICE_URL_ENV, TokenServiceError, callTokenService, serviceUrl } from "./token-service.js";
 
 const TOKEN_FILE = join(homedir(), ".guesty-cli", "token.json");
 const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
@@ -32,12 +33,25 @@ function isUsableToken(value: unknown, tokenType: TokenType): value is CachedTok
   );
 }
 
+// Either token-service variable selects the token service, so a partial setup
+// fails instead of silently reading an unrelated SUPABASE_URL project.
+function usesTokenService(): boolean {
+  return !!(process.env[TOKEN_SERVICE_URL_ENV] || process.env[TOKEN_SERVICE_KEY_ENV]);
+}
+
+export function cacheGuidance(tokenType: TokenType): string {
+  return usesTokenService()
+    ? `Check ${TOKEN_SERVICE_URL_ENV} and ${TOKEN_SERVICE_KEY_ENV}, or run guesty setup. The token service renews ` +
+      `the team's token; an admin can run guesty team status, and guesty team refresh${tokenType === "beapi" ? " --beapi" : ""} replaces a token Guesty rejected.`
+    : "Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and have the designated " +
+      `server refresh workflow restore a valid ${tokenType} token in the shared cache.`;
+}
+
 function cacheUnavailable(tokenType: TokenType, reason: string): Error {
   return new Error(
     `No valid cached Guesty ${tokenType} token is available: ${reason}.\n` +
     "CLI authentication is read-only and never requests OAuth tokens. " +
-    "Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and have the designated " +
-    `server refresh workflow restore a valid ${tokenType} token in the shared cache.`
+    cacheGuidance(tokenType)
   );
 }
 
@@ -99,6 +113,42 @@ async function readSharedToken(tokenType: TokenType): Promise<CachedToken> {
   return { access_token, expires_at, token_type };
 }
 
+// The team token service (server/) requests tokens; the CLI only reads them.
+async function readServiceToken(tokenType: TokenType): Promise<CachedToken> {
+  const url = process.env[TOKEN_SERVICE_URL_ENV];
+  const key = process.env[TOKEN_SERVICE_KEY_ENV];
+  if (!url || !key) throw cacheUnavailable(tokenType, "token-service configuration is incomplete");
+  let base: string;
+  try {
+    base = serviceUrl(url);
+  } catch (error) {
+    throw cacheUnavailable(tokenType, (error as Error).message.replace(/\.$/, ""));
+  }
+
+  let token: unknown;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      token = await callTokenService(base, "POST", "/v1/token", { key, body: { token_type: tokenType } });
+      break;
+    } catch (error) {
+      if (!(error instanceof TokenServiceError)) throw error;
+      // Another member's request is renewing the token right now.
+      if (error.code === "refreshing" && attempt === 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
+        continue;
+      }
+      throw cacheUnavailable(tokenType, error.status === 401
+        ? "the token service rejected the access key (HTTP 401)"
+        : error.status === 0 ? "the token service request could not complete" : error.message.replace(/\.$/, ""));
+    }
+  }
+  if (!isUsableToken(token, tokenType)) {
+    throw cacheUnavailable(tokenType, "the token service returned a missing, expired, rejected, or invalid token");
+  }
+  const { access_token, expires_at, token_type } = token;
+  return { access_token, expires_at, token_type };
+}
+
 export function invalidateToken(rejectedToken?: string): void {
   const token = cached.get("openapi");
   const rejected = rejectedToken ?? token?.access_token;
@@ -116,7 +166,7 @@ export async function getCachedToken(tokenType: TokenType = "openapi"): Promise<
   if (isUsableToken(memoryToken, tokenType)) return { ...memoryToken };
 
   const diskToken = tokenType === "openapi" ? readLocalOpenApiToken() : null;
-  const token = diskToken ?? await readSharedToken(tokenType);
+  const token = diskToken ?? await (usesTokenService() ? readServiceToken(tokenType) : readSharedToken(tokenType));
   cached.set(tokenType, token);
   return { ...token };
 }
