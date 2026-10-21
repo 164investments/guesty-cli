@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-// Usage: node scripts/refresh-api-spec.mjs [--interval-ms 2000] [--max-minutes 25] [--allow-shrink]
+// Usage: node scripts/refresh-api-spec.mjs [--booking-engine] [--interval-ms 2000] [--max-minutes 25] [--allow-shrink]
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { refreshApiSpec } from "./reference-refresh.mjs";
+import { BOOKING_ENGINE_DOCS, OPEN_API_DOCS, refreshApiSpec } from "./reference-refresh.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -17,8 +17,10 @@ function numberOption(name, fallback) {
 }
 
 async function main() {
+  const docs = args.includes("--booking-engine") ? BOOKING_ENGINE_DOCS : OPEN_API_DOCS;
   const result = await refreshApiSpec({
     root,
+    docs,
     intervalMs: numberOption("--interval-ms", 2_000),
     maxRuntimeMs: numberOption("--max-minutes", 25) * 60_000,
     allowShrink: args.includes("--allow-shrink"),
@@ -27,7 +29,7 @@ async function main() {
   });
   const seconds = Math.round(result.elapsedMs / 1000);
   const lines = [
-    `Refreshed ${result.current} operations from ${result.pages} Guesty reference pages (previously ${result.previous}; documentation updated ${result.source.updatedAt}).`,
+    `Refreshed ${result.current} ${docs.api.label} operations from ${result.pages} Guesty reference pages (previously ${result.previous}; documentation updated ${result.source.updatedAt}).`,
     `Added ${result.added.length}, removed ${result.removed.length}.`,
     ...result.added.map((key) => `  + ${key}`),
     ...result.removed.map((key) => `  - ${key}`),

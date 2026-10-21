@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createDocsClient, DOCS_BASE_URL, refreshApiSpec, retryAfterMs } from "../scripts/reference-refresh.mjs";
+import { BOOKING_ENGINE_DOCS, createDocsClient, DOCS_BASE_URL, refreshApiSpec, retryAfterMs } from "../scripts/reference-refresh.mjs";
 
 const document = { openapi: "3.0.3", info: { title: "GUESTY OPEN API", version: "1" }, servers: [{ url: "https://open-api.guesty.com/v1" }], security: [{ bearerAuth: [] }] };
 const components = { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer" } } };
@@ -166,4 +166,46 @@ test("documentation client refuses redirects to the site's 404 page", async () =
   const client = createDocsClient({ fetch: async () => redirected, sleep: async () => {} });
   await assert.rejects(client.get(`${DOCS_BASE_URL}/reference/gone`, "text/html"), /redirected to the documentation site's 404 page/);
   assert.equal(client.stats.requests, 1);
+});
+
+test("Booking Engine refresh reads its own site and writes only the Booking Engine files", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "guesty-booking-reference-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  writeFileSync(join(root, "openapi-spec.json"), "open api schema stays untouched\n");
+  writeFileSync(join(root, "api-spec.json"), "open api catalog stays untouched\n");
+  const base = "https://booking-api-docs.guesty.com";
+  const bookingDocument = { ...document, info: { title: "Booking Engine API", version: "1.0" }, servers: [{ url: "https://booking.guesty.com/" }] };
+  const pages = [
+    { slug: "getlistings", method: "get", path: "/api/listings", operation: operation("Get listings", "Listings") },
+    { slug: "createquote", method: "post", path: "/api/reservations/quotes", operation: operation("Create quote", "Quotes") },
+  ];
+  const sidebar = [{ title: "Booking Engine API", pages: [{ type: "basic", slug: "listings", pages: pages.map((page) => ({
+    type: "endpoint", slug: page.slug, api_method: page.method, title: page.operation.summary, parent: `/branches/1.0/reference/${page.operation.tags[0].toLowerCase()}`, pages: [],
+  })) }] }];
+  const props = { sidebar, apiDefinitions: [{ filename: "booking-engine-api-1.json", updated_at: "2026-06-01T13:04:19.980Z" }] };
+  const site = (server) => async (url) => {
+    if (url === `${base}/reference`) return html(`<script id="ssr-props" type="application/json">${JSON.stringify(props)}</script>`);
+    const page = pages.find((item) => url === `${base}/reference/${item.slug}.md`);
+    if (!page) return html("Page not found", 404);
+    const reduced = { ...bookingDocument, servers: [{ url: server }], tags: [{ name: page.operation.tags[0] }], paths: { [page.path]: { [page.method]: page.operation } }, components };
+    return markdown(`# ${page.operation.summary}\n\n# OpenAPI definition\n\n\`\`\`json\n${JSON.stringify(reduced)}\n\`\`\`\n`);
+  };
+  const requested = [];
+  const run = (server) => refreshApiSpec({ root, docs: BOOKING_ENGINE_DOCS, sleep: async () => {}, fetch: async (url) => { requested.push(url); return site(server)(url); } });
+
+  await assert.rejects(run("https://open-api.guesty.com/v1"), /Expected the Guesty Booking Engine API server; refusing to mix API token scopes/);
+  assert.deepEqual(readdirSync(root).sort(), ["api-spec.json", "openapi-spec.json"], "a page on the wrong server writes nothing");
+
+  const result = await run("https://booking.guesty.com/");
+  assert.ok(requested.every((url) => url.startsWith(base)), "only the Booking Engine documentation site is read");
+  assert.deepEqual(result.added, ["GET /api/listings", "POST /api/reservations/quotes"]);
+  const catalog = JSON.parse(readFileSync(join(root, "booking-engine-api-spec.json"), "utf8"));
+  assert.deepEqual(catalog, {
+    listings: [{ method: "GET", path: "/api/listings", title: "Get listings", slug: "getlistings" }],
+    quotes: [{ method: "POST", path: "/api/reservations/quotes", title: "Create quote", slug: "createquote" }],
+  });
+  const schema = JSON.parse(readFileSync(join(root, "booking-engine-openapi-spec.json"), "utf8"));
+  assert.deepEqual(schema["x-cli-source"], { url: `${base}/reference`, updatedAt: "2026-06-01T13:04:19.980Z" });
+  assert.equal(readFileSync(join(root, "openapi-spec.json"), "utf8"), "open api schema stays untouched\n");
+  assert.equal(readFileSync(join(root, "api-spec.json"), "utf8"), "open api catalog stays untouched\n");
 });

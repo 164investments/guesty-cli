@@ -1,0 +1,147 @@
+{
+  "listings": [
+    {
+      "method": "GET",
+      "path": "/api/listings",
+      "title": "Get all the listings included in the booking engine",
+      "slug": "getapplicationlistingslist",
+      "operationId": "getApplicationListingsList"
+    },
+    {
+      "method": "GET",
+      "path": "/api/listings/{listingId}",
+      "title": "Get a specific listing",
+      "slug": "getapplicationlisting",
+      "operationId": "getApplicationListing"
+    },
+    {
+      "method": "GET",
+      "path": "/api/listings/{listingId}/calendar",
+      "title": "Get listing availability calendar",
+      "slug": "getcalendarbylistingid",
+      "operationId": "getCalendarByListingId"
+    },
+    {
+      "method": "GET",
+      "path": "/api/listings/{listingId}/payment-provider",
+      "title": "Get listing's payment provider",
+      "slug": "getpaymentproviderbylistingid",
+      "operationId": "getPaymentProviderByListingId"
+    },
+    {
+      "method": "GET",
+      "path": "/api/listings/cities",
+      "title": "Get list of cities",
+      "slug": "getcities",
+      "operationId": "getCities"
+    }
+  ],
+  "metasearch": [
+    {
+      "method": "GET",
+      "path": "/api/metasearch/pointofsale/{pointofsale}/config",
+      "title": "Get metasearch config",
+      "slug": "getmetasearchconfig",
+      "operationId": "getMetasearchConfig"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/metasearch/pointofsale/{pointofsale}/config",
+      "title": "Upsert metasearch config",
+      "slug": "upsertmetasearchconfig",
+      "operationId": "upsertMetasearchConfig"
+    }
+  ],
+  "payouts": [
+    {
+      "method": "GET",
+      "path": "/api/reservations/payouts/list",
+      "title": "Retrieve a payouts schedule for a listing",
+      "slug": "retrievepayoutsschedule",
+      "operationId": "retrievePayoutsSchedule"
+    }
+  ],
+  "reservation-quote-1": [
+    {
+      "method": "GET",
+      "path": "/api/reservations/{reservationId}/details",
+      "title": "Retrieve a reservation by ID",
+      "slug": "getquotereservationbyid",
+      "operationId": "getQuoteReservationById"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reservations/{reservationId}/verify-payment",
+      "title": "Verify the payment for a reservation created with instant charge",
+      "slug": "verifychargeforreservationfromquote",
+      "operationId": "verifyChargeForReservationFromQuote"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reservations/quotes",
+      "title": "Create a reservation quote",
+      "slug": "createreservationquote",
+      "operationId": "createReservationQuote"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reservations/quotes/{quoteId}",
+      "title": "Retrieve a quote",
+      "slug": "retrievequotebyid",
+      "operationId": "retrieveQuoteById"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reservations/quotes/{quoteId}/coupons",
+      "title": "Update coupon in a quote",
+      "slug": "managerateplanquotecoupons",
+      "operationId": "manageRatePlanQuoteCoupons"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reservations/quotes/{quoteId}/inquiry",
+      "title": "Create inquiry for reservation based on quote",
+      "slug": "createinquiryreservationfromquote",
+      "operationId": "createInquiryReservationFromQuote"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reservations/quotes/{quoteId}/instant",
+      "title": "Create instant reservation based on quote",
+      "slug": "createinstantreservationfromquote",
+      "operationId": "createInstantReservationFromQuote"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reservations/quotes/{quoteId}/instant-charge",
+      "title": "Create an instant reservation if a credit card charge is successful",
+      "slug": "createinstantchargereservationfromquote",
+      "operationId": "createInstantChargeReservationFromQuote"
+    }
+  ],
+  "reviews": [
+    {
+      "method": "GET",
+      "path": "/api/reviews",
+      "title": "Retrieve reviews",
+      "slug": "getreviewslist",
+      "operationId": "getReviewsList"
+    }
+  ],
+  "upsell": [
+    {
+      "method": "GET",
+      "path": "/api/reservations/upsell/{inquiryId}/{listingId}/fee",
+      "title": "Retrieve upsell [Pilot]",
+      "slug": "retrieveupsellfee",
+      "operationId": "retrieveUpsellFee"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reservations/upsell/{quoteId}",
+      "title": "Update upsell in a quote [Pilot]",
+      "slug": "replaceupsellfees",
+      "operationId": "replaceUpsellFees"
+    }
+  ]
+}

@@ -1150,6 +1150,29 @@
       "deprecated": true
     }
   ],
+  "payment-methods": [
+    {
+      "method": "GET",
+      "path": "/v1/payment-methods",
+      "title": "List payment methods",
+      "slug": "paymentspaymentmethodlist",
+      "operationId": "paymentsPaymentMethodList"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payment-methods",
+      "title": "Create payment method",
+      "slug": "paymentspaymentmethodcreate",
+      "operationId": "paymentsPaymentMethodCreate"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payment-methods/{paymentMethodId}",
+      "title": "Get payment method",
+      "slug": "paymentspaymentmethodget",
+      "operationId": "paymentsPaymentMethodGet"
+    }
+  ],
   "payment-providers": [
     {
       "method": "POST",
@@ -1657,6 +1680,101 @@
       "title": "Create multiple quotes for reservation",
       "slug": "quotesopenapicontroller_createmultiple",
       "operationId": "QuotesOpenApiController_createMultiple"
+    }
+  ],
+  "recorded-payments": [
+    {
+      "method": "PATCH",
+      "path": "/v1/payments/{paymentId}/record",
+      "title": "Update recorded payment",
+      "slug": "paymentsrecordedupdate",
+      "operationId": "paymentsRecordedUpdate"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/{paymentId}/record/refund",
+      "title": "Record offline refund",
+      "slug": "paymentsrecordedrefundrecord",
+      "operationId": "paymentsRecordedRefundRecord"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/payments/{paymentId}/record/refund/{refundId}",
+      "title": "Update recorded refund",
+      "slug": "paymentsrecordedrefundupdate",
+      "operationId": "paymentsRecordedRefundUpdate"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/record",
+      "title": "Record offline payment",
+      "slug": "paymentsrecordedrecord",
+      "operationId": "paymentsRecordedRecord"
+    }
+  ],
+  "reservation-payments": [
+    {
+      "method": "GET",
+      "path": "/v1/payments",
+      "title": "List reservation payments",
+      "slug": "paymentsreservationlist",
+      "operationId": "paymentsReservationList"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments",
+      "title": "Create payment",
+      "slug": "paymentsreservationcreate",
+      "operationId": "paymentsReservationCreate"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payments/{paymentId}",
+      "title": "Get payment",
+      "slug": "paymentsreservationget",
+      "operationId": "paymentsReservationGet"
+    },
+    {
+      "method": "PATCH",
+      "path": "/v1/payments/{paymentId}",
+      "title": "Update payment",
+      "slug": "paymentsreservationupdate",
+      "operationId": "paymentsReservationUpdate"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/{paymentId}/cancel",
+      "title": "Cancel payment",
+      "slug": "paymentsreservationcancel",
+      "operationId": "paymentsReservationCancel"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/{paymentId}/capture",
+      "title": "Capture authorization hold",
+      "slug": "paymentsreservationcapture",
+      "operationId": "paymentsReservationCapture"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/{paymentId}/chargeback",
+      "title": "Record chargeback",
+      "slug": "paymentsreservationchargebackrecord",
+      "operationId": "paymentsReservationChargebackRecord"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/{paymentId}/pay",
+      "title": "Charge payment",
+      "slug": "paymentsreservationcharge",
+      "operationId": "paymentsReservationCharge"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/payments/{paymentId}/refund",
+      "title": "Refund payment",
+      "slug": "paymentsreservationrefund",
+      "operationId": "paymentsReservationRefund"
     }
   ],
   "reservations": [

@@ -14,7 +14,9 @@
     "docs/endpoint-tests-2026-09-07.md",
     "api-spec.json",
     "openapi-spec.json",
-    "guesty-cli-spec.json"
+    "guesty-cli-spec.json",
+    "booking-engine-api-spec.json",
+    "booking-engine-openapi-spec.json"
   ],
   "scripts": {
     "build": "tsc",
@@ -26,6 +28,7 @@
     "generate:cli-spec": "node scripts/generate-cli-spec.mjs",
     "link": "npm run build && npm link",
     "refresh:api-spec": "node scripts/refresh-api-spec.mjs",
+    "refresh:booking-engine-spec": "node scripts/refresh-api-spec.mjs --booking-engine",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
