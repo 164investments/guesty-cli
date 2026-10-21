@@ -206,13 +206,14 @@ export async function verifyCredentials(env: TokenEnv, tokenType: TokenType, cre
 // Returns the team's cached token, requesting a new one from Guesty only when
 // it is close to expiry (or forced), the lease is free and the limits allow.
 export async function ensureToken(env: TokenEnv, keys: ServiceKeys, teamId: string, tokenType: TokenType, maxPerDay: number, force = false): Promise<Refresh | undefined> {
-  const credentials = await readCredentials(env, keys, teamId, tokenType);
-  if (!credentials) return undefined;
   const isFresh = (token?: CachedToken): token is CachedToken =>
     !!token && token.expires_at > Date.now() + POLICY.refreshBeforeMs;
 
+  // Most reads end here, without decrypting the credentials.
   const current = await readToken(env, keys, teamId, tokenType);
   if (!force && isFresh(current)) return { status: "fresh", token: current };
+  const credentials = await readCredentials(env, keys, teamId, tokenType);
+  if (!credentials) return undefined;
 
   const leaseId = await acquireLease(env, credentials.fingerprint);
   if (!leaseId) return { status: "busy", retryAt: Date.now() + 2_000, token: current };
