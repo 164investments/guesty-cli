@@ -1,8 +1,8 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-21T19:09:30.151Z",
-  "cliVersion": "1.3.0",
+  "generatedAt": "2026-10-21T19:26:57.879Z",
+  "cliVersion": "1.4.0",
   "generatedFrom": {
     "packageFile": "package.json",
     "commandFiles": [

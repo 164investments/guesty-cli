@@ -1,36 +1,30 @@
-# Guesty CLI 1.3.0
+# Guesty CLI 1.4.0
 
-Version 1.3.0 lets a whole team share one Guesty token. Guesty allows five new tokens per client ID in any 24 hours, so a team that requested one per person could lock its account out for a day. `guesty setup` connects the CLI to a token service that keeps one token per team and hands it to every teammate's CLI.
+Version 1.4.0 gives every operation in Guesty's current API documentation a named command: all 362 Open API operations and all 19 Booking Engine API operations. Nothing documented is left to `guesty raw`. Version 1.3.0's shared team token works the same way.
 
 ## Install or update
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.3.0/guesty-cli-1.3.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.0/guesty-cli-1.4.0.tgz
 guesty setup
 ```
 
 Users on 1.2.0 or later can run `guesty update` instead. The release includes `SHA256SUMS` for the compiled tarball.
 
-## Share one token across a team
+## New commands
 
-- `guesty setup` offers three choices: create a team on Simply VRM's free hosted token service (`https://guesty-tokens.simplyvacationrentalmanagement.com`), create a team on a token service you run yourself, or join a team with an invite code.
-- The admin enters the Guesty Open API client ID and secret once, plus optional booking-engine credentials. Guesty confirms them before the service saves them. Teammates never see the secret.
-- `guesty team invite "Name"` prints an invite code, and the teammate runs `guesty team join <code>`. `guesty team` also handles `revoke`, `status`, `refresh`, `credentials`, `limit` and `delete`.
-- The CLI saves only the service URL and the access key, in `~/.guesty-cli/.env`, readable only by you. When those are set, `guesty token` and every API command use the team's token.
+- **`payments`:** Guesty's new Payments API, with 16 operations. It covers payments, holds, captures, refunds, chargebacks, recorded offline payments and saved payment methods. Guesty's changelog says it replaces the old per-reservation payment endpoints and the guest payment-method endpoints.
+- **`booking-engine` (alias `be`):** every Booking Engine API operation, using the cached booking-engine token (`guesty token --beapi`), `https://booking.guesty.com` and its own rate limits (5 a second, 275 a minute, 16,500 an hour).
+- **`basic-fees`, the channel commission `-v2` commands, owner payout methods, vendor create and update, and the rest of the operations that were reachable only through `raw`.**
 
-## How the token service protects the allowance
+## Deprecated commands
 
-- It requests a new token only when a teammate needs one and the cached token has less than an hour left, so a busy team uses about one token a day. Teammates asking at the same moment share one request.
-- Team renewals are limited to three requests per Guesty client in any 24 hours, counting failures; `guesty team limit` changes that. Sign-up attempts have their own small allowance. Together they never exceed Guesty's five. Requests pause after a failure, for two hours after a 429.
-- There is one team per Guesty client, and the request history survives deleting a team. Recovering admin access requires Guesty to accept the current client secret.
-- Credentials and tokens are encrypted at rest, and access keys are stored only as keyed hashes.
-
-The service is in [`server/`](server), a Cloudflare Worker with a D1 database that runs on Cloudflare's free plan. The README explains how to run your own.
+26 more commands are marked deprecated, because Guesty deprecated their endpoints or its changelog names a replacement. They still work. Each prints a notice on stderr naming its replacement and leaves stdout unchanged, so scripts keep working. [`docs/endpoint-coverage-2026-10-21.md`](docs/endpoint-coverage-2026-10-21.md) lists each one and its replacement, along with the places where Guesty's documentation contradicts itself and how the CLI handles them.
 
 ## Unchanged
 
-The CLI still never requests OAuth tokens. The existing `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` cache works as before, and the `token`, `raw` and 401 behavior is the same. The bundled API catalog is the 2026-10-18 rebuild of Guesty's documentation, with 346 Open API operations.
+The CLI still never requests OAuth tokens. The team token service from 1.3.0 (`guesty setup`, `guesty team`), the `SUPABASE_URL` cache, and the `token`, `raw` and 401 behavior are unchanged.
 
 ## Verification
 
-`npm run check` runs strict TypeScript 7 checks, 504 offline tests and the CLI contract check. `npm run check:server` type-checks the token service with tsrs, runs 24 tests of the Worker in Miniflare against a mock of Guesty's token endpoint, and drives the built CLI through setup, invites, revocation, recovery and team deletion. No test contacts Guesty.
+`npm run check` runs strict TypeScript 7 checks, 657 offline tests and the contract check. The contract confirms that every documented Open API and Booking Engine operation has a command. `npm run check:server` type-checks and tests the token service and drives this CLI through team setup against it. No test contacts Guesty, and the new write commands are tested offline only.

@@ -1,6 +1,5 @@
 import { cacheGuidance, getCachedToken, getToken, invalidateToken } from "./auth.js";
 
-
 const BASE_URL = "https://open-api.guesty.com";
 const MAX_ATTEMPTS = 3;
 const REQUEST_TIMEOUT_MS = 60_000;

@@ -5,7 +5,7 @@ Command-line access to the [Guesty](https://guesty.com) Open API and Booking Eng
 ## Quick Start
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.3.0/guesty-cli-1.3.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.0/guesty-cli-1.4.0.tgz
 guesty setup
 ```
 
@@ -14,7 +14,7 @@ guesty setup
 ## Install
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.3.0/guesty-cli-1.3.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.0/guesty-cli-1.4.0.tgz
 ```
 
 Download the compiled package and checksum from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
