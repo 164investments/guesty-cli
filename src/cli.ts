@@ -46,6 +46,8 @@ import { bookingEngine } from "./commands/booking-engine.js";
 import { invoiceItems } from "./commands/invoice-items.js";
 import { accounts } from "./commands/accounts.js";
 import { token } from "./commands/token.js";
+import { setup } from "./commands/setup.js";
+import { team } from "./commands/team.js";
 import { checkForUpdate, runSelfUpdate } from "./update-check.js";
 
 function getCliVersion(): string {
@@ -63,6 +65,8 @@ const program = new Command()
   .description("Guesty Open API and Booking Engine API CLI with read-only cached-token authentication. Named commands cover every documented endpoint, and 'raw' handles other Open API resource paths.");
 
 program.addCommand(init);
+program.addCommand(setup);
+program.addCommand(team);
 program.addCommand(reservations);
 program.addCommand(listings);
 program.addCommand(calendar);

@@ -1,46 +1,36 @@
-# Guesty CLI 1.2.1
+# Guesty CLI 1.3.0
 
-Version 1.2.1 clarifies the verified upgrade path for older npm installations and includes the complete 1.2.0 API audit. It repairs commands that sent ignored filters, incomplete requests, or the wrong payload format, and updates the bundled reference to Guesty's 333 currently documented Open API operations.
+Version 1.3.0 lets a whole team share one Guesty token. Guesty allows five new tokens per client ID in any 24 hours, so a team that requested one per person could lock its account out for a day. `guesty setup` connects the CLI to a token service that keeps one token per team and hands it to every teammate's CLI.
 
 ## Install or update
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.2.1/guesty-cli-1.2.1.tgz
-guesty --version
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.3.0/guesty-cli-1.3.0.tgz
+guesty setup
 ```
 
-Users already on 1.2.0 or later can run `guesty update`. Users on older versions should run the compiled-package command above: the legacy updater uses Git, and npm 11 can fail while preparing a global Git dependency before CLI code runs. The tarball installs successfully without that build step. Starting with 1.2.0, updates use the latest stable GitHub release package. A source checkout or custom package prefix is preserved; the updater gives a separate installation command instead of changing that workspace.
+Users on 1.2.0 or later can run `guesty update` instead. The release includes `SHA256SUMS` for the compiled tarball.
 
-GitHub Releases is the current distribution channel. The npm registry release remains 1.1.0; `npm update -g guesty-cli` alone does not obtain this release. The release includes `SHA256SUMS` for the compiled tarball.
+## Share one token across a team
 
-## New commands
+- `guesty setup` offers three choices: create a team on Simply VRM's free hosted token service (`https://guesty-tokens.simplyvacationrentalmanagement.com`), create a team on a token service you run yourself, or join a team with an invite code.
+- The admin enters the Guesty Open API client ID and secret once, plus optional booking-engine credentials. Guesty confirms them before the service saves them. Teammates never see the secret.
+- `guesty team invite "Name"` prints an invite code, and the teammate runs `guesty team join <code>`. `guesty team` also handles `revoke`, `status`, `refresh`, `credentials`, `limit` and `delete`.
+- The CLI saves only the service URL and the access key, in `~/.guesty-cli/.env`, readable only by you. When those are set, `guesty token` and every API command use the team's token.
 
-- Reservation v3 search (`res list-v3`, alias `search-v3`), comments, booking-date and travel-information updates, and reservation activity logs.
-- Accounting disbursements, owner statements, selected guest-folio totals and invoice items, and adjustable reservation line items.
-- Options for financial response components, optimized-calendar detail/allotment, accounting filters, and current report pagination.
+## How the token service protects the allowance
 
-## Corrected behavior and migration notes
+- It requests a new token only when a teammate needs one and the cached token has less than an hour left, so a busy team uses about one token a day. Teammates asking at the same moment share one request.
+- Team renewals are limited to three requests per Guesty client in any 24 hours, counting failures; `guesty team limit` changes that. Sign-up attempts have their own small allowance. Together they never exceed Guesty's five. Requests pause after a failure, for two hours after a 429.
+- There is one team per Guesty client, and the request history survives deleting a team. Recovering admin access requires Guesty to accept the current client secret.
+- Credentials and tokens are encrypted at rest, and access keys are stored only as keyed hashes.
 
-- `res search CODE` now searches an exact confirmation code. Use `--guest-name` for an exact guest full name. The old `q` parameter was ignored by Guesty and could return unrelated reservations.
-- `res list` retains its legacy response format with corrected JSON filters. Use `list-v3` for the new API's response shape. Guesty has announced retirement of legacy reservation resources; payment replacements remain pending in its documentation.
-- `res get` accepts at most ten IDs. Its old `--fields` option is rejected because Guesty ignored it and returned full records; use `legacy-get --fields` or explicitly project the v3 result in your consumer.
-- Calendar updates use `startDate` and `endDate`, with inclusive end dates. Blocking supplies the documented reason. `cal minified` and `cal list` require dates; `cal list` requires listing IDs.
-- Guest reports use documented columns and `--filters`; unsupported `guests list --q` fails clearly. Tasks also use explicit report filters. `res report` requires an IANA timezone.
-- Messaging requires `--module`; review replies send `reviewReply`. Photo uploads and owner documents use multipart form data. Owner document creation requires a PDF file and name.
-- `fin owner-statement` now returns real owner statements instead of listing financial settings. Statement filtering uses explicit period options. Guesty Pay reports use their documented date/confirmation filters and `take` pagination.
-- Required language, channel, property IDs, webhook URL, and iCalendar deletion-strategy parameters are exposed or enforced where the API requires them.
-- JSON input errors omit private input snippets. Raw JSON primitives, content types, existing query strings, binary/text output, and empty responses are handled correctly.
+The service is in [`server/`](server), a Cloudflare Worker with a D1 database that runs on Cloudflare's free plan. The README explains how to run your own.
 
-## Reliability and authentication
+## Unchanged
 
-Authentication is cache-only across normal commands, `token`, `init`, raw requests, and 401 recovery. The CLI never requests OAuth tokens or writes token caches. Both cached token types are validated independently.
+The CLI still never requests OAuth tokens. The existing `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` cache works as before, and the `token`, `raw` and 401 behavior is the same. The bundled API catalog is the 2026-10-18 rebuild of Guesty's documentation, with 346 Open API operations.
 
-The client observes the documented Open API limits of 15 requests/second, 120/minute, and 5,000/hour. It honors `Retry-After`, times out requests, retries transient read failures, and avoids repeating mutations with uncertain outcomes. Pagination respects the requested starting offset, page size, server caps, and v3 completion metadata; incomplete or repeated pages fail instead of silently returning a misleading partial result.
+## Verification
 
-## Verification and API limitations
-
-Every changed or added endpoint has offline request-contract coverage. Live verification uses reads only; messaging, reservation changes, calendar writes, payments, uploads, and other business mutations are never exercised against production as tests.
-
-Guesty's reservation-log service returned 503 (`name resolution failed`) during live verification, and the expense API returned 403 for the available account. Their request contracts are covered offline; successful live responses for these capabilities could not be established. The journal endpoints still require `transactionDate` in live requests despite a changelog announcing it as optional, so this release retains the required date filter.
-
-See the [audit record](docs/api-audit-2026-09-07.md) and [endpoint test matrix](docs/endpoint-tests-2026-09-07.md) for detailed evidence and remaining API candidates. The Booking Engine API was reviewed separately and remains outside normal CLI request scope.
+`npm run check` runs strict TypeScript 7 checks, 504 offline tests and the CLI contract check. `npm run check:server` type-checks the token service with tsrs, runs 24 tests of the Worker in Miniflare against a mock of Guesty's token endpoint, and drives the built CLI through setup, invites, revocation, recovery and team deletion. No test contacts Guesty.

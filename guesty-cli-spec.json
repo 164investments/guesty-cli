@@ -1,8 +1,8 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-21T18:15:10.685Z",
-  "cliVersion": "1.2.1",
+  "generatedAt": "2026-10-21T19:09:30.151Z",
+  "cliVersion": "1.3.0",
   "generatedFrom": {
     "packageFile": "package.json",
     "commandFiles": [
@@ -44,8 +44,10 @@
       "src/commands/reservations.ts",
       "src/commands/reviews.ts",
       "src/commands/saved-replies.ts",
+      "src/commands/setup.ts",
       "src/commands/tasks.ts",
       "src/commands/taxes.ts",
+      "src/commands/team.ts",
       "src/commands/token.ts",
       "src/commands/user-scope.ts",
       "src/commands/users.ts",
@@ -154252,6 +154254,60 @@
       ]
     },
     {
+      "name": "setup",
+      "alias": null,
+      "description": "Connect this CLI to a token service so your whole team shares one Guesty token",
+      "sourceFile": "src/commands/setup.ts",
+      "line": 10,
+      "operations": [
+        {
+          "id": "guesty setup",
+          "rootAction": true,
+          "name": "setup",
+          "syntax": "setup",
+          "fullCommand": "guesty setup",
+          "description": "Connect this CLI to a token service so your whole team shares one Guesty token",
+          "aliases": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--hosted",
+              "description": "Create a team on Simply VRM's hosted token service",
+              "required": false,
+              "defaultValue": null,
+              "line": 10
+            },
+            {
+              "flags": "--server <url>",
+              "description": "Create a team on your own token service",
+              "required": false,
+              "defaultValue": null,
+              "line": 10
+            },
+            {
+              "flags": "--join <invite>",
+              "description": "Join a team with an invite code",
+              "required": false,
+              "defaultValue": null,
+              "line": 10
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/setup.ts",
+          "line": 10
+        }
+      ]
+    },
+    {
       "name": "tasks",
       "alias": null,
       "description": "Manage tasks",
@@ -161633,6 +161689,231 @@
       ]
     },
     {
+      "name": "team",
+      "alias": null,
+      "description": "Share one Guesty token with your team through a token service",
+      "sourceFile": "src/commands/team.ts",
+      "line": 78,
+      "operations": [
+        {
+          "id": "guesty team join",
+          "rootAction": false,
+          "name": "join",
+          "syntax": "join",
+          "fullCommand": "guesty team join",
+          "description": "Join a team with the invite code its admin sent you",
+          "aliases": [],
+          "arguments": [],
+          "options": [],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/team.ts",
+          "line": 81
+        },
+        {
+          "id": "guesty team invite",
+          "rootAction": false,
+          "name": "invite",
+          "syntax": "invite",
+          "fullCommand": "guesty team invite",
+          "description": "Create an access key for a teammate and print their invite code",
+          "aliases": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--admin",
+              "description": "Let this teammate manage the team too",
+              "required": false,
+              "defaultValue": null,
+              "line": 87
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/team.ts",
+          "line": 87
+        },
+        {
+          "id": "guesty team revoke",
+          "rootAction": false,
+          "name": "revoke",
+          "syntax": "revoke",
+          "fullCommand": "guesty team revoke",
+          "description": "Revoke a teammate's access key",
+          "aliases": [],
+          "arguments": [],
+          "options": [],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/team.ts",
+          "line": 103
+        },
+        {
+          "id": "guesty team status",
+          "rootAction": false,
+          "name": "status",
+          "syntax": "status",
+          "fullCommand": "guesty team status",
+          "description": "Show the team's tokens, recent token requests and access keys (admin)",
+          "aliases": [],
+          "arguments": [],
+          "options": [],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/team.ts",
+          "line": 113
+        },
+        {
+          "id": "guesty team refresh",
+          "rootAction": false,
+          "name": "refresh",
+          "syntax": "refresh",
+          "fullCommand": "guesty team refresh",
+          "description": "Replace a token Guesty rejected before it expired. Uses one of the day's token requests (admin)",
+          "aliases": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--beapi",
+              "description": "Replace the booking-engine token instead of the Open API token",
+              "required": false,
+              "defaultValue": null,
+              "line": 121
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/team.ts",
+          "line": 121
+        },
+        {
+          "id": "guesty team credentials",
+          "rootAction": false,
+          "name": "credentials",
+          "syntax": "credentials",
+          "fullCommand": "guesty team credentials",
+          "description": "Add or replace the team's Guesty credentials. Guesty confirms them first (admin)",
+          "aliases": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--beapi",
+              "description": "Set booking-engine API credentials instead of Open API",
+              "required": false,
+              "defaultValue": null,
+              "line": 134
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/team.ts",
+          "line": 134
+        },
+        {
+          "id": "guesty team limit",
+          "rootAction": false,
+          "name": "limit",
+          "syntax": "limit",
+          "fullCommand": "guesty team limit",
+          "description": "Set how many token requests the team may make in any 24 hours, from 1 to 5 (admin)",
+          "aliases": [],
+          "arguments": [],
+          "options": [],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/team.ts",
+          "line": 149
+        },
+        {
+          "id": "guesty team delete",
+          "rootAction": false,
+          "name": "delete",
+          "syntax": "delete",
+          "fullCommand": "guesty team delete",
+          "description": "Delete the team, its stored Guesty credentials and every access key (admin)",
+          "aliases": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--yes",
+              "description": "Confirm without asking",
+              "required": false,
+              "defaultValue": null,
+              "line": 160
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/team.ts",
+          "line": 160
+        }
+      ]
+    },
+    {
       "name": "token",
       "alias": null,
       "description": "Print a valid cached Guesty Open API token. Use --beapi for booking-engine scope. Fails if the correct cached token is unavailable; never requests OAuth tokens.",
@@ -161684,7 +161965,7 @@
       "alias": null,
       "description": "Update guesty-cli to the latest version",
       "sourceFile": "src/cli.ts",
-      "line": 107,
+      "line": 111,
       "operations": [
         {
           "id": "guesty update",
@@ -161707,7 +161988,7 @@
           },
           "requests": [],
           "sourceFile": "src/cli.ts",
-          "line": 107
+          "line": 111
         }
       ]
     },
@@ -319768,6 +320049,51 @@
       "line": 36
     },
     {
+      "id": "guesty setup",
+      "rootAction": true,
+      "name": "setup",
+      "syntax": "setup",
+      "fullCommand": "guesty setup",
+      "description": "Connect this CLI to a token service so your whole team shares one Guesty token",
+      "aliases": [],
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--hosted",
+          "description": "Create a team on Simply VRM's hosted token service",
+          "required": false,
+          "defaultValue": null,
+          "line": 10
+        },
+        {
+          "flags": "--server <url>",
+          "description": "Create a team on your own token service",
+          "required": false,
+          "defaultValue": null,
+          "line": 10
+        },
+        {
+          "flags": "--join <invite>",
+          "description": "Join a team with an invite code",
+          "required": false,
+          "defaultValue": null,
+          "line": 10
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/setup.ts",
+      "line": 10
+    },
+    {
       "id": "guesty tasks create",
       "rootAction": false,
       "name": "create",
@@ -327131,6 +327457,222 @@
       "line": 19
     },
     {
+      "id": "guesty team credentials",
+      "rootAction": false,
+      "name": "credentials",
+      "syntax": "credentials",
+      "fullCommand": "guesty team credentials",
+      "description": "Add or replace the team's Guesty credentials. Guesty confirms them first (admin)",
+      "aliases": [],
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--beapi",
+          "description": "Set booking-engine API credentials instead of Open API",
+          "required": false,
+          "defaultValue": null,
+          "line": 134
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/team.ts",
+      "line": 134
+    },
+    {
+      "id": "guesty team delete",
+      "rootAction": false,
+      "name": "delete",
+      "syntax": "delete",
+      "fullCommand": "guesty team delete",
+      "description": "Delete the team, its stored Guesty credentials and every access key (admin)",
+      "aliases": [],
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--yes",
+          "description": "Confirm without asking",
+          "required": false,
+          "defaultValue": null,
+          "line": 160
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/team.ts",
+      "line": 160
+    },
+    {
+      "id": "guesty team invite",
+      "rootAction": false,
+      "name": "invite",
+      "syntax": "invite",
+      "fullCommand": "guesty team invite",
+      "description": "Create an access key for a teammate and print their invite code",
+      "aliases": [],
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--admin",
+          "description": "Let this teammate manage the team too",
+          "required": false,
+          "defaultValue": null,
+          "line": 87
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/team.ts",
+      "line": 87
+    },
+    {
+      "id": "guesty team join",
+      "rootAction": false,
+      "name": "join",
+      "syntax": "join",
+      "fullCommand": "guesty team join",
+      "description": "Join a team with the invite code its admin sent you",
+      "aliases": [],
+      "arguments": [],
+      "options": [],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/team.ts",
+      "line": 81
+    },
+    {
+      "id": "guesty team limit",
+      "rootAction": false,
+      "name": "limit",
+      "syntax": "limit",
+      "fullCommand": "guesty team limit",
+      "description": "Set how many token requests the team may make in any 24 hours, from 1 to 5 (admin)",
+      "aliases": [],
+      "arguments": [],
+      "options": [],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/team.ts",
+      "line": 149
+    },
+    {
+      "id": "guesty team refresh",
+      "rootAction": false,
+      "name": "refresh",
+      "syntax": "refresh",
+      "fullCommand": "guesty team refresh",
+      "description": "Replace a token Guesty rejected before it expired. Uses one of the day's token requests (admin)",
+      "aliases": [],
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--beapi",
+          "description": "Replace the booking-engine token instead of the Open API token",
+          "required": false,
+          "defaultValue": null,
+          "line": 121
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/team.ts",
+      "line": 121
+    },
+    {
+      "id": "guesty team revoke",
+      "rootAction": false,
+      "name": "revoke",
+      "syntax": "revoke",
+      "fullCommand": "guesty team revoke",
+      "description": "Revoke a teammate's access key",
+      "aliases": [],
+      "arguments": [],
+      "options": [],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/team.ts",
+      "line": 103
+    },
+    {
+      "id": "guesty team status",
+      "rootAction": false,
+      "name": "status",
+      "syntax": "status",
+      "fullCommand": "guesty team status",
+      "description": "Show the team's tokens, recent token requests and access keys (admin)",
+      "aliases": [],
+      "arguments": [],
+      "options": [],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/team.ts",
+      "line": 113
+    },
+    {
       "id": "guesty token",
       "rootAction": true,
       "name": "token",
@@ -327189,7 +327731,7 @@
       },
       "requests": [],
       "sourceFile": "src/cli.ts",
-      "line": 107
+      "line": 111
     },
     {
       "id": "guesty user-scope assign",
