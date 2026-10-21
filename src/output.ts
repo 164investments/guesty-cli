@@ -52,3 +52,14 @@ export function printJson(data: unknown): void {
   if (json === undefined) throw new Error("The response cannot be represented as JSON.");
   process.stdout.write(json + "\n");
 }
+
+// Commands that call an endpoint Guesty documents as deprecated keep working
+// and print this notice on stderr, so stdout stays machine-readable.
+export function warnDeprecated(command: string, ...replacements: string[]): void {
+  const names = replacements.map((name) => `"guesty ${name}"`);
+  const use = names.length > 1 ? `${names.slice(0, -1).join(", ")}, or ${names[names.length - 1]}` : names[0];
+  process.stderr.write(
+    `\x1b[33m[deprecated]\x1b[0m "guesty ${command}" calls an endpoint Guesty has deprecated.` +
+    (use ? ` Use ${use} instead.\n` : " Guesty documents no replacement.\n")
+  );
+}

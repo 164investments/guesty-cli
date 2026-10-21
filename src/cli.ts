@@ -44,6 +44,8 @@ import { invoiceItems } from "./commands/invoice-items.js";
 import { accounts } from "./commands/accounts.js";
 import { token } from "./commands/token.js";
 import { bookingEngine } from "./commands/booking-engine.js";
+import { payments } from "./commands/payments.js";
+import { basicFees } from "./commands/basic-fees.js";
 import { checkForUpdate, runSelfUpdate } from "./update-check.js";
 
 function getCliVersion(): string {
@@ -96,6 +98,8 @@ program.addCommand(blockLogs);
 program.addCommand(airbnb);
 program.addCommand(invoiceItems);
 program.addCommand(accounts);
+program.addCommand(payments);
+program.addCommand(basicFees);
 program.addCommand(bookingEngine);
 program.addCommand(token);
 program.addCommand(raw);

@@ -2,7 +2,7 @@ import { Command, Option } from "commander";
 import { guestyFetch } from "../client.js";
 import { print } from "../output.js";
 import { readStdin } from "../stdin.js";
-import { collect, dateRange, integer, type QueryParams } from "./query-options.js";
+import { collect, dateRange, integer, jsonObject, type QueryParams } from "./query-options.js";
 import { journalParams } from "./accounting-options.js";
 
 export const accounting = new Command("accounting")
@@ -124,6 +124,21 @@ accounting
     const data = await guestyFetch(`/v1/business-models-api/assignment/${businessModelId}`, {
       method: "PUT",
       body,
+    });
+    print(data);
+  });
+
+accounting
+  .command("update-business-model <businessModelId>")
+  .description("Change a business model's category; Guesty saves a new version")
+  .option("--category <name>", "Category name (max 255 characters)")
+  .option("--clear-category", "Remove the category")
+  .action(async (businessModelId: string, opts) => {
+    if ((opts.category !== undefined) === Boolean(opts.clearCategory)) throw new Error("Use --category or --clear-category.");
+    if (opts.category !== undefined && [...opts.category].length > 255) throw new Error("--category must be at most 255 characters.");
+    const data = await guestyFetch(`/v1/business-models-api/light-business-models/${businessModelId}`, {
+      method: "PATCH",
+      body: { category: opts.clearCategory ? null : opts.category },
     });
     print(data);
   });
@@ -351,4 +366,39 @@ accounting
   .action(async (id: string, attachmentId: string) => {
     const data = await guestyFetch(`/v1/expenses-api/expenses/${id}/attachments/${attachmentId}`, { method: "DELETE" });
     print(data);
+  });
+
+function validateVendor(body: Record<string, unknown>, required: string[]): void {
+  for (const key of required) {
+    if (typeof body[key] !== "string" || !(body[key] as string).trim()) throw new Error(`The request body needs ${key}.`);
+  }
+  for (const key of ["email", "phone"]) {
+    const value = body[key];
+    if (value !== undefined && (!Array.isArray(value) || value.some((item) => typeof item !== "string" || !item.trim()))) {
+      throw new Error(`${key} must be an array of strings.`);
+    }
+  }
+  if (body.email !== undefined && !(body.email as unknown[]).length) throw new Error("email must contain at least one address.");
+}
+
+accounting
+  .command("create-vendor")
+  .description("Create a vendor (--data or stdin: company, firstName, lastName, email[], optional payoutMethod)")
+  .option("--data <json>", "JSON body")
+  .action(async (opts) => {
+    const body = jsonObject(opts.data ?? await readStdin(), "--data or stdin");
+    if (body.email === undefined) throw new Error("The request body needs email as an array of at least one address.");
+    validateVendor(body, ["company", "firstName", "lastName"]);
+    print(await guestyFetch("/v1/vendors", { method: "POST", body }));
+  });
+
+accounting
+  .command("update-vendor <id>")
+  .description("Update a vendor's details or payout method (--data or stdin)")
+  .option("--data <json>", "JSON body")
+  .action(async (id: string, opts) => {
+    const body = jsonObject(opts.data ?? await readStdin(), "--data or stdin");
+    if (!Object.keys(body).length) throw new Error("The request body needs at least one vendor field.");
+    validateVendor(body, []);
+    print(await guestyFetch(`/v1/vendors/${id}`, { method: "PATCH", body }));
   });

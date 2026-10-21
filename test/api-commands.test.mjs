@@ -259,3 +259,124 @@ test("guest payment methods help explains the reservation context", (t) => {
   assert.match(result.stdout, /virtual credit cards/);
   assert.deepEqual(result.trace.requests, []);
 });
+
+// ─── SIM-179: every documented Open API operation has a named command ────────
+
+const guestId = "507f1f77bcf86cd799439013";
+const paymentId = "507f1f77bcf86cd799439014";
+
+contract("payments list reads one reservation's payments", ["payments", "list", "--reservation", reservationId], "/v1/payments", { reservationId });
+invalid("payments list requires a reservation", ["payments", "list"], /required option.*--reservation/);
+contract("payments get reads a payment", ["payments", "get", paymentId], `/v1/payments/${paymentId}`);
+const newPayment = { reservationId, paymentMethodId: "method", amount: 125.5, shouldBePaidAt: "2026-12-01T00:00:00.000Z", note: "Balance" };
+contract("payments create posts the documented body", ["payments", "create", "--data", JSON.stringify(newPayment)], "/v1/payments", {}, newPayment);
+const deposit = { reservationId, paymentMethodId: "method", amount: 500, isSecurityDeposit: true, releaseAuthorizationHold: { shouldTriggerAt: "2026-12-10T00:00:00.000Z" } };
+contract("payments create supports a security deposit hold", ["payments", "create", "--data", JSON.stringify(deposit)], "/v1/payments", {}, deposit);
+invalid("payments create enforces the minimum amount", ["payments", "create", "--data", JSON.stringify({ ...newPayment, amount: 0.5 })], /at least 1/);
+invalid("payments create requires a payment method", ["payments", "create", "--data", JSON.stringify({ reservationId, amount: 10 })], /paymentMethodId/);
+invalid("payments create rejects a hold that is also a deposit", ["payments", "create", "--data", JSON.stringify({ ...deposit, isAuthorizationHold: true })], /cannot both be true/);
+invalid("payments create requires a deposit release time", ["payments", "create", "--data", JSON.stringify({ ...deposit, releaseAuthorizationHold: undefined })], /releaseAuthorizationHold\.shouldTriggerAt/);
+invalid("payments create requires a dated schedule", ["payments", "create", "--data", JSON.stringify({ ...newPayment, shouldBePaidAt: "tomorrow" })], /shouldBePaidAt must be a valid date/);
+invalid("payments create requires a time zone in the schedule", ["payments", "create", "--data", JSON.stringify({ ...newPayment, shouldBePaidAt: "2026-12-01T00:00:00" })], /ISO 8601 date-time including a timezone/);
+contract("payments update patches a processor payment", ["payments", "update", paymentId, "--data", '{"amount":200}'], `/v1/payments/${paymentId}`, {}, { amount: 200 }, "PATCH");
+invalid("payments update requires a documented field", ["payments", "update", paymentId, "--data", '{"status":"CANCELLED"}'], /paymentMethodId, amount, shouldBePaidAt, or note/);
+contract("payments charge posts to /pay", ["payments", "charge", paymentId], `/v1/payments/${paymentId}/pay`, {}, undefined, "POST");
+contract("payments cancel posts without a body", ["payments", "cancel", paymentId], `/v1/payments/${paymentId}/cancel`, {}, undefined, "POST");
+contract("payments capture without an amount captures the full hold", ["payments", "capture", paymentId], `/v1/payments/${paymentId}/capture`, {}, {});
+contract("payments capture sends a partial amount and note", ["payments", "capture", paymentId, "--amount", "75", "--note", "Damage"], `/v1/payments/${paymentId}/capture`, {}, { amount: 75, note: "Damage" });
+contract("payments refund sends a partial amount", ["payments", "refund", paymentId, "--amount", "40.25"], `/v1/payments/${paymentId}/refund`, {}, { amount: 40.25 });
+invalid("payments refund rejects a note over 500 characters", ["payments", "refund", paymentId, "--note", "x".repeat(501)], /at most 500/);
+contract("payments chargeback records the documented fields", ["payments", "chargeback", paymentId, "--amount", "90", "--at", "2026-10-01T12:00:00Z", "--reason", "Fraud", "--note", "Bank notice", "--case-id", "dp_123"],
+  `/v1/payments/${paymentId}/chargeback`, {}, { amount: 90, note: "Bank notice", chargebackAt: "2026-10-01T12:00:00Z", reason: "Fraud", caseId: "dp_123" });
+invalid("payments chargeback requires an amount", ["payments", "chargeback", paymentId], /required option.*--amount/);
+invalid("payments chargeback limits the case ID", ["payments", "chargeback", paymentId, "--amount", "1", "--case-id", "x".repeat(101)], /at most 100/);
+const recorded = { reservationId, amount: 300, paymentMethod: { method: "BANK_TRANSFER" }, confirmationCode: "GY-123456" };
+contract("payments record posts an offline payment", ["payments", "record", "--data", JSON.stringify(recorded)], "/v1/payments/record", {}, recorded);
+invalid("payments record rejects the legacy CASH method", ["payments", "record", "--data", JSON.stringify({ ...recorded, paymentMethod: { method: "CASH" } })], /paymentMethod\.method must be one of RECORDED_CASH/);
+invalid("payments record requires a payment method", ["payments", "record", "--data", JSON.stringify({ reservationId, amount: 300 })], /paymentMethod\.method/);
+contract("payments update-recorded patches a recorded payment", ["payments", "update-recorded", paymentId, "--data", '{"note":"Corrected"}'], `/v1/payments/${paymentId}/record`, {}, { note: "Corrected" }, "PATCH");
+invalid("payments update-recorded requires a documented field", ["payments", "update-recorded", paymentId, "--data", "{}"], /shouldBePaidAt, amount/);
+contract("payments record-refund builds the refund body", ["payments", "record-refund", paymentId, "--amount", "20", "--method", "BCOM", "--at", "2026-10-02T09:30:00-07:00", "--note", "Booking.com refund"],
+  `/v1/payments/${paymentId}/record/refund`, {}, { amount: 20, note: "Booking.com refund", paymentMethod: { method: "BCOM" }, refundedAt: "2026-10-02T09:30:00-07:00" });
+contract("payments update-recorded-refund patches one refund", ["payments", "update-recorded-refund", paymentId, "refund", "--method", "CHECK"], `/v1/payments/${paymentId}/record/refund/refund`, {}, { paymentMethod: { method: "CHECK" } }, "PATCH");
+invalid("payments update-recorded-refund requires a change", ["payments", "update-recorded-refund", paymentId, "refund"], /Use --amount, --method, --at, or --note/);
+contract("payments methods lists a guest's methods", ["payments", "methods", "--guest", guestId], "/v1/payment-methods", { guestId });
+contract("payments methods lists a reservation's methods", ["payments", "methods", "--reservation", reservationId], "/v1/payment-methods", { reservationId });
+invalid("payments methods needs exactly one owner", ["payments", "methods", "--guest", guestId, "--reservation", reservationId], /exactly one of --guest or --reservation/);
+contract("payments method reads one method", ["payments", "method", "method"], "/v1/payment-methods/method");
+const vaulted = { guestId, paymentProviderId: "provider", confirmationCode: "GY-123456", stripeCardToken: "pm_test", reuse: true };
+contract("payments create-method vaults a tokenized card", ["payments", "create-method", "--data", JSON.stringify(vaulted)], "/v1/payment-methods", {}, vaulted);
+invalid("payments create-method needs exactly one token", ["payments", "create-method", "--data", JSON.stringify({ ...vaulted, _id: "guesty-pay" })], /exactly one of _id/);
+
+contract("basic fees list repeats listing IDs", ["basic-fees", "list", "--listing", "one", "--listing", "two"], "/v1/basic-fees/listings", { listingIds: ["one", "two"] });
+invalid("basic fees list caps a request at 50 listings", ["basic-fees", "list", ...Array.from({ length: 51 }, (_, index) => ["--listing", `l${index}`]).flat()], /at most 50/);
+contract("basic fees get reads one listing", ["basic-fees", "get", "listing"], "/v1/basic-fees/listings/listing");
+contract("basic fees channel reads a channel's fee", ["basic-fees", "channel", "listing", "airbnb2"], "/v1/basic-fees/listings/listing/channels/airbnb2");
+contract("basic fees delete removes a listing's fees", ["basic-fees", "delete", "listing"], "/v1/basic-fees/listings/listing", {}, undefined, "DELETE");
+const basicFeeBody = { cleaningFee: { value: { multiplier: "PER_STAY", formula: 150, valueType: "FIXED" } }, channelConfigurations: [{ channel: "airbnb2", cleaningFee: { value: { multiplier: "PER_STAY", formula: 10, valueType: "PERCENTAGE" } } }] };
+contract("basic fees set replaces fees and can update sub-units", ["basic-fees", "set", "listing", "--update-sub-units", "--data", JSON.stringify(basicFeeBody)], "/v1/basic-fees/listings/listing", { shouldUpdateSubUnits: true }, basicFeeBody, "PUT");
+invalid("basic fees set requires channelConfigurations", ["basic-fees", "set", "listing", "--data", JSON.stringify({ cleaningFee: basicFeeBody.cleaningFee })], /channelConfigurations as an array/);
+invalid("basic fees set allows only PER_STAY percentages", ["basic-fees", "set", "listing", "--data", JSON.stringify({ channelConfigurations: [], cleaningFee: { value: { multiplier: "PER_NIGHT", formula: 5, valueType: "PERCENTAGE" } } })], /PER_STAY for a PERCENTAGE/);
+
+const commission = { channel: "bookingCom", source: "bookingCom", commission: { value: 15, of: ["ACCOMMODATION_FARE", "CLEANING_FEE"] }, tax: 7, isPreDeduct: true };
+contract("channel commission v2 reads account entries", ["channel-commission", "account-v2"], "/v1/channel-commissions-v2/account");
+contract("channel commission v2 replaces account entries", ["channel-commission", "account-update-v2", "--data", JSON.stringify([commission])], "/v1/channel-commissions-v2/account", {}, [commission], "PUT");
+invalid("channel commission v2 requires a source", ["channel-commission", "account-update-v2", "--data", JSON.stringify([{ channel: "manual" }])], /\[0\]\.source is required/);
+invalid("channel commission v2 requires a list for bulk updates", ["channel-commission", "account-update-v2", "--data", JSON.stringify(commission)], /JSON array/);
+contract("channel commission v2 creates one entry", ["channel-commission", "create-v2", "--data", JSON.stringify({ ...commission, unitTypeId: "listing" })], "/v1/channel-commissions-v2", {}, { ...commission, unitTypeId: "listing" });
+invalid("channel commission v2 rejects percentages over 100", ["channel-commission", "create-v2", "--data", JSON.stringify({ ...commission, commission: { value: 120, of: ["PAYOUT"] } })], /percentage from 0 to 100/);
+contract("channel commission v2 updates one entry", ["channel-commission", "update-v2", "entry", "--data", JSON.stringify(commission)], "/v1/channel-commissions-v2/entry", {}, commission, "PATCH");
+contract("channel commission v2 deletes one entry", ["channel-commission", "delete-v2", "entry"], "/v1/channel-commissions-v2/entry", {}, undefined, "DELETE");
+contract("channel commission v2 reads listing entries", ["channel-commission", "listing-v2", "listing"], "/v1/channel-commissions-v2/unit-type/listing");
+contract("channel commission v2 replaces listing entries", ["channel-commission", "listing-update-v2", "listing", "--data", JSON.stringify([commission])], "/v1/channel-commissions-v2/unit-type/listing", {}, [commission], "PUT");
+contract("channel commission v2 reads effective listing entries", ["channel-commission", "listing-effective-v2", "listing"], "/v1/channel-commissions-v2/unit-type/listing/actual");
+contract("channel commission v2 reads the listing level", ["channel-commission", "listing-level-v2", "listing"], "/v1/channel-commissions-v2/unit-type/listing/level-configurations");
+contract("channel commission v2 sets the listing level", ["channel-commission", "listing-level-update-v2", "listing", "--level", "UNIT_TYPE"], "/v1/channel-commissions-v2/unit-type/listing/level-configurations", {}, { levelEntityType: "UNIT_TYPE" }, "PUT");
+invalid("channel commission v2 level is required", ["channel-commission", "listing-level-update-v2", "listing"], /required option.*--level/);
+contract("channel commission v2 sets a reservation amount on one date", ["channel-commission", "reservation-update-v2", reservationId, "--amount", "12.5", "--date", "2026-11-01"], `/v1/channel-commissions-v2/reservations/${reservationId}`, {}, { realizationDates: { date: "2026-11-01" }, amount: 12.5 }, "PUT");
+contract("channel commission v2 sets a reservation amount over a range", ["channel-commission", "reservation-update-v2", reservationId, "--amount", "0", "--from", "2026-11-01", "--to", "2026-11-30"], `/v1/channel-commissions-v2/reservations/${reservationId}`, {}, { realizationDates: { from: "2026-11-01", to: "2026-11-30" }, amount: 0 }, "PUT");
+invalid("channel commission v2 takes one recognition shape", ["channel-commission", "reservation-update-v2", reservationId, "--amount", "1", "--date", "2026-11-01", "--from", "2026-11-01", "--to", "2026-11-02"], /--date, or --from with --to/);
+invalid("channel commission v2 requires both range ends", ["channel-commission", "reservation-update-v2", reservationId, "--amount", "1", "--from", "2026-11-01"], /both --from and --to/);
+
+contract("folio settings snapshot uses comma-separated parameters", ["financials", "folio-settings-snapshot", "--reservations", `${reservationId}, ${secondId}`, "--fields", "taxes.name,currencyConversion"], "/v1/guest-folio/settings-snapshot", { reservationIds: `${reservationId},${secondId}`, fields: "taxes.name,currencyConversion" });
+invalid("folio settings snapshot rejects invalid reservation IDs", ["financials", "folio-settings-snapshot", "--reservations", "short", "--fields", "markup"], /24 characters/);
+invalid("folio settings snapshot requires fields", ["financials", "folio-settings-snapshot", "--reservations", reservationId], /required option.*--fields/);
+
+const payoutMethod = { type: "ACH", accountHolderName: "Owner LLC", bankName: "Example Bank", accountNumber: "000123", routingNumber: "110000000", accountType: "CHECKING" };
+contract("owner payout method read", ["owners", "payout-method", "owner"], "/v1/payouts/owners/owner");
+contract("owner payout method create", ["owners", "create-payout-method", "owner", "--data", JSON.stringify(payoutMethod)], "/v1/payouts/owners/owner", {}, payoutMethod);
+contract("owner payout method update", ["owners", "update-payout-method", "owner", "--data", JSON.stringify(payoutMethod)], "/v1/payouts/owners/owner", {}, payoutMethod, "PUT");
+invalid("owner payout method requires a bank name", ["owners", "create-payout-method", "owner", "--data", JSON.stringify({ ...payoutMethod, bankName: undefined })], /body\.bankName is required/);
+const bulkPayouts = { items: [{ entityId: "owner", payoutMethod }] };
+contract("owner payout methods bulk create", ["owners", "bulk-create-payout-methods", "--data", JSON.stringify(bulkPayouts)], "/v1/payouts/owners/bulk", {}, bulkPayouts);
+invalid("owner payout methods bulk create requires owner IDs", ["owners", "bulk-create-payout-methods", "--data", JSON.stringify({ items: [{ payoutMethod }] })], /items\[0\]\.entityId is required/);
+
+contract("business model category update", ["accounting", "update-business-model", "model", "--category", "Luxury"], "/v1/business-models-api/light-business-models/model", {}, { category: "Luxury" }, "PATCH");
+contract("business model category can be cleared", ["accounting", "update-business-model", "model", "--clear-category"], "/v1/business-models-api/light-business-models/model", {}, { category: null }, "PATCH");
+invalid("business model update needs one category option", ["accounting", "update-business-model", "model"], /--category or --clear-category/);
+const vendor = { company: "Fix-It Co", firstName: "Grace", lastName: "Hopper", email: ["vendor@example.invalid"], phone: ["+15035550100"] };
+contract("vendor create posts the documented body", ["accounting", "create-vendor", "--data", JSON.stringify(vendor)], "/v1/vendors", {}, vendor);
+invalid("vendor create requires an email", ["accounting", "create-vendor", "--data", JSON.stringify({ ...vendor, email: [] })], /at least one address/);
+invalid("vendor create requires a company", ["accounting", "create-vendor", "--data", JSON.stringify({ ...vendor, company: "" })], /needs company/);
+contract("vendor update patches a vendor", ["accounting", "update-vendor", "vendor", "--data", '{"notes":"Preferred"}'], "/v1/vendors/vendor", {}, { notes: "Preferred" }, "PATCH");
+invalid("vendor update requires a field", ["accounting", "update-vendor", "vendor", "--data", "{}"], /at least one vendor field/);
+
+for (const [args, path, method, replacement] of [
+  [["reservations", "add-payment", reservationId, "--data", "{}"], `/v1/reservations/${reservationId}/payments`, "POST", /"guesty payments create", or "guesty payments record"/],
+  [["reservations", "refund-payment", reservationId, paymentId, "--data", "{}"], `/v1/reservations/${reservationId}/payments/${paymentId}/refund`, "POST", /"guesty payments refund"/],
+  [["channel-commission", "account"], "/v1/channel-commission/account", "GET", /"guesty channel-commission account-v2"/],
+  [["guests", "payment-methods", guestId], `/v1/guests/${guestId}/payment-methods`, "GET", /"guesty payments methods --guest <id>"/],
+  [["listings", "custom-fields", "listing"], "/v1/listings/listing/custom-fields", "GET", /"guesty properties custom-fields <propertyId>"/],
+  [["reservations", "export-email", "--data", "{}"], "/v1/reservations.email", "POST", /Guesty documents no replacement/],
+]) {
+  test(`deprecated ${args.slice(0, 2).join(" ")} still works and names its replacement on stderr`, (t) => {
+    const result = run(t, args);
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /\[deprecated\]/);
+    assert.match(result.stderr, replacement);
+    assert.equal(result.trace.requests.length, 1);
+    assert.equal(new URL(result.trace.requests[0].url).pathname, path);
+    assert.equal(result.trace.requests[0].method, method);
+    assert.deepEqual(JSON.parse(result.stdout), { ok: true }, "stdout stays machine-readable");
+  });
+}
