@@ -4,6 +4,8 @@ export const TOKEN_TYPES = ["openapi", "beapi"] as const;
 export type TokenType = (typeof TOKEN_TYPES)[number];
 
 export const POLICY = {
+  // Guesty's documented allowance per client ID; no mix of sources exceeds it.
+  guestyRequestsPerDay: 5,
   refreshBeforeMs: 60 * 60_000,
   windowMs: 24 * 60 * 60_000,
   retryAfterFailureMs: 30 * 60_000,
@@ -117,18 +119,23 @@ async function releaseLease(env: TokenEnv, fingerprint: string, leaseId: string)
 export type RequestSource = "team" | "signup";
 
 // Returns when the next request is allowed, or undefined if one is allowed now.
-// The limit counts one source's requests; the pause follows the latest request
-// of either kind.
+// Each source has its own cap, all requests together stay within Guesty's
+// allowance, and only a failure of the same source starts a pause, so a
+// stranger's failed sign-up cannot hold up a team's renewal.
 async function nextAllowedRequest(env: TokenEnv, fingerprint: string, source: RequestSource, maxPerDay: number): Promise<{ status: "limit" | "waiting"; retryAt: number } | undefined> {
   const now = Date.now();
   const recent = await env.DB.prepare(
     "SELECT requested_at, outcome, http_status, source FROM token_requests WHERE fingerprint = ? AND requested_at > ? ORDER BY requested_at DESC"
   ).bind(fingerprint, now - POLICY.windowMs).all<{ requested_at: number; outcome: string; http_status: number | null; source: RequestSource }>();
-  const counted = recent.results.filter((row) => row.source === source);
+  const all = recent.results;
+  const counted = all.filter((row) => row.source === source);
   if (counted.length >= maxPerDay) {
     return { status: "limit", retryAt: counted[maxPerDay - 1].requested_at + POLICY.windowMs };
   }
-  const last = recent.results[0];
+  if (all.length >= POLICY.guestyRequestsPerDay) {
+    return { status: "limit", retryAt: all[POLICY.guestyRequestsPerDay - 1].requested_at + POLICY.windowMs };
+  }
+  const last = counted[0];
   // Guesty refusing the credentials is not worth pausing for: the admin is
   // correcting a typo, and the daily limit still counts the attempt.
   if (last && last.outcome !== "succeeded" && ![400, 401, 403].includes(last.http_status ?? 0)) {

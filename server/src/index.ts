@@ -23,8 +23,8 @@ const MAX_TEAMS_PER_CLIENT_PER_HOUR = 10;
 const LAST_USED_RESOLUTION_MS = 60 * 60_000;
 const DEFAULT_MAX_REQUESTS_PER_DAY = 3;
 // Requests before the caller has a key: two for a new team, so a typo can be
-// fixed, and one to recover a team. With a team's three, a client never
-// exceeds Guesty's five in a day.
+// fixed, and one to recover a team. A combined cap keeps every client within
+// Guesty's five a day, whatever the team's own limit.
 const SIGNUPS_PER_DAY_NEW_TEAM = 2;
 const SIGNUPS_PER_DAY_RECOVERY = 1;
 
@@ -103,7 +103,7 @@ function refreshError(result: Refresh, tokenType: TokenType, maxPerDay: number):
       return new HttpError(503, "refreshing", "Another request is renewing this team's token. Try again in a few seconds.", result.retryAt);
     case "limit":
       return new HttpError(503, "limit_reached",
-        `This team has used its ${maxPerDay} ${tokenType} token requests for the last 24 hours. The next is allowed at ${at(result.retryAt)}.`, result.retryAt);
+        `This team's ${tokenType} client has used its token requests for the last 24 hours (the team allows ${maxPerDay}, and Guesty allows 5 in all). The next is allowed at ${at(result.retryAt)}.`, result.retryAt);
     case "waiting":
       return new HttpError(503, "waiting", `The last ${tokenType} token request failed. The next is allowed at ${at(result.retryAt)}.`, result.retryAt);
     case "rejected":

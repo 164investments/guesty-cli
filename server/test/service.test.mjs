@@ -168,7 +168,7 @@ test("the daily limit counts every request, and the next allowed time is reporte
   const limited = await callJson("POST", "/v1/team/refresh", { key: admin, body: {} });
   assert.equal(limited.status, 503);
   assert.equal(limited.body.error, "limit_reached");
-  assert.match(limited.body.message, /used its 3 openapi token requests/);
+  assert.match(limited.body.message, /used its token requests for the last 24 hours \(the team allows 3, and Guesty allows 5 in all\)/);
   assert.ok(limited.body.retry_at > Date.now());
   assert.equal(oauth.requests.length, before + 2);
 });
@@ -320,6 +320,29 @@ test("the current client secret recovers admin access after Guesty accepts it", 
   assert.equal(status.body.team.name, "Acme");
   const sameDay = await callJson("POST", "/v1/teams", { body: { name: "Again", credentials: { openapi: { client_id: "acme-id", client_secret: "rotated" } } } });
   assert.equal(sameDay.status, 409);
+});
+
+test("a stranger's failed sign-up does not pause the team's renewals", async () => {
+  await ageRequests(25 * 3600_000);
+  oauth.replies.push({ status: 500 });
+  const stranger = await callJson("POST", "/v1/teams", { body: { name: "Copy", credentials: { openapi: { client_id: "acme-id", client_secret: "odd" } } } });
+  assert.equal(stranger.status, 502);
+  assert.equal((await callJson("POST", "/v1/team/refresh", { key: admin, body: {} })).status, 200);
+});
+
+test("all requests for one client stay within Guesty's five, even when the team allows five", async () => {
+  await ageRequests(25 * 3600_000);
+  await sql("UPDATE team_creation_attempts SET attempted_at = attempted_at - ?", 2 * 3600_000).run();
+  assert.equal((await callJson("PATCH", "/v1/team", { key: admin, body: { max_requests_per_day: 5 } })).status, 200);
+  oauth.replies.push({ status: 401 });
+  assert.equal((await callJson("POST", "/v1/teams", { body: { name: "Copy", credentials: { openapi: { client_id: "acme-id", client_secret: "guess" } } } })).status, 422);
+  const before = oauth.requests.length;
+  for (let n = 1; n <= 4; n += 1) assert.equal((await callJson("POST", "/v1/team/refresh", { key: admin, body: {} })).status, 200, `refresh ${n}`);
+  const fifth = await callJson("POST", "/v1/team/refresh", { key: admin, body: {} });
+  assert.equal(fifth.body.error, "limit_reached");
+  assert.match(fifth.body.message, /Guesty allows 5 in all/);
+  assert.equal(oauth.requests.length, before + 4);
+  assert.equal((await callJson("PATCH", "/v1/team", { key: admin, body: { max_requests_per_day: 3 } })).status, 200);
 });
 
 test("status shows token health and keys but no secrets", async () => {

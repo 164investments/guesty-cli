@@ -82,8 +82,8 @@ The teammate runs `guesty team join <code>`, or `guesty setup` and chooses **Joi
 ### How the service protects the allowance
 
 - It requests a new token only when a teammate needs one and the cached token has less than an hour left, so a busy team uses about one token a day. Teammates asking at the same moment share one request.
-- A team's renewals make at most three token requests per Guesty client in any 24 hours, counting failures. After a failed request the service waits 30 minutes, or two hours after a 429. A rejected client ID or secret doesn't trigger the wait, so a typo can be fixed straight away.
-- Sign-up attempts, made before anyone has a key, have their own allowance: two a day for a new team, so a typo can be fixed, and one a day to recover a team. That way someone who only knows a client ID can't use up a team's renewals, and a client never makes more than Guesty's five requests in a day.
+- A team's renewals make at most three token requests per Guesty client in any 24 hours, counting failures; `guesty team limit` changes that. After a failed renewal the service waits 30 minutes, or two hours after a 429. A rejected client ID or secret doesn't trigger the wait, so a typo can be fixed straight away.
+- Sign-up attempts, made before anyone has a key, have their own allowance: two a day for a new team, so a typo can be fixed, and one a day to recover a team. That way someone who only knows a client ID can't use up a team's renewals or pause them. Whatever the limits, one client never makes more than Guesty's five requests in a day.
 - One team per Guesty client. The request history is kept even after a team is deleted, so recreating a team can't reset the count. If an admin loses their key, running `guesty setup` again with the current client ID and secret gives them a new admin key once Guesty accepts the secret. That can't happen on the day the team was created; before then, ask another admin for an invite.
 - The service encrypts Guesty credentials and tokens at rest, with a key kept outside the database. It stores access keys only as keyed hashes. Teammates never see the client secret.
 
