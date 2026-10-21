@@ -115,4 +115,5 @@ None. `raw` is still available for Open API paths and payload shapes that the na
 
 - Regenerate `guesty-cli-spec.json` with `npm run generate:cli-spec`. Both branches change it.
 - Combine the two `./auth.js` imports at the top of `src/client.ts`. They are separate so that the branches merge without a conflict.
-- Add `GUESTY_TEAM_CACHE_ACCESS_KEY` to the secrets that Booking Engine error bodies redact, as SIM-178 does for Open API errors.
+- Add the token-service key that SIM-178 redacts from Open API error bodies (`GUESTY_TOKEN_SERVICE_KEY` on 2026-10-21) to the Booking Engine redaction list in `bookingEngineFetch`.
+- Use SIM-178's `cacheGuidance("beapi")` in the Booking Engine 401 message, as its Open API 401 message does.
