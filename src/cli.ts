@@ -40,12 +40,12 @@ import { guestApp } from "./commands/guest-app.js";
 import { guestCode } from "./commands/guest-code.js";
 import { blockLogs } from "./commands/block-logs.js";
 import { airbnb } from "./commands/airbnb.js";
+import { payments } from "./commands/payments.js";
+import { basicFees } from "./commands/basic-fees.js";
+import { bookingEngine } from "./commands/booking-engine.js";
 import { invoiceItems } from "./commands/invoice-items.js";
 import { accounts } from "./commands/accounts.js";
 import { token } from "./commands/token.js";
-import { bookingEngine } from "./commands/booking-engine.js";
-import { payments } from "./commands/payments.js";
-import { basicFees } from "./commands/basic-fees.js";
 import { checkForUpdate, runSelfUpdate } from "./update-check.js";
 
 function getCliVersion(): string {
