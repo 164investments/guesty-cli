@@ -346,6 +346,20 @@ Neither Guesty documentation site publishes a complete OpenAPI download; each re
 
 The refresh writes nothing and exits non-zero if any page cannot be read, if pages disagree, if the result does not cover every reference page, if the operation count falls below 90% of the previous `openapi-spec.json`, or if it runs past 25 minutes. Options: `--interval-ms <ms>`, `--max-minutes <minutes>`, and `--allow-shrink` after you have confirmed that Guesty removed the missing operations.
 
+### Daily documentation watch
+
+```bash
+npm run docs:watch                       # check both sites; refresh any site Guesty changed
+npm run docs:watch -- --force            # re-read every page of both sites
+npm run docs:watch -- --summary out.md   # also write the summary to a file
+```
+
+The watch compares each documentation site with the spec files here. Two requests per site read the reference index (when Guesty last published its API definition, and the list of reference pages) and the changelog. A site whose publication time or page list differs from its spec file's `x-cli-source` is refreshed as above, so its pages are read only after Guesty publishes something. A new changelog entry alone updates the record (`x-cli-source.changelog`, the newest entry the last check saw) without re-reading pages. When a spec file changed, the watch regenerates `guesty-cli-spec.json`.
+
+It prints `CHANGED` or `UNCHANGED`, then a summary with Pacific times: the operations Guesty added, removed, deprecated or stopped deprecating; those whose request (parameters or body) or response changed, counting a change inside a shared schema for every operation that uses it; and those where only descriptions or examples changed. A date-time default is ignored, because Guesty fills some with the time it built the page. Then Guesty's changelog entries since the last check, and the CLI follow-up: operations without a command, and commands that call a removed or newly deprecated operation. It exits 1 when a site failed; that site's files stay unchanged and the other site's results still count.
+
+The nightly MCP review in `164investments/simply-ops` runs the watch every night (with `--force` on Mondays). It commits what changed, with commands for new operations, to the `guesty-docs` branch, keeps a "Guesty docs refresh" pull request current, and rebuilds the Simply Ops MCP's Guesty lists from that branch. It never merges the pull request. See `docs/mcp-review.md` in that repository.
+
 `node scripts/scrape-api-docs.mjs` downloads pages from the current documentation index into the ignored `docs/api/open` cache. Add `--booking` for Booking Engine documentation or `--guides` for guides only. The historical `.ts` script names remain compatibility entry points. `node scripts/build-knowledge-base.mjs --output <directory>` generates a condensed reference from the current schema.
 
 See the [October 2026 endpoint coverage record](./docs/endpoint-coverage-2026-10-21.md), the [September 2026 audit and verification record](./docs/api-audit-2026-09-07.md), and the [release notes](./RELEASE_NOTES.md) for fixes, migrations, endpoint coverage, and testing limits.

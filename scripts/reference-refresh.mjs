@@ -104,9 +104,14 @@ async function readJsonIfPresent(file) {
   }
 }
 
+// When the site last published its API definition.
+export function sourceUpdatedAt(index) {
+  return index.apiDefinitions?.[0]?.updated_at ?? index.gitVersion?.updated_at ?? index.document?.updated_at ?? null;
+}
+
 // Finish every fetch and validation before replacing either artifact, then
 // rename both into place so a failure never publishes a partial inventory.
-async function writeArtifacts(root, artifacts) {
+export async function writeArtifacts(root, artifacts) {
   const staged = [];
   try {
     for (const [name, data] of artifacts) {
@@ -121,9 +126,11 @@ async function writeArtifacts(root, artifacts) {
   }
 }
 
+// `source` adds fields to the schema's x-cli-source record (docs-watch.mjs
+// records the newest changelog entry there).
 export async function refreshApiSpec({
   root, fetch, sleep, now = Date.now, log = () => {}, warn = log, docs = OPEN_API_DOCS,
-  intervalMs, maxAttempts, maxRuntimeMs = 25 * 60_000, minimumRatio = 0.9, allowShrink = false,
+  intervalMs, maxAttempts, maxRuntimeMs = 25 * 60_000, minimumRatio = 0.9, allowShrink = false, source = {},
 }) {
   const startedAt = now();
   const client = createDocsClient({ fetch, sleep, now, log: warn, intervalMs, maxAttempts, deadline: startedAt + maxRuntimeMs });
@@ -146,10 +153,7 @@ export async function refreshApiSpec({
   }
 
   const { schema, operationSlugs } = mergeReferenceSchemas(pages);
-  schema["x-cli-source"] = {
-    url: indexUrl,
-    updatedAt: index.apiDefinitions?.[0]?.updated_at ?? index.gitVersion?.updated_at ?? index.document?.updated_at ?? null,
-  };
+  schema["x-cli-source"] = { url: indexUrl, updatedAt: sourceUpdatedAt(index), ...source };
   const catalog = buildReference({ document: { api: { schema } }, sidebar: index.sidebar, operationSlugs }, previousCatalog, docs.api);
   const changes = diffOperations(previousSchema, schema, docs.api);
   assertOperationCount(changes.current, previousCount, minimum);

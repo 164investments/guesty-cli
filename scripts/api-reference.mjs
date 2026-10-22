@@ -28,12 +28,17 @@ export function requestMatchesEndpoint(request, endpoint) {
   return [...new URLSearchParams(endpointQuery)].every(([key, value]) => actual.getAll(key).includes(value));
 }
 
+// Every page of the documentation site embeds its data as JSON.
+export function readPageData(html) {
+  const match = html.match(/<script\b[^>]*\bid="ssr-props"[^>]*>([\s\S]*?)<\/script>/);
+  if (!match) throw new Error("Guesty documentation did not contain its page data; reference files were not updated.");
+  return JSON.parse(match[1]);
+}
+
 // Any page of the documentation site embeds the reference navigation: reference
 // pages call it `sidebar`, the home page `referenceCategories`.
 export function readDocumentationIndex(html) {
-  const match = html.match(/<script\b[^>]*\bid="ssr-props"[^>]*>([\s\S]*?)<\/script>/);
-  if (!match) throw new Error("Guesty documentation did not contain its page data; reference files were not updated.");
-  const page = JSON.parse(match[1]);
+  const page = readPageData(html);
   const sidebar = page.sidebar ?? page.referenceCategories;
   if (!Array.isArray(sidebar) || !sidebar.length) throw new Error("Guesty documentation has no API reference navigation.");
   return { ...page, sidebar };
@@ -136,7 +141,7 @@ export function mergeReferenceSchemas(pages) {
   return { schema, operationSlugs };
 }
 
-function resolvePointer(schema, ref) {
+export function resolvePointer(schema, ref) {
   if (!ref.startsWith("#/")) return undefined;
   let target = schema;
   for (const part of ref.slice(2).split("/")) target = target?.[part.replace(/~1/g, "/").replace(/~0/g, "~")];
