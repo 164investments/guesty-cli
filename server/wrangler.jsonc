@@ -20,6 +20,8 @@
       "workers_dev": false,
       "routes": [{ "pattern": "guesty-tokens.simplyvacationrentalmanagement.com", "custom_domain": true }],
       "observability": { "enabled": true },
+      // Invite emails also need the RESEND_API_KEY secret; without it, invites are links only.
+      "vars": { "INVITE_EMAIL_FROM": "Simply VRM <invites@simplyvacationrentalmanagement.com>" },
       "d1_databases": [
         {
           "binding": "DB",

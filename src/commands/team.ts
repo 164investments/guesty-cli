@@ -2,16 +2,16 @@ import { homedir } from "node:os";
 import { Command } from "commander";
 import { saveSettings } from "../config.js";
 import { print, printable } from "../output.js";
-import { command, confirm, done, frame, info, interactive, required, secret, success, summary, task, text, warn } from "../prompt.js";
+import { command, confirm, done, frame, info, interactive, required, secret, success, summary, task, text, warn, type Check } from "../prompt.js";
 import {
   HOSTED_TOKEN_SERVICE_URL,
   TOKEN_SERVICE_KEY_ENV,
   TOKEN_SERVICE_URL_ENV,
+  TokenServiceError,
   callTokenService,
   configuredService,
-  decodeInvite,
-  encodeInvite,
   isAccessKey,
+  parseInvite,
   serviceUrl,
   type ServiceSettings,
 } from "../token-service.js";
@@ -21,6 +21,20 @@ interface CreatedTeam {
   admin_key: string;
   recovered?: boolean;
   beapi_error?: { message: string };
+}
+
+interface CreatedInvite {
+  link: string;
+  join_command: string;
+  expires_at: number;
+  email?: { address: string; sent: boolean; message?: string };
+}
+
+interface RedeemedInvite {
+  key: string;
+  label: string;
+  role: string;
+  team: { name: string };
 }
 
 interface TeamStatus {
@@ -33,7 +47,13 @@ interface TeamStatus {
     last_request: { requested_at: number; outcome: string; http_status: number | null } | null;
   }[];
   keys: { label: string; role: string; last_used_at: number | null; revoked_at: number | null }[];
+  // Missing from services older than CLI 1.5.
+  invites?: { label: string; role: string; email: string | null; expires_at: number }[];
 }
+
+const EMAIL = /^[^\s@<>()",;:]+@[^\s@<>()",;:]+\.[^\s@<>()",;:]+$/;
+const optionalEmail: Check = (value) =>
+  !value || EMAIL.test(value) ? undefined : "Enter an email address, such as sam@example.com, or leave it blank.";
 
 function tryIt(): string {
   return `This CLI now uses your team's shared Guesty token. Try it: ${command("guesty listings list")}`;
@@ -73,6 +93,55 @@ async function askCredentials(kind: string): Promise<{ client_id: string; client
   };
 }
 
+// The link comes from the service, which may be someone else's server.
+function isInviteLink(value: unknown): value is string {
+  if (typeof value !== "string" || !/^https?:\/\//.test(value)) return false;
+  try {
+    parseInvite(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Asks for the teammate's name and email unless the name was given, then
+// creates a one-time invite, which the service emails when given an address.
+async function inviteTeammate(service: ServiceSettings, given: { name?: string; email?: string; admin?: boolean }): Promise<{ name: string; link: string }> {
+  const name = given.name ?? await text("Teammate's name", { placeholder: "Shown in guesty team status", check: required("Enter their name.") });
+  const email = given.email ?? (given.name ? "" : await text("Their email address", { placeholder: "Leave blank to send them the link yourself", check: optionalEmail }));
+  const problem = optionalEmail(email);
+  if (problem) throw new Error(problem);
+  const shown = printable(name);
+  let invite: CreatedInvite;
+  try {
+    invite = await task(
+      email ? `Emailing ${shown} an invite` : `Creating ${shown}'s invite`,
+      (created) => created.email?.sent ? `Emailed the invite to ${printable(created.email.address)}` : `Created ${shown}'s invite`,
+      "No invite was created",
+      () => callTokenService<CreatedInvite>(service.url, "POST", "/v1/team/invites", {
+        key: service.key,
+        body: { label: name, role: given.admin ? "admin" : "member", ...(email ? { email } : {}) },
+      }),
+    );
+  } catch (err) {
+    if (err instanceof TokenServiceError && err.code === "not_found") {
+      throw new Error("This token service is too old to create invites. Its admin can update it; see \"Run your own token service\" in the README.");
+    }
+    throw err;
+  }
+  if (!isInviteLink(invite.link) || typeof invite.join_command !== "string") throw new Error("The token service returned an invalid invite.");
+  if (email && !invite.email?.sent) {
+    warn(`The invite wasn't emailed. ${printable(invite.email?.message ?? "The token service didn't say why.")} Send ${shown} the link instead.`);
+  }
+  summary(`Invite for ${shown}`, [
+    ["Link", printable(invite.link)],
+    ["Or they run", command(printable(invite.join_command))],
+    ["Expires", pacific(invite.expires_at)],
+    ...(given.admin ? [["Role", "Admin"] as [string, string]] : []),
+  ]);
+  return { name, link: printable(invite.link) };
+}
+
 // Guesty confirms the credentials before the service saves anything, so this
 // uses one of the account's daily tokens; that token then serves the team.
 export async function createTeamOn(url: string): Promise<void> {
@@ -103,13 +172,21 @@ export async function createTeamOn(url: string): Promise<void> {
     ["Service", serviceName(base)],
     ["Your role", "Admin"],
     ["Settings", shortPath(file)],
-    ["Invite", command('guesty team invite "Their name"')],
+    ["Invite", command("guesty team invite")],
   ]);
+  for (let first = true; await confirm(first ? "Invite a teammate now?" : "Invite someone else?"); first = false) {
+    try {
+      await inviteTeammate({ url: base, key: created.admin_key }, {});
+    } catch (err) {
+      // The team exists either way; a failed invite shouldn't read as a failed setup.
+      warn(printable(err instanceof Error ? err.message : String(err)));
+    }
+  }
   done(tryIt());
 }
 
-export async function joinTeam(code: string): Promise<void> {
-  const settings = decodeInvite(code);
+// Invite codes from CLI 1.4 hold the key itself.
+async function joinWithKey(settings: ServiceSettings): Promise<void> {
   await task("Joining your team", () => "Joined your team", "Couldn't join the team", () =>
     callTokenService(settings.url, "POST", "/v1/token", { key: settings.key, body: { token_type: "openapi" } }));
   const file = useService(settings);
@@ -120,46 +197,72 @@ export async function joinTeam(code: string): Promise<void> {
   done(tryIt());
 }
 
+export async function joinTeam(value: string): Promise<void> {
+  const invite = parseInvite(value);
+  // Joining replaces this CLI's connection, which may be an admin key.
+  if (configuredService() && !await confirm("This CLI is already connected to a team. Replace that connection?")) {
+    throw new Error("Nothing was changed. This CLI is still connected to its team.");
+  }
+  if (invite.kind === "key") return joinWithKey(invite.settings);
+  const joined = await task("Joining your team", (result) => `Joined "${printable(result.team?.name ?? "your team")}"`, "Couldn't join the team", () =>
+    callTokenService<RedeemedInvite>(invite.url, "POST", "/v1/join", { body: { code: invite.code } }));
+  // Saved before the token check: the invite is now used, and a token the
+  // team can't renew right now shouldn't cost the teammate their key.
+  const file = useService({ url: invite.url, key: joined.key });
+  try {
+    await callTokenService(invite.url, "POST", "/v1/token", { key: joined.key, body: { token_type: "openapi" } });
+  } catch (err) {
+    warn(`You're on the team, but its Guesty token isn't available right now: ${printable(err instanceof Error ? err.message : String(err))}`);
+  }
+  summary(`You're on the "${printable(joined.team?.name ?? "")}" team`, [
+    ["Service", serviceName(invite.url)],
+    ["Your name", printable(String(joined.label))],
+    ["Role", joined.role === "admin" ? "Admin" : "Member"],
+    ["Settings", shortPath(file)],
+  ]);
+  done(tryIt());
+}
+
 export const team = new Command("team")
   .description("Share one Guesty token with your team through a token service");
 
 team
   .command("join")
-  .description("Join a team with the invite code its admin sent you")
-  .argument("<invite>", "Invite code from guesty team invite")
+  .description("Join your team with the invite code or link its admin sent you (same as guesty join)")
+  .argument("<invite>", "Invite code, such as ABCD-EFGH-JKLM, or invite link")
   .action(async (invite: string) => { await frame("Join a team", () => joinTeam(invite)); });
 
 team
   .command("invite")
-  .description("Create an access key for a teammate and print their invite code")
-  .argument("<name>", "Teammate's name, used to revoke the key later")
+  .description("Invite a teammate: the service emails them a one-time invite, or you send them the link")
+  .argument("[name]", "Teammate's name, used to cancel or revoke their access later. Asked for when left out, along with their email")
+  .option("--email <address>", "Email the invite to this address")
   .option("--admin", "Let this teammate manage the team too")
-  .action(async (name: string, opts: { admin?: boolean }) => {
+  .action(async (name: string | undefined, opts: { email?: string; admin?: boolean }) => {
     const service = currentService();
-    let code = "";
+    let link = "";
     await frame("Invite a teammate", async () => {
-      const created = await task(`Creating an access key for ${name}`, () => `Created ${name}'s access key`, "Couldn't create the key", () =>
-        callTokenService<{ key: string }>(service.url, "POST", "/v1/team/keys", {
-          key: service.key,
-          body: { label: name, role: opts.admin ? "admin" : "member" },
-        }));
-      if (!isAccessKey(created.key)) throw new Error("The token service returned an invalid access key.");
-      code = encodeInvite({ url: service.url, key: created.key });
-      info(`Send ${name} this code privately. They run ${command("guesty setup")} and choose "Join a team with an invite code", or run ${command("guesty team join <code>")}.`);
-      done(`Invite code for ${name}:`);
+      const invited = await inviteTeammate(service, { name, email: opts.email, admin: opts.admin });
+      link = invited.link;
+      done(`It works once. To cancel it, run ${command(`guesty team revoke "${printable(invited.name)}"`)}.`);
     });
     // Printed on its own, outside the frame, so it copies cleanly.
-    print(code);
+    print(link);
   });
 
 team
   .command("revoke")
-  .description("Revoke a teammate's access key")
-  .argument("<name>", "The name the key was created with")
+  .description("Revoke a teammate's access key and cancel their pending invite")
+  .argument("<name>", "The name the key or invite was created with")
   .action(async (name: string) => {
     const service = currentService();
-    await callTokenService(service.url, "DELETE", `/v1/team/keys/${encodeURIComponent(name)}`, { key: service.key });
-    success(`Revoked ${name}'s key. A token they already have works until it expires, at most 24 hours.`);
+    const result = await callTokenService<{ key?: boolean; invite?: boolean }>(service.url, "DELETE", `/v1/team/keys/${encodeURIComponent(name)}`, { key: service.key });
+    const shown = printable(name);
+    if (result.key === false) {
+      success(`Cancelled ${shown}'s invite.`);
+      return;
+    }
+    success(`Revoked ${shown}'s key${result.invite ? " and cancelled their pending invite" : ""}. A token they already have works until it expires, at most 24 hours.`);
   });
 
 team
@@ -192,6 +295,12 @@ team
         printable(key.label),
         `${printable(key.role)}, ${key.revoked_at ? "revoked" : key.last_used_at ? `last used ${pacific(key.last_used_at)}` : "never used"}`,
       ]));
+      if (status.invites?.length) {
+        summary("Pending invites", status.invites.map((invite) => [
+          printable(invite.label),
+          `${printable(invite.role)}, ${invite.email ? `emailed to ${printable(invite.email)}` : "link only"}, expires ${pacific(invite.expires_at)}`,
+        ]));
+      }
       done(`The team may make ${status.team.max_requests_per_day} token requests a day. Change it with ${command("guesty team limit <1-5>")}.`);
     });
   });

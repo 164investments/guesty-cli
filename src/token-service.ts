@@ -63,6 +63,37 @@ export function decodeInvite(code: string): ServiceSettings {
   return { url: serviceUrl(url), key };
 }
 
+export type Invite = { kind: "code"; url: string; code: string } | { kind: "key"; settings: ServiceSettings };
+
+// A one-time code such as ABCD-EFGH-JKLM in any case, with or without dashes.
+// Crockford's base 32 has no I, L, O or U, so those are read as 1, 1 and 0.
+export function inviteCode(value: string): string {
+  const code = value.toUpperCase().replace(/[\s-]/g, "").replace(/O/g, "0").replace(/[IL]/g, "1");
+  if (!/^[0-9A-HJKMNP-TV-Z]{12}$/.test(code)) {
+    throw new Error("This isn't an invite code or link. Invite codes look like ABCD-EFGH-JKLM.");
+  }
+  return code;
+}
+
+// An invite is a code for the hosted service, a join link from any service
+// (https://service/join/CODE), or a gti_ code from CLI 1.4, which holds a key.
+export function parseInvite(value: string): Invite {
+  const trimmed = value.trim();
+  if (trimmed.startsWith(INVITE_PREFIX)) return { kind: "key", settings: decodeInvite(trimmed) };
+  if (/^https?:\/\//i.test(trimmed)) {
+    let url: URL;
+    try {
+      url = new URL(trimmed);
+    } catch {
+      throw new Error("This invite link isn't a valid web address. Copy the whole link and try again.");
+    }
+    const match = /^(.*)\/join\/([^/]+)\/?$/.exec(url.pathname);
+    if (!match || url.search || url.hash) throw new Error("This link isn't a Guesty CLI invite link. Those end in /join/ and a code.");
+    return { kind: "code", url: serviceUrl(`${url.origin}${match[1]}`), code: inviteCode(match[2]) };
+  }
+  return { kind: "code", url: HOSTED_TOKEN_SERVICE_URL, code: inviteCode(trimmed) };
+}
+
 export function configuredService(): ServiceSettings | undefined {
   const url = process.env[TOKEN_SERVICE_URL_ENV];
   const key = process.env[TOKEN_SERVICE_KEY_ENV];

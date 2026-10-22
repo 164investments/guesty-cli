@@ -1,8 +1,8 @@
 // Runs the bundled Worker in Miniflare with a local D1 database. Every
-// outbound request goes to a mock of Guesty's token endpoint; nothing here
-// contacts Guesty.
+// outbound request goes to a mock of Guesty's token endpoint or of Resend's
+// email API; nothing here contacts Guesty or sends email.
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test, { after, before } from "node:test";
@@ -10,13 +10,19 @@ import { Miniflare } from "miniflare";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const oauth = { requests: [], replies: [] };
+const resend = { requests: [], replies: [] };
 let mf;
 let base;
 let db;
 let tokenCount = 0;
 
-async function guestyOAuth(request) {
+async function outbound(request) {
   const url = new URL(request.url);
+  if (url.href === "https://api.resend.com/emails") {
+    resend.requests.push({ authorization: request.headers.get("authorization"), body: await request.json() });
+    const reply = resend.replies.shift() ?? { status: 200 };
+    return Response.json(reply.status === 200 ? { id: `mock-email-${resend.requests.length}` } : { message: "mock failure" }, { status: reply.status });
+  }
   if (url.pathname !== "/oauth2/token" || !["open-api.guesty.com", "booking.guesty.com"].includes(url.hostname)) {
     throw new Error(`Unexpected outbound request to ${url.href}`);
   }
@@ -50,9 +56,15 @@ async function createTeam(n, extra = {}) {
   return callJson("POST", "/v1/teams", { body: { name: `Team ${n}`, credentials: { openapi: credentials(n) }, ...extra } });
 }
 
-function migrationStatements() {
-  const migration = readFileSync(join(root, "migrations/0001_init.sql"), "utf8").replace(/--.*$/gm, "");
-  return migration.split(";").map((part) => part.trim()).filter(Boolean);
+async function migrate(database) {
+  for (const file of readdirSync(join(root, "migrations")).filter((name) => name.endsWith(".sql")).sort()) {
+    const migration = readFileSync(join(root, "migrations", file), "utf8").replace(/--.*$/gm, "");
+    for (const statement of migration.split(";").map((part) => part.trim()).filter(Boolean)) await database.prepare(statement).run();
+  }
+}
+
+function serviceKey() {
+  return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
 }
 
 function sql(query, ...params) {
@@ -65,14 +77,14 @@ before(async () => {
     scriptPath: join(root, "dist/index.js"),
     compatibilityDate: "2026-08-01",
     d1Databases: { DB: "guesty-token-service-test" },
-    bindings: { CREDENTIALS_KEY: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))) },
-    outboundService: guestyOAuth,
+    bindings: { CREDENTIALS_KEY: serviceKey(), RESEND_API_KEY: "re_test_key", INVITE_EMAIL_FROM: "Simply VRM <invites@example.com>" },
+    outboundService: outbound,
     host: "127.0.0.1",
     port: 0,
   });
   base = (await mf.ready).origin;
   db = await mf.getD1Database("DB");
-  for (const statement of migrationStatements()) await db.prepare(statement).run();
+  await migrate(db);
 });
 
 after(() => mf?.dispose());
@@ -206,7 +218,7 @@ test("a request that never reaches Guesty is recorded and pauses renewals", asyn
   });
   try {
     const offlineDb = await offline.getD1Database("DB");
-    for (const statement of migrationStatements()) await offlineDb.prepare(statement).run();
+    await migrate(offlineDb);
     const create = () => offline.dispatchFetch("http://local/v1/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -359,6 +371,170 @@ test("status shows token health and keys but no secrets", async () => {
 test("the admin can change the daily limit within Guesty's five", async () => {
   assert.equal((await call("PATCH", "/v1/team", { key: admin, body: { max_requests_per_day: 6 } })).status, 400);
   assert.equal((await callJson("PATCH", "/v1/team", { key: admin, body: { max_requests_per_day: 2 } })).body.team.max_requests_per_day, 2);
+});
+
+const CODE = /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
+const invite = (key, body) => callJson("POST", "/v1/team/invites", { key, body });
+
+test("an invite link shows the steps, and its code works once for a member key", async () => {
+  const created = await invite(admin, { label: "Riley" });
+  assert.equal(created.status, 201);
+  const { code, link, join_command: joinCommand, expires_at: expiresAt } = created.body;
+  assert.match(code, CODE);
+  assert.equal(link, `${base}/join/${code}`);
+  // Only the hosted service's codes work without its address.
+  assert.equal(joinCommand, `guesty join ${link}`);
+  assert.ok(Math.abs(expiresAt - (Date.now() + 7 * 86400_000)) < 60_000);
+  assert.equal(created.body.email, undefined);
+  assert.doesNotMatch(JSON.stringify((await sql("SELECT * FROM invites").all()).results), new RegExp(code.replace(/-/g, "")));
+
+  // Opening the link, as a mail scanner would, leaves the invite unused.
+  for (let n = 0; n < 2; n += 1) {
+    const page = await call("GET", `/join/${code}`);
+    assert.equal(page.status, 200);
+    assert.match(page.headers.get("content-security-policy"), /default-src 'none'/);
+    const html = await page.text();
+    assert.match(html, /Dana invited you to the Acme team/);
+    assert.ok(html.includes(`releases/latest/download/guesty-cli.tgz &#38;&#38; ${joinCommand}`));
+  }
+
+  // Lower case, spaces, and O and l for 0 and 1 all read as the same code.
+  const loose = code.toLowerCase().replace(/-/g, " ").replace(/0/g, "o").replace(/1/g, "l");
+  const joined = await callJson("POST", "/v1/join", { body: { code: loose } });
+  assert.equal(joined.status, 201);
+  assert.match(joined.body.key, /^gts_[A-Za-z0-9_-]{43}$/);
+  assert.deepEqual([joined.body.label, joined.body.role, joined.body.team.name], ["Riley", "member", "Acme"]);
+  assert.equal((await call("POST", "/v1/token", { key: joined.body.key, body: {} })).status, 200);
+  assert.equal((await call("GET", "/v1/team", { key: joined.body.key })).status, 403);
+
+  const again = await callJson("POST", "/v1/join", { body: { code } });
+  assert.equal(again.status, 410);
+  assert.match(again.body.message, /already used\. If that wasn't you, ask Dana for a new one/);
+  const page = await call("GET", `/join/${code}`);
+  assert.equal(page.status, 410);
+  assert.match(await page.text(), /already used/);
+});
+
+test("a new invite for the same name replaces the pending one; revoke cancels it; expired invites are refused", async () => {
+  const first = (await invite(admin, { label: "Morgan" })).body;
+  const second = (await invite(admin, { label: "Morgan", role: "admin" })).body;
+  assert.match((await callJson("POST", "/v1/join", { body: { code: first.code } })).body.message, /was cancelled/);
+  const status = (await callJson("GET", "/v1/team", { key: admin })).body;
+  assert.deepEqual(status.invites.map(({ label, role, email, invited_by: by }) => [label, role, email, by]), [["Morgan", "admin", null, "Dana"]]);
+  assert.doesNotMatch(JSON.stringify(status), new RegExp(`${second.code.replace(/-/g, "")}|code_hash|email_hash`));
+
+  assert.deepEqual((await callJson("DELETE", "/v1/team/keys/Morgan", { key: admin })).body, { revoked: "Morgan", key: false, invite: true });
+  assert.equal((await callJson("POST", "/v1/join", { body: { code: second.code } })).body.error, "invite_closed");
+  assert.deepEqual((await callJson("GET", "/v1/team", { key: admin })).body.invites, []);
+  assert.equal((await callJson("DELETE", "/v1/team/keys/Morgan", { key: admin })).status, 404);
+
+  const late = (await invite(admin, { label: "Late" })).body;
+  await sql("UPDATE invites SET expires_at = ? WHERE label = 'Late'", Date.now() - 1000).run();
+  assert.match((await callJson("POST", "/v1/join", { body: { code: late.code } })).body.message, /^This invite expired .+ Ask Dana for a new one\.$/);
+
+  assert.equal((await invite(admin, { label: "Riley" })).body.error, "label_in_use");
+  assert.equal((await call("POST", "/v1/team/invites", { key: member, body: { label: "Nope" } })).status, 403);
+  assert.equal((await invite(admin, { label: "Nope", email: "not-an-address" })).body.error, "invalid_email");
+  assert.equal((await invite(admin, { label: "Nope", role: "owner" })).status, 400);
+});
+
+test("an emailed invite goes through Resend once, escapes the names, and keeps to the daily caps", async () => {
+  const sender = (await callJson("POST", "/v1/team/keys", { key: admin, body: { label: "<b>Ana</b>\u001b[31m", role: "admin" } })).body.key;
+  resend.requests.length = 0;
+  const created = await invite(sender, { label: "Quinn", email: " quinn@example.com " });
+  assert.equal(created.status, 201);
+  assert.deepEqual(created.body.email, { address: "quinn@example.com", sent: true });
+  assert.equal(resend.requests.length, 1);
+  const { authorization, body: sent } = resend.requests[0];
+  assert.equal(authorization, "Bearer re_test_key");
+  assert.equal(sent.from, "Simply VRM <invites@example.com>");
+  assert.deepEqual(sent.to, ["quinn@example.com"]);
+  assert.equal(sent.subject, "<b>Ana</b> [31m invited you to the Acme team on Guesty CLI");
+  assert.ok(sent.html.includes("&#60;b&#62;Ana&#60;/b&#62; [31m invited you to the Acme team"));
+  assert.doesNotMatch(sent.html, /<b>Ana/);
+  assert.doesNotMatch(sent.subject + sent.html + sent.text, /\u001b/);
+  assert.ok(sent.text.includes(`guesty-cli.tgz && ${created.body.join_command}`));
+  assert.ok(sent.html.includes(`href="${created.body.link}"`));
+  assert.match(sent.text, /works once and expires (Mon|Tue|Wed|Thu|Fri|Sat|Sun), [A-Z][a-z]{2} \d{1,2}, \d{1,2}:\d{2} [AP]M P[DS]T\./);
+  const page = await (await call("GET", `/join/${created.body.code}`)).text();
+  assert.ok(page.includes("&#60;b&#62;Ana&#60;/b&#62;"));
+  assert.doesNotMatch(page, /<b>Ana/);
+  assert.equal((await callJson("GET", "/v1/team", { key: admin })).body.invites.find(({ label }) => label === "Quinn").email, "quinn@example.com");
+
+  // Three emails a day per address, whatever its case.
+  for (const label of ["Quinn 2", "Quinn 3"]) assert.equal((await invite(admin, { label, email: "QUINN@example.com" })).body.email.sent, true);
+  const capped = await invite(admin, { label: "Quinn 4", email: "quinn@example.com" });
+  assert.equal(capped.status, 201);
+  assert.deepEqual(capped.body.email, { address: "quinn@example.com", sent: false, message: "That address got 3 invite emails in the last 24 hours, the most allowed." });
+  assert.equal(resend.requests.length, 3);
+
+  // A failed send is reported; the invite and its link still work.
+  resend.replies.push({ status: 500 });
+  const failed = await invite(admin, { label: "Avery", email: "avery@example.com" });
+  assert.deepEqual(failed.body.email, { address: "avery@example.com", sent: false, message: "The email service didn't accept the message." });
+  assert.equal((await call("GET", `/join/${failed.body.code}`)).status, 200);
+  assert.equal(resend.requests.length, 4);
+
+  // Twenty emails a day per team.
+  const teamId = (await callJson("GET", "/v1/team", { key: admin })).body.team.id;
+  for (let n = 0; n < 20; n += 1) {
+    await sql("INSERT INTO invites (code_hash, team_id, label, role, invited_by, created_at, expires_at, closed_at, emailed_at) VALUES (?, ?, ?, 'member', 'Dana', ?, ?, ?, ?)",
+      `earlier-${n}`, teamId, `Earlier ${n}`, Date.now(), Date.now(), Date.now(), Date.now()).run();
+  }
+  assert.equal((await invite(admin, { label: "Blair", email: "blair@example.com" })).body.email.message, "This team emailed 20 invites in the last 24 hours, the most allowed.");
+  await sql("DELETE FROM invites WHERE code_hash LIKE 'earlier-%'").run();
+  assert.equal(resend.requests.length, 4);
+
+  // Only a pending invite keeps its address; one that was never emailed has none.
+  assert.equal((await callJson("POST", "/v1/join", { body: { code: created.body.code } })).status, 201);
+  const rows = (await sql("SELECT label, email, email_hash FROM invites WHERE label IN ('Quinn', 'Quinn 4', 'Avery') ORDER BY label").all()).results;
+  assert.deepEqual(rows.map(({ label, email, email_hash: hash }) => [label, email, !!hash]), [["Avery", null, false], ["Quinn", null, true], ["Quinn 4", null, false]]);
+});
+
+test("a service without a mail key still creates invite links and says email isn't set up", async () => {
+  const plain = new Miniflare({
+    modules: true,
+    scriptPath: join(root, "dist/index.js"),
+    compatibilityDate: "2026-08-01",
+    d1Databases: { DB: "guesty-token-service-no-mail" },
+    bindings: { CREDENTIALS_KEY: serviceKey() },
+    outboundService: outbound,
+    host: "127.0.0.1",
+    port: 0,
+  });
+  try {
+    const origin = (await plain.ready).origin;
+    await migrate(await plain.getD1Database("DB"));
+    const post = async (path, body, key) => (await fetch(`${origin}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(key ? { Authorization: `Bearer ${key}` } : {}) },
+      body: JSON.stringify(body),
+    })).json();
+    const team = await post("/v1/teams", { name: "No Mail", credentials: { openapi: credentials("no-mail") } });
+    const before = resend.requests.length;
+    const created = await post("/v1/team/invites", { label: "Sky", email: "sky@example.com" }, team.admin_key);
+    assert.deepEqual(created.email, { address: "sky@example.com", sent: false, message: "This token service isn't set up to send email." });
+    assert.match(created.link, /\/join\/[0-9A-Z-]{14}$/);
+    assert.equal(resend.requests.length, before);
+  } finally {
+    await plain.dispose();
+  }
+});
+
+test("wrong invite codes are limited per address, and an unknown link reflects nothing back", async () => {
+  await sql("DELETE FROM join_failures").run();
+  for (let n = 0; n < 9; n += 1) assert.equal((await callJson("POST", "/v1/join", { body: { code: "AAAA-AAAA-AAAA" } })).body.error, "invite_not_found");
+  const unknown = await call("GET", "/join/%3Cscript%3Ealert(1)%3C%2Fscript%3E");
+  assert.equal(unknown.status, 404);
+  assert.doesNotMatch(await unknown.text(), /alert|<script/);
+
+  const real = (await invite(admin, { label: "Rowan" })).body;
+  const blocked = await callJson("POST", "/v1/join", { body: { code: real.code } });
+  assert.equal(blocked.status, 429);
+  assert.equal(blocked.body.error, "too_many_attempts");
+  assert.equal((await call("GET", `/join/${real.code}`)).status, 429);
+  await sql("DELETE FROM join_failures").run();
+  assert.equal((await callJson("POST", "/v1/join", { body: { code: real.code } })).status, 201);
 });
 
 test("bad requests are refused before any work", async () => {

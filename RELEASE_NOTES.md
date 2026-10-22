@@ -1,34 +1,43 @@
-# Guesty CLI 1.4.1
+# Guesty CLI 1.5.0
 
-Version 1.4.1 fixes `guesty setup` in a terminal and gives setup and the `guesty team` commands a clearer interactive layout.
+Version 1.5.0 makes inviting teammates simple. An admin types a name and an email address, and the token service emails the teammate one command that installs the CLI and joins the team.
 
 ## Install or update
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.1/guesty-cli-1.4.1.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
 guesty setup
 ```
 
-Users on 1.2.0 or later can run `guesty update` instead. The CLI needs Node.js 20.12 or later. npm 12 blocks installs from a web address by default; with npm 12, add `--allow-remote=all` to the install command. The release includes `SHA256SUMS` for the compiled tarball.
+Users on 1.2.0 or later can run `guesty update` instead. The CLI needs Node.js 20.12 or later. npm 12 blocks installs from a web address by default; with npm 12, add `--allow-remote=all` to the install command. The install address above now always serves the newest release, and each release still includes its versioned package and `SHA256SUMS`.
 
-## Fixed
+## New
 
-- **Setup questions disappeared in a terminal.** Each question was erased as soon as it appeared, so people typed their answers without seeing what was asked. Every question now stays on screen.
-- **Text from a token service can't control your terminal.** Control characters in anything a service sends, such as error messages, team names and key labels, are shown as `?`. A self-hosted service, or a key label an admin typed, can no longer send terminal escape codes.
-- **Installing printed an npm warning about a blocked install script.** The package is built before it's published, so installing runs no script, and npm no longer warns.
+- **Email invites.** `guesty team invite` asks for the teammate's name and email address. The service emails them who invited them, the team, and one command to paste: it installs the CLI and runs `guesty join`. `guesty team invite "Alex" --email alex@example.com` does the same without questions.
+- **Invite links.** Without an email address, the invite is a link to send however you like. It opens a page with the same steps and copy buttons. Opening it doesn't use the invite, so mail scanners can't spend it.
+- **`guesty join`.** Teammates join with `guesty join ABCD-EFGH-JKLM` or the whole link. Codes ignore case and dashes, and read O as 0 and I or L as 1.
+- **Invite from setup.** After `guesty setup` creates a team, it offers to invite teammates straight away.
+- **Pending invites.** `guesty team status` lists them, and `guesty team revoke <name>` cancels one as well as revoking a key.
 
 ## Changed
 
-- **Interactive setup.** At a terminal, `guesty setup` offers its choices in a menu you move through with the arrow keys, masks the client secret as you type it, shows a spinner while Guesty checks the credentials, and ends with a summary and the next command to run. Ctrl+C stops it without saving anything. If Guesty rejects the credentials, setup says so next to the step that failed.
-- **Team commands.** `guesty team invite`, `join`, `credentials` and `delete` use the same layout. `guesty team invite` prints the invite code on its own line, so it copies cleanly.
-- **`guesty team status`** shows tokens, recent token requests and access keys as a readable summary at a terminal. When its output is piped, it still prints JSON.
-- **Scripts keep working.** With piped input, setup still reads one answer per line, and the menu still takes 1, 2 or 3. An empty answer to a required question now stops setup with a message instead of asking again.
-- **Node.js 20.12 or later** is now required, up from 18, which reached end of life in April 2025.
+- **Invites are one-time.** An invite code works once and expires after seven days. Until now, an invite code held the teammate's key itself and worked until the key was revoked. Codes printed by CLI 1.4 still work.
+- **Joining asks before replacing a connection.** If this CLI is already connected to a team, `guesty join` asks before replacing that connection, which may be an admin key. Piped input that ends answers no.
+
+## Token service
+
+Self-hosted services need the update for invites; redeploy with `npm run deploy` in `server/`, which applies the new migration. Invite email is optional: set `INVITE_EMAIL_FROM` and the `RESEND_API_KEY` secret to turn it on. Without them, invites are links only. The service:
+
+- stores invite codes only as keyed hashes, and keeps a teammate's address only while the invite is pending;
+- turns a code into a key once, inside one database transaction;
+- allows ten wrong codes an hour from one address;
+- allows each team 50 invites and 20 invite emails a day, and sends one address at most three invite emails a day;
+- escapes team and inviter names in emails and on the join page, and strips control characters from them.
 
 ## Unchanged
 
-The CLI still never requests OAuth tokens. The token service, the `SUPABASE_URL` cache, and the `token`, `raw` and API commands are unchanged.
+The CLI still never requests OAuth tokens. Token renewal, the request limits, and the `token`, `raw` and API commands are unchanged.
 
 ## Verification
 
-`npm run check` runs strict TypeScript 7 checks, 658 offline tests and the contract check. `npm run check:server` type-checks and tests the token service, and drives this CLI through team setup against it. That includes two new tests that run setup in a pseudo-terminal: one completes setup, confirms the secret never appears on screen, and confirms `team status` shows a key label without its escape codes; the other confirms Ctrl+C saves nothing and sends nothing. A separate terminal-emulator check went through every setup and team screen and confirmed each question is visible. No test contacts Guesty.
+`npm run check` runs strict TypeScript 7 checks, the offline tests, and the contract check. `npm run check:server` type-checks the token service and runs it in Miniflare against mocks of Guesty's token endpoint and Resend. Its tests cover one-time use, expiry, cancellation, replacement, wrong-code limits, email caps, escaping, and a service without email. They also drive this CLI through inviting, joining by link, joining with a CLI 1.4 code, cancelling, and an interactive setup that invites a teammate by email in a pseudo-terminal. No test contacts Guesty or sends email.

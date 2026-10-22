@@ -1,8 +1,8 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-22T00:21:01.169Z",
-  "cliVersion": "1.4.1",
+  "generatedAt": "2026-10-22T05:50:56.623Z",
+  "cliVersion": "1.5.0",
   "generatedFrom": {
     "packageFile": "package.json",
     "commandFiles": [
@@ -27,6 +27,7 @@
       "src/commands/init.ts",
       "src/commands/integrations.ts",
       "src/commands/invoice-items.ts",
+      "src/commands/join.ts",
       "src/commands/listings.ts",
       "src/commands/marketing.ts",
       "src/commands/owner-statement-options.ts",
@@ -61727,6 +61728,45 @@
           ],
           "sourceFile": "src/commands/invoice-items.ts",
           "line": 10
+        }
+      ]
+    },
+    {
+      "name": "join",
+      "alias": null,
+      "description": "Join your team with the invite code or link its admin sent you",
+      "sourceFile": "src/commands/join.ts",
+      "line": 5,
+      "operations": [
+        {
+          "id": "guesty join",
+          "rootAction": true,
+          "name": "join",
+          "syntax": "join",
+          "fullCommand": "guesty join",
+          "description": "Join your team with the invite code or link its admin sent you",
+          "aliases": [],
+          "arguments": [
+            {
+              "syntax": "<invite>",
+              "description": "Invite code, such as ABCD-EFGH-JKLM, or invite link",
+              "defaultValue": null,
+              "line": 5
+            }
+          ],
+          "options": [],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/join.ts",
+          "line": 5
         }
       ]
     },
@@ -154286,7 +154326,7 @@
             },
             {
               "flags": "--join <invite>",
-              "description": "Join a team with an invite code",
+              "description": "Join a team with an invite code or link",
               "required": false,
               "defaultValue": null,
               "line": 6
@@ -161693,7 +161733,7 @@
       "alias": null,
       "description": "Share one Guesty token with your team through a token service",
       "sourceFile": "src/commands/team.ts",
-      "line": 123,
+      "line": 226,
       "operations": [
         {
           "id": "guesty team join",
@@ -161701,7 +161741,7 @@
           "name": "join",
           "syntax": "join",
           "fullCommand": "guesty team join",
-          "description": "Join a team with the invite code its admin sent you",
+          "description": "Join your team with the invite code or link its admin sent you (same as guesty join)",
           "aliases": [],
           "arguments": [],
           "options": [],
@@ -161716,7 +161756,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 126
+          "line": 229
         },
         {
           "id": "guesty team invite",
@@ -161724,16 +161764,23 @@
           "name": "invite",
           "syntax": "invite",
           "fullCommand": "guesty team invite",
-          "description": "Create an access key for a teammate and print their invite code",
+          "description": "Invite a teammate: the service emails them a one-time invite, or you send them the link",
           "aliases": [],
           "arguments": [],
           "options": [
+            {
+              "flags": "--email <address>",
+              "description": "Email the invite to this address",
+              "required": false,
+              "defaultValue": null,
+              "line": 235
+            },
             {
               "flags": "--admin",
               "description": "Let this teammate manage the team too",
               "required": false,
               "defaultValue": null,
-              "line": 132
+              "line": 235
             }
           ],
           "inputCapabilities": {
@@ -161747,7 +161794,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 132
+          "line": 235
         },
         {
           "id": "guesty team revoke",
@@ -161755,7 +161802,7 @@
           "name": "revoke",
           "syntax": "revoke",
           "fullCommand": "guesty team revoke",
-          "description": "Revoke a teammate's access key",
+          "description": "Revoke a teammate's access key and cancel their pending invite",
           "aliases": [],
           "arguments": [],
           "options": [],
@@ -161770,7 +161817,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 155
+          "line": 253
         },
         {
           "id": "guesty team status",
@@ -161793,7 +161840,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 165
+          "line": 268
         },
         {
           "id": "guesty team refresh",
@@ -161810,7 +161857,7 @@
               "description": "Replace the booking-engine token instead of the Open API token",
               "required": false,
               "defaultValue": null,
-              "line": 199
+              "line": 308
             }
           ],
           "inputCapabilities": {
@@ -161824,7 +161871,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 199
+          "line": 308
         },
         {
           "id": "guesty team credentials",
@@ -161841,7 +161888,7 @@
               "description": "Set booking-engine API credentials instead of Open API",
               "required": false,
               "defaultValue": null,
-              "line": 212
+              "line": 321
             }
           ],
           "inputCapabilities": {
@@ -161855,7 +161902,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 212
+          "line": 321
         },
         {
           "id": "guesty team limit",
@@ -161878,7 +161925,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 229
+          "line": 338
         },
         {
           "id": "guesty team delete",
@@ -161895,7 +161942,7 @@
               "description": "Confirm without asking",
               "required": false,
               "defaultValue": null,
-              "line": 240
+              "line": 349
             }
           ],
           "inputCapabilities": {
@@ -161909,7 +161956,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 240
+          "line": 349
         }
       ]
     },
@@ -161965,7 +162012,7 @@
       "alias": null,
       "description": "Update guesty-cli to the latest version",
       "sourceFile": "src/cli.ts",
-      "line": 113,
+      "line": 115,
       "operations": [
         {
           "id": "guesty update",
@@ -161988,7 +162035,7 @@
           },
           "requests": [],
           "sourceFile": "src/cli.ts",
-          "line": 113
+          "line": 115
         }
       ]
     },
@@ -227659,6 +227706,36 @@
       ],
       "sourceFile": "src/commands/invoice-items.ts",
       "line": 10
+    },
+    {
+      "id": "guesty join",
+      "rootAction": true,
+      "name": "join",
+      "syntax": "join",
+      "fullCommand": "guesty join",
+      "description": "Join your team with the invite code or link its admin sent you",
+      "aliases": [],
+      "arguments": [
+        {
+          "syntax": "<invite>",
+          "description": "Invite code, such as ABCD-EFGH-JKLM, or invite link",
+          "defaultValue": null,
+          "line": 5
+        }
+      ],
+      "options": [],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/join.ts",
+      "line": 5
     },
     {
       "id": "guesty listings cities",
@@ -320074,7 +320151,7 @@
         },
         {
           "flags": "--join <invite>",
-          "description": "Join a team with an invite code",
+          "description": "Join a team with an invite code or link",
           "required": false,
           "defaultValue": null,
           "line": 6
@@ -327471,7 +327548,7 @@
           "description": "Set booking-engine API credentials instead of Open API",
           "required": false,
           "defaultValue": null,
-          "line": 212
+          "line": 321
         }
       ],
       "inputCapabilities": {
@@ -327485,7 +327562,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 212
+      "line": 321
     },
     {
       "id": "guesty team delete",
@@ -327502,7 +327579,7 @@
           "description": "Confirm without asking",
           "required": false,
           "defaultValue": null,
-          "line": 240
+          "line": 349
         }
       ],
       "inputCapabilities": {
@@ -327516,7 +327593,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 240
+      "line": 349
     },
     {
       "id": "guesty team invite",
@@ -327524,16 +327601,23 @@
       "name": "invite",
       "syntax": "invite",
       "fullCommand": "guesty team invite",
-      "description": "Create an access key for a teammate and print their invite code",
+      "description": "Invite a teammate: the service emails them a one-time invite, or you send them the link",
       "aliases": [],
       "arguments": [],
       "options": [
+        {
+          "flags": "--email <address>",
+          "description": "Email the invite to this address",
+          "required": false,
+          "defaultValue": null,
+          "line": 235
+        },
         {
           "flags": "--admin",
           "description": "Let this teammate manage the team too",
           "required": false,
           "defaultValue": null,
-          "line": 132
+          "line": 235
         }
       ],
       "inputCapabilities": {
@@ -327547,7 +327631,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 132
+      "line": 235
     },
     {
       "id": "guesty team join",
@@ -327555,7 +327639,7 @@
       "name": "join",
       "syntax": "join",
       "fullCommand": "guesty team join",
-      "description": "Join a team with the invite code its admin sent you",
+      "description": "Join your team with the invite code or link its admin sent you (same as guesty join)",
       "aliases": [],
       "arguments": [],
       "options": [],
@@ -327570,7 +327654,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 126
+      "line": 229
     },
     {
       "id": "guesty team limit",
@@ -327593,7 +327677,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 229
+      "line": 338
     },
     {
       "id": "guesty team refresh",
@@ -327610,7 +327694,7 @@
           "description": "Replace the booking-engine token instead of the Open API token",
           "required": false,
           "defaultValue": null,
-          "line": 199
+          "line": 308
         }
       ],
       "inputCapabilities": {
@@ -327624,7 +327708,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 199
+      "line": 308
     },
     {
       "id": "guesty team revoke",
@@ -327632,7 +327716,7 @@
       "name": "revoke",
       "syntax": "revoke",
       "fullCommand": "guesty team revoke",
-      "description": "Revoke a teammate's access key",
+      "description": "Revoke a teammate's access key and cancel their pending invite",
       "aliases": [],
       "arguments": [],
       "options": [],
@@ -327647,7 +327731,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 155
+      "line": 253
     },
     {
       "id": "guesty team status",
@@ -327670,7 +327754,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 165
+      "line": 268
     },
     {
       "id": "guesty token",
@@ -327731,7 +327815,7 @@
       },
       "requests": [],
       "sourceFile": "src/cli.ts",
-      "line": 113
+      "line": 115
     },
     {
       "id": "guesty user-scope assign",

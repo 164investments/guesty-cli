@@ -34,7 +34,10 @@ jobs:
           "$RUNNER_TEMP/guesty-smoke/node_modules/.bin/guesty" --version
           "$RUNNER_TEMP/guesty-smoke/node_modules/.bin/guesty" reservations --help
           cd release
-          sha256sum guesty-cli-*.tgz > SHA256SUMS
+          # A copy under a fixed name, so releases/latest/download/guesty-cli.tgz
+          # always installs the newest release. Invite emails link to it.
+          cp guesty-cli-*.tgz guesty-cli.tgz
+          sha256sum guesty-cli-*.tgz guesty-cli.tgz > SHA256SUMS
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -44,4 +47,4 @@ jobs:
           if [[ "$RELEASE_TAG" == *-* ]]; then
             release_flags+=(--prerelease --latest=false)
           fi
-          gh release create "$RELEASE_TAG" release/guesty-cli-*.tgz release/SHA256SUMS --verify-tag --title "Guesty CLI $RELEASE_TAG" --notes-file RELEASE_NOTES.md "${release_flags[@]}"
+          gh release create "$RELEASE_TAG" release/guesty-cli-*.tgz release/guesty-cli.tgz release/SHA256SUMS --verify-tag --title "Guesty CLI $RELEASE_TAG" --notes-file RELEASE_NOTES.md "${release_flags[@]}"
