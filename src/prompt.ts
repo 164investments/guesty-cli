@@ -30,13 +30,18 @@ function answered<T>(value: T): Exclude<T, symbol> {
   return value as Exclude<T, symbol>;
 }
 
-async function readLine(question: string): Promise<string> {
+async function nextLine(question: string): Promise<string | undefined> {
   output.write(question);
   pipedLines ??= createInterface({ input: process.stdin, terminal: false })[Symbol.asyncIterator]();
   const next = await pipedLines.next();
-  if (next.done) throw new Error("Setup needs an answer, but input ended.");
   output.write("\n");
-  return next.value.trim();
+  return next.done ? undefined : next.value.trim();
+}
+
+async function readLine(question: string): Promise<string> {
+  const line = await nextLine(question);
+  if (line === undefined) throw new Error("Setup needs an answer, but input ended.");
+  return line;
 }
 
 function plain(message: string): void {
@@ -170,8 +175,9 @@ export async function secret(message: string, check?: Check): Promise<string> {
   })).trim();
 }
 
+// Piped input that ends before the question answers no.
 export async function confirm(message: string): Promise<boolean> {
-  if (!interactive()) return /^y(es)?$/i.test(await readLine(`${message} (y/N) `));
+  if (!interactive()) return /^y(es)?$/i.test(await nextLine(`${message} (y/N) `) ?? "");
   return answered(await clack.confirm({ message, initialValue: false, ...view() }));
 }
 

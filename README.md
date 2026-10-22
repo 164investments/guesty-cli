@@ -5,21 +5,21 @@ Command-line access to the [Guesty](https://guesty.com) Open API and Booking Eng
 ## Quick Start
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.1/guesty-cli-1.4.1.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
 guesty setup
 ```
 
 It needs Node.js 20.12 or later. npm 12 blocks installs from a web address by default; with npm 12, add `--allow-remote=all` to the install command.
 
-`guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use Simply VRM's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
+`guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use StayKit's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
 
 ## Install
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.1/guesty-cli-1.4.1.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
 ```
 
-Download the compiled package and checksum from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
+That address always serves the newest release. Download a specific version and the checksums from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
 
 To upgrade an older installation (including npm version 1.1.0), run the compiled-package installation command above. For version 1.2.0 and later:
 
@@ -47,7 +47,7 @@ npm link
 - **A team token service**, which `guesty setup` configures:
 
   ```bash
-  GUESTY_TOKEN_SERVICE_URL=https://guesty-tokens.simplyvacationrentalmanagement.com  # or your own service
+  GUESTY_TOKEN_SERVICE_URL=https://guesty-tokens.staykit.ai  # or your own service
   GUESTY_TOKEN_SERVICE_KEY=gts_...                              # your personal access key
   ```
 
@@ -68,18 +68,28 @@ Guesty allows five OAuth tokens per client ID in any 24 hours. If everyone on a 
 
 The admin runs `guesty setup` and chooses where the team's token lives:
 
-1. **Simply VRM's hosted token service.** It's free, and there's nothing to run.
+1. **StayKit's hosted token service.** It's free, and there's nothing to run. It used to be Simply VRM's, at `guesty-tokens.simplyvacationrentalmanagement.com`; that address still works, and the CLI reads it as the new one.
 2. **A token service you run yourself.** See [Run your own token service](#run-your-own-token-service).
 
 Setup asks for a team name, your name, and the Guesty Open API client ID and secret; Guesty's help article "Using Guesty's Open API" shows how to create them. Booking-engine API credentials are optional. At a terminal, setup shows a menu you move through with the arrow keys and hides the secret as you type it; with piped input, as in scripts, it reads one answer per line. The service checks the credentials with Guesty before saving them. That check uses one of the day's five tokens, and the team then uses that token.
 
-Then invite each teammate:
+### Invite your team
+
+Setup offers to invite teammates as soon as the team is ready. Later, run:
 
 ```bash
-guesty team invite "Alex Smith"      # prints an invite code; send it privately
+guesty team invite                                   # asks for their name and email
+guesty team invite "Alex Smith" --email alex@example.com
+guesty team invite "Alex Smith"                      # no email; prints a link to send
 ```
 
-The teammate runs `guesty team join <code>`, or `guesty setup` and chooses **Join a team**. Their CLI then uses the team's token.
+With an email address, the service emails the teammate. The email says who invited them and to which team, and gives one command that installs the CLI and joins. Without one, you get a link to send however you like. The link opens a page with the same steps and copy buttons. Either way the teammate runs:
+
+```bash
+guesty join ABCD-EFGH-JKLM      # or paste the whole link
+```
+
+The code works once and expires after seven days. Opening the link doesn't use it, so a mail scanner that follows links can't spend an invite. `guesty team status` lists pending invites, and `guesty team revoke "Alex Smith"` cancels one. A teammate can also run `guesty setup` and choose **Join a team**. Invite codes printed by CLI 1.4 still work.
 
 ### How the service protects the allowance
 
@@ -87,16 +97,18 @@ The teammate runs `guesty team join <code>`, or `guesty setup` and chooses **Joi
 - A team's renewals make at most three token requests per Guesty client in any 24 hours, counting failures; `guesty team limit` changes that. After a failed renewal the service waits 30 minutes, or two hours after a 429. A rejected client ID or secret doesn't trigger the wait, so a typo can be fixed straight away.
 - Sign-up attempts, made before anyone has a key, have their own allowance: two a day for a new team, so a typo can be fixed, and one a day to recover a team. That way someone who only knows a client ID can't use up a team's renewals or pause them. Whatever the limits, one client never makes more than Guesty's five requests in a day.
 - One team per Guesty client. The request history is kept even after a team is deleted, so recreating a team can't reset the count. If an admin loses their key, running `guesty setup` again with the current client ID and secret gives them a new admin key once Guesty accepts the secret. That can't happen on the day the team was created; before then, ask another admin for an invite.
-- The service encrypts Guesty credentials and tokens at rest, with a key kept outside the database. It stores access keys only as keyed hashes. Teammates never see the client secret.
+- The service encrypts Guesty credentials and tokens at rest, with a key kept outside the database. It stores access keys and invite codes only as keyed hashes. Teammates never see the client secret.
+- An invite code becomes an access key once, inside one database transaction. Revoking a key also cancels the invites it created. Each address may try ten wrong codes an hour; IPv6 addresses count by their /64 block.
+- Invite emails have daily caps: 20 per team, three per recipient across all teams, and 200 for the whole service. A recipient's address counts once, whatever its case or `+tag`, and with or without dots at Gmail. Each cap is enforced in a single database statement, failed sends count, and the history is kept by Guesty client, not team, so deleting and recreating a team doesn't reset it. Emails leave the team name out of the subject, shorten names, and strip invisible and text-direction characters from them. The service keeps a teammate's email address only while their invite is pending.
 
 ### Team commands
 
 | Command | What it does |
 |---------|--------------|
-| `guesty team invite <name> [--admin]` | Creates a teammate's access key and prints their invite code |
-| `guesty team join <code>` | Joins a team |
-| `guesty team status` | Shows token expiry, recent token requests and every key (admin). Prints JSON when its output is piped |
-| `guesty team revoke <name>` | Revokes a key. A token the teammate already has works until it expires, at most 24 hours later |
+| `guesty team invite [name] [--email <address>] [--admin]` | Creates a one-time invite and emails it, or prints its link (admin) |
+| `guesty join <code-or-link>` | Joins a team. Same as `guesty team join` |
+| `guesty team status` | Shows token expiry, recent token requests, every key and pending invites (admin). Prints JSON when its output is piped |
+| `guesty team revoke <name>` | Revokes a key and cancels a pending invite. A token the teammate already has works until it expires, at most 24 hours later |
 | `guesty team refresh [--beapi]` | Replaces a token Guesty rejected before it expired; uses one of the day's requests (admin) |
 | `guesty team credentials [--beapi]` | Adds or replaces Guesty credentials, after Guesty confirms them (admin) |
 | `guesty team limit <1-5>` | Changes the team's token requests per 24 hours (admin) |
@@ -119,6 +131,16 @@ npm run deploy                                 # type-checks, tests, applies the
 ```
 
 Then run `guesty setup`, choose **A token service you run yourself**, and enter the Worker's URL. Keep a copy of `CREDENTIALS_KEY` somewhere safe: without it, the stored credentials can't be decrypted, and every team must be set up again.
+
+Invites work without email: admins send the link themselves. To have the service email invites, verify a sending domain with [Resend](https://resend.com), then set the sender and a sending-only API key:
+
+```bash
+# In wrangler.jsonc: "vars": { "INVITE_EMAIL_FROM": "Your Company <invites@example.com>" }
+npx wrangler secret put RESEND_API_KEY
+npm run deploy
+```
+
+Invite codes from your service include its address, so teammates run `guesty join https://your-service/join/CODE`. Only codes from StayKit's hosted service work on their own.
 
 ## Getting a raw token
 
@@ -179,6 +201,7 @@ guesty be create-quote --listing <listingId> --check-in 2026-11-01 --check-out 2
 | Command | Alias | Description |
 |---------|-------|-------------|
 | `setup` | | Connect to a token service: hosted, your own, or join a team |
+| `join` | | Join a team with an invite code or link |
 | `team` | | Invite, revoke and manage your team's shared token |
 | `init` | | Show cache setup instructions |
 | `token` | | Read a valid cached Open API or BEAPI token |
@@ -288,7 +311,7 @@ npm run check
 
 The check compiles strict TypeScript, runs offline authentication, transport, command, and update regression tests, and verifies that the generated CLI contract matches the source. Authentication tests replace all network calls and private-cache reads with fake data and prove that cache failures cannot request OAuth tokens. Endpoint tests assert methods, paths, query parameters, bodies, and meaningful validation failures. Live write tests are not part of this suite.
 
-For the token service, run `npm ci --prefix server` once, then `npm run check:server`. It type-checks the Worker with tsrs and runs the bundled Worker in Miniflare with a local D1 database and a mock of Guesty's token endpoint, so it never contacts Guesty. It also drives the built CLI through setup, invites, revocation and team deletion against that Worker.
+For the token service, run `npm ci --prefix server` once, then `npm run check:server`. It type-checks the Worker with tsrs and runs the bundled Worker in Miniflare with a local D1 database and mocks of Guesty's token endpoint and Resend's email API, so it never contacts Guesty or sends email. It also drives the built CLI through setup, invites, joining, revocation and team deletion against that Worker.
 
 ## Rate Limiting
 

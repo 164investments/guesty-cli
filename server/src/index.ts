@@ -1,4 +1,7 @@
 import { keyedHash, newAccessKey, serviceKeys, type ServiceKeys } from "./crypto.js";
+import { HttpError, errorResponse, json, readBody, requiredText } from "./http.js";
+import type { MailEnv } from "./invite-messages.js";
+import { cancelInvite, closeInvitesFrom, createInvite, invitePage, pendingInvites, redeemInvite } from "./invites.js";
 import {
   TOKEN_TYPES,
   clientFingerprint,
@@ -14,11 +17,10 @@ import {
   type TokenType,
 } from "./tokens.js";
 
-export interface Env extends TokenEnv {
+export interface Env extends TokenEnv, MailEnv {
   CREDENTIALS_KEY: string;
 }
 
-const MAX_BODY_BYTES = 16_384;
 const MAX_TEAMS_PER_CLIENT_PER_HOUR = 10;
 const LAST_USED_RESOLUTION_MS = 60 * 60_000;
 const DEFAULT_MAX_REQUESTS_PER_DAY = 3;
@@ -28,57 +30,13 @@ const DEFAULT_MAX_REQUESTS_PER_DAY = 3;
 const SIGNUPS_PER_DAY_NEW_TEAM = 2;
 const SIGNUPS_PER_DAY_RECOVERY = 1;
 
-class HttpError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string, readonly retryAt?: number) {
-    super(message);
-  }
-}
-
 interface Caller {
   teamId: string;
   teamName: string;
+  label: string;
+  keyHash: string;
   role: "admin" | "member";
   maxPerDay: number;
-}
-
-function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...headers },
-  });
-}
-
-function errorResponse(error: HttpError): Response {
-  const headers: Record<string, string> = {};
-  if (error.retryAt) headers["Retry-After"] = String(Math.max(1, Math.ceil((error.retryAt - Date.now()) / 1000)));
-  return json({ error: error.code, message: error.message, ...(error.retryAt ? { retry_at: error.retryAt } : {}) }, error.status, headers);
-}
-
-async function readBody(request: Request): Promise<Record<string, unknown>> {
-  if (Number(request.headers.get("Content-Length") ?? 0) > MAX_BODY_BYTES) {
-    throw new HttpError(413, "too_large", "The request body is too large.");
-  }
-  const text = await request.text();
-  if (text.length > MAX_BODY_BYTES) throw new HttpError(413, "too_large", "The request body is too large.");
-  if (!text) return {};
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    throw new HttpError(400, "invalid_json", "The request body must be JSON.");
-  }
-  if (!body || typeof body !== "object" || Array.isArray(body)) {
-    throw new HttpError(400, "invalid_json", "The request body must be a JSON object.");
-  }
-  return body as Record<string, unknown>;
-}
-
-// Trims, because pasted credentials often end in a newline Guesty would refuse.
-function requiredText(body: Record<string, unknown>, name: string, max = 200): string {
-  const value = body[name];
-  if (typeof value !== "string" || !value.trim()) throw new HttpError(400, "invalid_request", `${name} is required.`);
-  if (value.trim().length > max) throw new HttpError(400, "invalid_request", `${name} is too long.`);
-  return value.trim();
 }
 
 function credentialsInput(value: unknown, name: string): Credentials {
@@ -142,17 +100,17 @@ async function authenticate(request: Request, env: Env, keys: ServiceKeys): Prom
   if (!key) throw new HttpError(401, "unauthorized", "Send this team's access key as Authorization: Bearer gts_...");
   const keyHash = await keyedHash(keys, `access:${key}`);
   const row = await env.DB.prepare(
-    `SELECT k.team_id, k.role, k.last_used_at, t.name, t.max_requests_per_day
+    `SELECT k.team_id, k.label, k.role, k.last_used_at, t.name, t.max_requests_per_day
      FROM access_keys k JOIN teams t ON t.id = k.team_id
      WHERE k.key_hash = ? AND k.revoked_at IS NULL`
-  ).bind(keyHash).first<{ team_id: string; role: "admin" | "member"; last_used_at: number | null; name: string; max_requests_per_day: number }>();
+  ).bind(keyHash).first<{ team_id: string; label: string; role: "admin" | "member"; last_used_at: number | null; name: string; max_requests_per_day: number }>();
   if (!row) throw new HttpError(401, "unauthorized", "This access key is wrong or has been revoked.");
   const now = Date.now();
   // Hourly resolution keeps database writes low; every CLI command reads a token.
   if (!row.last_used_at || row.last_used_at < now - LAST_USED_RESOLUTION_MS) {
     await env.DB.prepare("UPDATE access_keys SET last_used_at = ? WHERE key_hash = ?").bind(now, keyHash).run();
   }
-  return { teamId: row.team_id, teamName: row.name, role: row.role, maxPerDay: row.max_requests_per_day };
+  return { teamId: row.team_id, teamName: row.name, label: row.label, keyHash, role: row.role, maxPerDay: row.max_requests_per_day };
 }
 
 async function createTeam(request: Request, env: Env, keys: ServiceKeys): Promise<Response> {
@@ -307,6 +265,7 @@ async function teamStatus(env: Env, caller: Caller): Promise<Response> {
     team: { id: caller.teamId, name: caller.teamName, max_requests_per_day: caller.maxPerDay },
     token_types: tokenTypes,
     keys: keyRows.results,
+    invites: await pendingInvites(env, caller.teamId),
   });
 }
 
@@ -340,21 +299,27 @@ async function createKey(request: Request, env: Env, keys: ServiceKeys, caller: 
   return json({ label, role, key: await createAccessKey(env, keys, caller.teamId, label, role) }, 201);
 }
 
+// Revokes the teammate's key and cancels their pending invite, whichever exist.
 async function revokeKey(env: Env, caller: Caller, label: string): Promise<Response> {
-  const key = await env.DB.prepare("SELECT role FROM access_keys WHERE team_id = ? AND label = ? AND revoked_at IS NULL")
+  const key = await env.DB.prepare("SELECT key_hash, role FROM access_keys WHERE team_id = ? AND label = ? AND revoked_at IS NULL")
     .bind(caller.teamId, label)
-    .first<{ role: string }>();
-  if (!key) throw new HttpError(404, "not_found", `This team has no active key named ${label}.`);
+    .first<{ key_hash: string; role: string }>();
+  if (!key) {
+    if (await cancelInvite(env, caller.teamId, label)) return json({ revoked: label, key: false, invite: true });
+    throw new HttpError(404, "not_found", `This team has no active key or pending invite named ${label}.`);
+  }
   if (key.role === "admin") {
     const admins = await env.DB.prepare("SELECT COUNT(*) AS n FROM access_keys WHERE team_id = ? AND role = 'admin' AND revoked_at IS NULL")
       .bind(caller.teamId)
       .first<{ n: number }>();
     if ((admins?.n ?? 0) <= 1) throw new HttpError(409, "last_admin", "This is the team's only admin key. Create another admin key before revoking it.");
   }
-  await env.DB.prepare("UPDATE access_keys SET revoked_at = ? WHERE team_id = ? AND label = ? AND revoked_at IS NULL")
-    .bind(Date.now(), caller.teamId, label)
-    .run();
-  return json({ revoked: label });
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE access_keys SET revoked_at = ? WHERE team_id = ? AND label = ? AND revoked_at IS NULL").bind(now, caller.teamId, label),
+    closeInvitesFrom(env, key.key_hash, now),
+  ]);
+  return json({ revoked: label, key: true, invite: await cancelInvite(env, caller.teamId, label) });
 }
 
 async function forceRefresh(request: Request, env: Env, keys: ServiceKeys, caller: Caller): Promise<Response> {
@@ -389,6 +354,9 @@ async function route(request: Request, env: Env): Promise<Response> {
   const route = `${request.method} ${pathname}`;
   if (route === "GET /" || route === "GET /health") return json({ service: "guesty-token-service", ok: true });
   if (route === "POST /v1/teams") return createTeam(request, env, keys);
+  if (route === "POST /v1/join") return redeemInvite(request, env, keys);
+  const joinCode = /^\/join\/([^/]+)\/?$/.exec(pathname)?.[1];
+  if (joinCode && (request.method === "GET" || request.method === "HEAD")) return invitePage(request, env, keys, joinCode);
 
   const caller = await authenticate(request, env, keys);
   if (route === "POST /v1/token") return tokenFor(request, env, keys, caller);
@@ -398,6 +366,7 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (route === "PATCH /v1/team") return updateTeam(request, env, caller);
   if (route === "DELETE /v1/team") return deleteTeam(env, caller);
   if (route === "POST /v1/team/keys") return createKey(request, env, keys, caller);
+  if (route === "POST /v1/team/invites") return createInvite(request, env, keys, caller);
   if (route === "POST /v1/team/refresh") return forceRefresh(request, env, keys, caller);
   if (route === "PUT /v1/team/credentials") return putCredentials(request, env, keys, caller);
   const keyLabel = /^\/v1\/team\/keys\/([^/]+)$/.exec(pathname)?.[1];

@@ -13,13 +13,19 @@
     }
   ],
   "env": {
-    // Simply VRM's hosted copy, which guesty setup offers first. Deploy with --env hosted.
+    // StayKit's hosted copy, which guesty setup offers first. Deploy with --env hosted.
+    // CLI 1.4 knows it by its former simplyvacationrentalmanagement.com address, which stays.
     "hosted": {
       "name": "guesty-token-service",
       "account_id": "52211577e087a1619838cda534d59d7b",
       "workers_dev": false,
-      "routes": [{ "pattern": "guesty-tokens.simplyvacationrentalmanagement.com", "custom_domain": true }],
+      "routes": [
+        { "pattern": "guesty-tokens.staykit.ai", "custom_domain": true },
+        { "pattern": "guesty-tokens.simplyvacationrentalmanagement.com", "custom_domain": true }
+      ],
       "observability": { "enabled": true },
+      // Invite emails also need the RESEND_API_KEY secret; without it, invites are links only.
+      "vars": { "INVITE_EMAIL_FROM": "StayKit <invites@staykit.ai>", "PUBLIC_URL": "https://guesty-tokens.staykit.ai" },
       "d1_databases": [
         {
           "binding": "DB",

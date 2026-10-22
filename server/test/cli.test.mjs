@@ -1,9 +1,9 @@
 // Drives the real CLI (../dist/cli.js, from npm run build in the repository
-// root) against the bundled Worker in Miniflare. Guesty's token endpoint is
-// mocked; nothing here contacts Guesty.
+// root) against the bundled Worker in Miniflare. Guesty's token endpoint and
+// Resend's email API are mocked; nothing here contacts Guesty or sends email.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,6 +13,7 @@ import { Miniflare } from "miniflare";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const cliPath = join(root, "..", "dist", "cli.js");
 const oauthRequests = [];
+const emails = [];
 const homes = [];
 const terminals = [];
 let mf;
@@ -81,6 +82,9 @@ function settings(homeDir) {
   return existsSync(file) ? readFileSync(file, "utf8") : "";
 }
 
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const linkPattern = () => new RegExp(`^${escapeRegExp(base)}/join/[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$`);
+
 before(async () => {
   assert.ok(existsSync(cliPath), "Build the CLI first: npm run build in the repository root.");
   mf = new Miniflare({
@@ -88,9 +92,17 @@ before(async () => {
     scriptPath: join(root, "dist/index.js"),
     compatibilityDate: "2026-08-01",
     d1Databases: { DB: "guesty-token-service-cli" },
-    bindings: { CREDENTIALS_KEY: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))) },
+    bindings: {
+      CREDENTIALS_KEY: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),
+      RESEND_API_KEY: "re_test_key",
+      INVITE_EMAIL_FROM: "StayKit <invites@example.com>",
+    },
     async outboundService(request) {
       const url = new URL(request.url);
+      if (url.href === "https://api.resend.com/emails") {
+        emails.push(await request.json());
+        return Response.json({ id: `mock-email-${emails.length}` });
+      }
       assert.equal(url.pathname, "/oauth2/token");
       oauthRequests.push(Object.fromEntries(new URLSearchParams(await request.text())));
       return Response.json({ token_type: "Bearer", access_token: `mock-token-${oauthRequests.length}`, expires_in: 86400 });
@@ -100,8 +112,10 @@ before(async () => {
   });
   base = (await mf.ready).origin;
   const db = await mf.getD1Database("DB");
-  const migration = readFileSync(join(root, "migrations/0001_init.sql"), "utf8").replace(/--.*$/gm, "");
-  for (const statement of migration.split(";").map((part) => part.trim()).filter(Boolean)) await db.prepare(statement).run();
+  for (const file of readdirSync(join(root, "migrations")).filter((name) => name.endsWith(".sql")).sort()) {
+    const migration = readFileSync(join(root, "migrations", file), "utf8").replace(/--.*$/gm, "");
+    for (const statement of migration.split(";").map((part) => part.trim()).filter(Boolean)) await db.prepare(statement).run();
+  }
 });
 
 after(async () => {
@@ -133,16 +147,22 @@ test("the admin's CLI reads the team token", async () => {
   assert.equal(JSON.parse(result.stdout).access_token, "mock-token-1");
 });
 
-test("an invite code lets a teammate join and share the same token", async () => {
+test("an invite link lets a teammate join once and share the same token", async () => {
   const created = await cli(admin, ["team", "invite", "Sam"]);
   assert.equal(created.status, 0, created.stderr);
   invite = created.stdout.trim();
-  assert.match(invite, /^gti_[A-Za-z0-9_-]+$/);
-  const joined = await cli(member, ["setup"], `3\n${invite}\n`);
+  assert.match(invite, linkPattern());
+  assert.match(created.stderr, new RegExp(`Or they run: guesty join ${escapeRegExp(invite)}`));
+  assert.match(created.stderr, /It works once\. To cancel it, run guesty team revoke "Sam"\./);
+  const joined = await cli(member, ["join", invite]);
   assert.equal(joined.status, 0, joined.stderr);
+  assert.match(joined.stderr, /You're on the "Acme" team\n {2}Service: .+\n {2}Your name: Sam\n {2}Role: Member/);
   const token = await cli(member, ["token"]);
   assert.equal(token.stdout, "mock-token-1\n");
   assert.equal(oauthRequests.length, 1);
+  const reused = await cli(home(), ["setup"], `3\n${invite}\n`);
+  assert.equal(reused.status, 1);
+  assert.match(reused.stderr, /This invite was already used/);
 });
 
 test("only admins see team status", async () => {
@@ -160,6 +180,48 @@ test("a revoked teammate can no longer get the token", async () => {
   const result = await cli(member, ["token"]);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /token service rejected the access key \(HTTP 401\)/);
+});
+
+test("an emailed invite shows in status until it's cancelled, and a CLI 1.4 invite code still works", async () => {
+  const emailed = await cli(admin, ["team", "invite", "Lee", "--email", "lee@example.com"]);
+  assert.equal(emailed.status, 0, emailed.stderr);
+  assert.match(emailed.stderr, /Emailing Lee an invite/);
+  assert.equal(emails.length, 1);
+  assert.deepEqual(emails[0].to, ["lee@example.com"]);
+  assert.equal(emails[0].subject, "Dana invited you to Guesty CLI");
+  const lee = emailed.stdout.trim();
+  assert.ok(emails[0].text.includes(lee));
+
+  const status = JSON.parse((await cli(admin, ["team", "status"])).stdout);
+  assert.deepEqual(status.invites.map(({ label, email }) => [label, email]), [["Lee", "lee@example.com"]]);
+
+  // Joining from a CLI that's already connected asks first, and input that ends answers no.
+  const declined = await cli(admin, ["join", lee]);
+  assert.equal(declined.status, 1);
+  assert.match(declined.stderr, /already connected to a team\. Replace that connection\? \(y\/N\)/);
+  assert.match(declined.stderr, /Nothing was changed/);
+  assert.match(settings(admin), /GUESTY_TOKEN_SERVICE_KEY=gts_/);
+
+  const cancelled = await cli(admin, ["team", "revoke", "Lee"]);
+  assert.equal(cancelled.status, 0, cancelled.stderr);
+  assert.match(cancelled.stderr, /Cancelled Lee's invite\./);
+  const refused = await cli(home(), ["join", lee]);
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /This invite was cancelled\. Ask Dana for a new one\./);
+
+  // CLI 1.4 printed codes that hold the key itself.
+  const adminKey = /^GUESTY_TOKEN_SERVICE_KEY=(.+)$/m.exec(settings(admin))[1];
+  const res = await fetch(`${base}/v1/team/keys`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${adminKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ label: "Legacy" }),
+  });
+  const legacy = `gti_${Buffer.from(JSON.stringify({ url: base, key: (await res.json()).key })).toString("base64url")}`;
+  const older = home();
+  const joined = await cli(older, ["team", "join", legacy]);
+  assert.equal(joined.status, 0, joined.stderr);
+  assert.equal((await cli(older, ["token"])).stdout, "mock-token-1\n");
+  assert.equal((await cli(admin, ["team", "revoke", "Legacy"])).status, 0);
 });
 
 test("rerunning setup with the same credentials points to an invite, then recovers admin access the next day", async () => {
@@ -181,10 +243,13 @@ test("rerunning setup with the same credentials points to an invite, then recove
 });
 
 test("deleting the team removes it from the service and this CLI's settings", async () => {
+  const pending = (await cli(admin, ["team", "invite", "Kai"])).stdout.trim();
   const result = await cli(admin, ["team", "delete", "--yes"]);
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(settings(admin), /GUESTY_TOKEN_SERVICE/);
-  assert.equal((await cli(member, ["team", "join", invite])).status, 1);
+  const joined = await cli(home(), ["join", pending]);
+  assert.equal(joined.status, 1);
+  assert.match(joined.stderr, /isn't valid/);
 });
 
 const hasPython = spawnSync("python3", ["--version"]).status === 0;
@@ -202,16 +267,33 @@ test("in a terminal, setup shows each question, masks the secret and creates the
   session.type("terminal-secret\r");
   await session.expect("Add booking engine API credentials too?");
   session.type("\r");
+  await session.expect('Team "Terminal Co" is ready');
+  // Setup offers to invite teammates straight away.
+  await session.expect("Invite a teammate now?");
+  session.type("\x1b[D\r");
+  await session.expect("Teammate's name");
+  session.type("Pat\r");
+  await session.expect("Their email address");
+  session.type("pat@example.com\r");
+  await session.expect("Emailed the invite to pat@example.com");
+  await session.expect("Invite for Pat");
+  await session.expect("Invite someone else?");
+  session.type("\r");
   assert.equal(await session.exit, 0, session.visible());
-  assert.match(session.visible(), /Team "Terminal Co" is ready/);
+  assert.match(session.visible(), /Or they run\s+guesty join http:\/\/127\.0\.0\.1:\d+\/join\/[0-9A-Z-]{14}/);
   assert.doesNotMatch(session.visible(), /terminal-secret/);
   assert.match(settings(dir), /^GUESTY_TOKEN_SERVICE_KEY=gts_/m);
+  assert.deepEqual(emails.at(-1).to, ["pat@example.com"]);
+  assert.equal(emails.at(-1).subject, "You're invited to a team on Guesty CLI");
+  assert.match(emails.at(-1).text, /^You're invited to the Terminal Co team on Guesty CLI\./);
 
-  // A key label is whatever an admin typed; status shows it without its escape sequences.
+  // A name is whatever an admin typed; status shows it without its escape sequences.
   assert.equal((await cli(dir, ["team", "invite", "Evil\u001b]0;renamed\u0007"])).status, 0);
   const status = terminal(dir, ["team", "status"]);
   assert.equal(await status.exit, 0, status.visible());
-  assert.match(status.visible(), /Evil\?\]0;renamed\?\s+member, never used/);
+  assert.match(status.visible(), /Pending invites/);
+  assert.match(status.visible(), /Evil\?\]0;renamed\?\s+member, link only, expires/);
+  assert.match(status.visible(), /Pat\s+member, emailed to pat@example\.com, expires/);
   assert.doesNotMatch(status.raw(), /\u001b\]0;renamed/);
 });
 
