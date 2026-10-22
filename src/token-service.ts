@@ -1,9 +1,12 @@
-// Client for the team token service in server/. Simply VRM hosts one copy;
+// Client for the team token service in server/. StayKit hosts one copy;
 // teams can also run their own and point the CLI at it.
 
 import { printable } from "./output.js";
 
-export const HOSTED_TOKEN_SERVICE_URL = "https://guesty-tokens.simplyvacationrentalmanagement.com";
+export const HOSTED_TOKEN_SERVICE_URL = "https://guesty-tokens.staykit.ai";
+// The hosted service's address before it moved to StayKit. It still works, and
+// settings and invites that use it are read as the new address.
+const FORMER_HOSTED_TOKEN_SERVICE_URL = "https://guesty-tokens.simplyvacationrentalmanagement.com";
 export const TOKEN_SERVICE_URL_ENV = "GUESTY_TOKEN_SERVICE_URL";
 export const TOKEN_SERVICE_KEY_ENV = "GUESTY_TOKEN_SERVICE_KEY";
 
@@ -36,7 +39,8 @@ export function serviceUrl(value: string): string {
   if (url.protocol !== "https:" && !(url.protocol === "http:" && local)) {
     throw new Error("The token service URL must use https.");
   }
-  return url.href.replace(/\/+$/, "");
+  const href = url.href.replace(/\/+$/, "");
+  return href === FORMER_HOSTED_TOKEN_SERVICE_URL ? HOSTED_TOKEN_SERVICE_URL : href;
 }
 
 export function isAccessKey(value: string): boolean {

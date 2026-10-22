@@ -21,6 +21,7 @@ Users on 1.2.0 or later can run `guesty update` instead. The CLI needs Node.js 2
 
 ## Changed
 
+- **The hosted service is now StayKit's.** Simply VRM's hosted token service is now StayKit's, at `https://guesty-tokens.staykit.ai`, and its invite emails come from `invites@staykit.ai`. It's the same service with the same teams and keys. The former address, `guesty-tokens.simplyvacationrentalmanagement.com`, keeps working for CLI 1.4, and CLI 1.5 reads settings and invites that use it as the new address, so nobody has to set up again.
 - **Invites are one-time.** An invite code works once and expires after seven days. Until now, an invite code held the teammate's key itself and worked until the key was revoked. Codes printed by CLI 1.4 still work.
 - **Joining asks before replacing a connection.** If this CLI is already connected to a team, `guesty join` asks before replacing that connection, which may be an admin key. Piped input that ends answers no.
 

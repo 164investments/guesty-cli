@@ -7,7 +7,7 @@ export const init = new Command("init")
     process.stdout.write(
       "Guesty CLI uses existing cached tokens only.\n\n" +
       "Team token service (one token shared by everyone on your team):\n" +
-      "  Run guesty setup to create a team on Simply VRM's hosted service or your own, " +
+      "  Run guesty setup to create a team on StayKit's hosted service or your own, " +
       "or to join a team with an invite code.\n\n" +
       "Server-managed cache:\n" +
       "  Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your shell or " +

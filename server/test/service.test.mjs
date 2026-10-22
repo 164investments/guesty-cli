@@ -77,7 +77,7 @@ before(async () => {
     scriptPath: join(root, "dist/index.js"),
     compatibilityDate: "2026-08-01",
     d1Databases: { DB: "guesty-token-service-test" },
-    bindings: { CREDENTIALS_KEY: serviceKey(), RESEND_API_KEY: "re_test_key", INVITE_EMAIL_FROM: "Simply VRM <invites@example.com>" },
+    bindings: { CREDENTIALS_KEY: serviceKey(), RESEND_API_KEY: "re_test_key", INVITE_EMAIL_FROM: "StayKit <invites@example.com>" },
     outboundService: outbound,
     host: "127.0.0.1",
     port: 0,
@@ -448,7 +448,7 @@ test("an emailed invite goes through Resend once, escapes the names, and keeps t
   assert.equal(resend.requests.length, 1);
   const { authorization, body: sent } = resend.requests[0];
   assert.equal(authorization, "Bearer re_test_key");
-  assert.equal(sent.from, "Simply VRM <invites@example.com>");
+  assert.equal(sent.from, "StayKit <invites@example.com>");
   assert.deepEqual(sent.to, ["quinn@example.com"]);
   // The team name stays out of the subject; names lose control, zero-width and direction characters.
   assert.equal(sent.subject, "<b>Ana</b> [31m invited you to Guesty CLI");
@@ -533,7 +533,8 @@ test("a service without a mail key still creates invite links and says email isn
     scriptPath: join(root, "dist/index.js"),
     compatibilityDate: "2026-08-01",
     d1Databases: { DB: "guesty-token-service-no-mail" },
-    bindings: { CREDENTIALS_KEY: serviceKey() },
+    // Answers here on a local address but links to the hosted one, as the hosted copy does for its former address.
+    bindings: { CREDENTIALS_KEY: serviceKey(), PUBLIC_URL: "https://guesty-tokens.staykit.ai" },
     outboundService: outbound,
     host: "127.0.0.1",
     port: 0,
@@ -550,7 +551,9 @@ test("a service without a mail key still creates invite links and says email isn
     const before = resend.requests.length;
     const created = await post("/v1/team/invites", { label: "Sky", email: "sky@example.com" }, team.admin_key);
     assert.deepEqual(created.email, { address: "sky@example.com", sent: false, message: "This token service isn't set up to send email." });
-    assert.match(created.link, /\/join\/[0-9A-Z-]{14}$/);
+    assert.match(created.link, /^https:\/\/guesty-tokens\.staykit\.ai\/join\/[0-9A-Z-]{14}$/);
+    // Codes from the hosted service work on their own.
+    assert.equal(created.join_command, `guesty join ${created.code}`);
     assert.equal(resend.requests.length, before);
   } finally {
     await plain.dispose();

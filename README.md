@@ -11,7 +11,7 @@ guesty setup
 
 It needs Node.js 20.12 or later. npm 12 blocks installs from a web address by default; with npm 12, add `--allow-remote=all` to the install command.
 
-`guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use Simply VRM's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
+`guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use StayKit's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
 
 ## Install
 
@@ -47,7 +47,7 @@ npm link
 - **A team token service**, which `guesty setup` configures:
 
   ```bash
-  GUESTY_TOKEN_SERVICE_URL=https://guesty-tokens.simplyvacationrentalmanagement.com  # or your own service
+  GUESTY_TOKEN_SERVICE_URL=https://guesty-tokens.staykit.ai  # or your own service
   GUESTY_TOKEN_SERVICE_KEY=gts_...                              # your personal access key
   ```
 
@@ -68,7 +68,7 @@ Guesty allows five OAuth tokens per client ID in any 24 hours. If everyone on a 
 
 The admin runs `guesty setup` and chooses where the team's token lives:
 
-1. **Simply VRM's hosted token service.** It's free, and there's nothing to run.
+1. **StayKit's hosted token service.** It's free, and there's nothing to run. It used to be Simply VRM's, at `guesty-tokens.simplyvacationrentalmanagement.com`; that address still works, and the CLI reads it as the new one.
 2. **A token service you run yourself.** See [Run your own token service](#run-your-own-token-service).
 
 Setup asks for a team name, your name, and the Guesty Open API client ID and secret; Guesty's help article "Using Guesty's Open API" shows how to create them. Booking-engine API credentials are optional. At a terminal, setup shows a menu you move through with the arrow keys and hides the secret as you type it; with piped input, as in scripts, it reads one answer per line. The service checks the credentials with Guesty before saving them. That check uses one of the day's five tokens, and the team then uses that token.
@@ -140,7 +140,7 @@ npx wrangler secret put RESEND_API_KEY
 npm run deploy
 ```
 
-Invite codes from your service include its address, so teammates run `guesty join https://your-service/join/CODE`. Only codes from Simply VRM's hosted service work on their own.
+Invite codes from your service include its address, so teammates run `guesty join https://your-service/join/CODE`. Only codes from StayKit's hosted service work on their own.
 
 ## Getting a raw token
 

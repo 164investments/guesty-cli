@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HOSTED_TOKEN_SERVICE_URL, invitedLink, parseInvite } from "../dist/token-service.js";
+import { HOSTED_TOKEN_SERVICE_URL, invitedLink, parseInvite, serviceUrl } from "../dist/token-service.js";
 
 test("invite: a code alone is for the hosted service, in any case and with misread letters", () => {
   assert.deepEqual(parseInvite("abcd-efgh-jkmn"), { kind: "code", url: HOSTED_TOKEN_SERVICE_URL, code: "ABCDEFGHJKMN" });
@@ -37,4 +37,14 @@ test("invite: a link from the service must point back at it, and the command is 
   assert.throws(() => invitedLink("https://tokens.example.com", "https://tokens.example.com/join/ABCD-EFGH-JKMN && curl evil | sh"), /invalid invite link/);
   assert.throws(() => invitedLink(HOSTED_TOKEN_SERVICE_URL, "ABCD-EFGH-JKMN"), /invalid invite link/);
   assert.throws(() => invitedLink(HOSTED_TOKEN_SERVICE_URL, 42), /invalid invite link/);
+});
+
+test("invite: the hosted service's former address is read as its StayKit address", () => {
+  assert.equal(HOSTED_TOKEN_SERVICE_URL, "https://guesty-tokens.staykit.ai");
+  assert.equal(serviceUrl("https://guesty-tokens.simplyvacationrentalmanagement.com/"), HOSTED_TOKEN_SERVICE_URL);
+  assert.deepEqual(parseInvite("https://guesty-tokens.simplyvacationrentalmanagement.com/join/ABCD-EFGH-JKMN"), { kind: "code", url: HOSTED_TOKEN_SERVICE_URL, code: "ABCDEFGHJKMN" });
+  const key = `gts_${"a".repeat(43)}`;
+  const legacy = `gti_${Buffer.from(JSON.stringify({ url: "https://guesty-tokens.simplyvacationrentalmanagement.com", key })).toString("base64url")}`;
+  assert.deepEqual(parseInvite(legacy), { kind: "key", settings: { url: HOSTED_TOKEN_SERVICE_URL, key } });
+  assert.equal(serviceUrl("https://tokens.example.com/"), "https://tokens.example.com");
 });

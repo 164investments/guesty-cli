@@ -72,7 +72,7 @@ function useService(settings: ServiceSettings): string {
 }
 
 function serviceName(url: string): string {
-  return url === HOSTED_TOKEN_SERVICE_URL ? "Simply VRM hosted service" : url;
+  return url === HOSTED_TOKEN_SERVICE_URL ? "StayKit hosted service" : url;
 }
 
 function shortPath(file: string): string {
@@ -136,7 +136,7 @@ async function inviteTeammate(service: ServiceSettings, given: { name?: string; 
 export async function createTeamOn(url: string): Promise<void> {
   const base = serviceUrl(url);
   if (base === HOSTED_TOKEN_SERVICE_URL) {
-    info(`Simply VRM's service stores your Guesty client ID and secret encrypted, and gives the token only to access keys your team creates. ${command("guesty team delete")} removes everything.`);
+    info(`StayKit's service stores your Guesty client ID and secret encrypted, and gives the token only to access keys your team creates. ${command("guesty team delete")} removes everything.`);
   }
   const name = await text("Team name", { placeholder: "Your company's name", check: required("Enter a team name.") });
   const adminLabel = await text("Your name", { placeholder: "Shown to your team's admins", fallback: "Admin" });

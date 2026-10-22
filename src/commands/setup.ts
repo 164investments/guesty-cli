@@ -5,7 +5,7 @@ import { createTeamOn, joinTeam } from "./team.js";
 
 export const setup = new Command("setup")
   .description("Connect this CLI to a token service so your whole team shares one Guesty token")
-  .option("--hosted", "Create a team on Simply VRM's hosted token service")
+  .option("--hosted", "Create a team on StayKit's hosted token service")
   .option("--server <url>", "Create a team on your own token service")
   .option("--join <invite>", "Join a team with an invite code or link")
   .action(async (opts: { hosted?: boolean; server?: string; join?: string }) => {
@@ -16,7 +16,7 @@ export const setup = new Command("setup")
 
       info("Guesty allows five new tokens a day. Your team shares one through a token service, so nobody uses up the rest.");
       const choice = await choose("How do you want to connect?", [
-        { value: "hosted", label: "Create a team on Simply VRM's hosted token service", hint: "free" },
+        { value: "hosted", label: "Create a team on StayKit's hosted token service", hint: "free" },
         { value: "server", label: "Create a team on a token service you run yourself" },
         { value: "join", label: "Join a team with an invite code or link" },
       ]);

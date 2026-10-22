@@ -4,6 +4,8 @@ import { canEmail, clean, closedInvitePage, htmlResponse, joinPage, pacific, sen
 
 export interface InviteEnv extends MailEnv {
   DB: D1Database;
+  // The address invite links use, for a service that answers on more than one.
+  PUBLIC_URL?: string;
 }
 
 export interface Inviter {
@@ -14,7 +16,7 @@ export interface Inviter {
 }
 
 // The CLI's default service, so its invite codes work without a URL.
-const HOSTED_ORIGIN = "https://guesty-tokens.simplyvacationrentalmanagement.com";
+const HOSTED_ORIGIN = "https://guesty-tokens.staykit.ai";
 const HOUR_MS = 60 * 60_000;
 const DAY_MS = 24 * HOUR_MS;
 const INVITE_LIFETIME_MS = 7 * DAY_MS;
@@ -91,8 +93,8 @@ function inviterName(label: string): string | undefined {
   return DEFAULT_NAMES.test(label) ? undefined : label;
 }
 
-function inviteView(request: Request, code: string, team: string, invitedBy: string, expiresAt: number): InviteView {
-  const { origin, host } = new URL(request.url);
+function inviteView(request: Request, env: InviteEnv, code: string, team: string, invitedBy: string, expiresAt: number): InviteView {
+  const { origin, host } = new URL(env.PUBLIC_URL ?? request.url);
   const link = `${origin}/join/${displayCode(code)}`;
   return {
     team,
@@ -193,7 +195,7 @@ export async function createInvite(request: Request, env: InviteEnv, keys: Servi
   if (created.meta.changes !== 1) {
     throw new HttpError(429, "too_many_invites", `This team created ${INVITES_PER_TEAM_PER_DAY} invites in the last 24 hours, the most allowed. Try again tomorrow.`);
   }
-  const view = inviteView(request, code, caller.teamName, caller.label, expiresAt);
+  const view = inviteView(request, env, code, caller.teamName, caller.label, expiresAt);
 
   let emailed: { address: string; sent: boolean; message?: string } | undefined;
   if (email) {
@@ -272,7 +274,7 @@ export async function invitePage(request: Request, env: InviteEnv, keys: Service
   const closed = closedReason(invite, Date.now());
   if (closed) return htmlResponse(closedInvitePage("This invite can't be used", closed, nonce), 410, nonce);
   const code = normalizeCode(value)!;
-  return htmlResponse(joinPage(inviteView(request, code, invite.team_name, invite.invited_by, invite.expires_at), nonce), 200, nonce);
+  return htmlResponse(joinPage(inviteView(request, env, code, invite.team_name, invite.invited_by, invite.expires_at), nonce), 200, nonce);
 }
 
 export async function pendingInvites(env: InviteEnv, teamId: string): Promise<unknown[]> {

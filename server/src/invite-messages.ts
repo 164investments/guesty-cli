@@ -6,7 +6,7 @@ export const INSTALL_COMMAND = "npm install -g https://github.com/164investments
 
 export interface MailEnv {
   RESEND_API_KEY?: string;
-  // For example "Simply VRM <invites@example.com>", on a domain Resend has verified.
+  // For example "StayKit <invites@example.com>", on a domain Resend has verified.
   INVITE_EMAIL_FROM?: string;
 }
 

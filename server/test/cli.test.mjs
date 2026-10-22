@@ -95,7 +95,7 @@ before(async () => {
     bindings: {
       CREDENTIALS_KEY: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),
       RESEND_API_KEY: "re_test_key",
-      INVITE_EMAIL_FROM: "Simply VRM <invites@example.com>",
+      INVITE_EMAIL_FROM: "StayKit <invites@example.com>",
     },
     async outboundService(request) {
       const url = new URL(request.url);
