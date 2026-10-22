@@ -1,30 +1,33 @@
-# Guesty CLI 1.4.0
+# Guesty CLI 1.4.1
 
-Version 1.4.0 gives every operation in Guesty's current API documentation a named command: all 362 Open API operations and all 19 Booking Engine API operations. Nothing documented is left to `guesty raw`. Version 1.3.0's shared team token works the same way.
+Version 1.4.1 fixes `guesty setup` in a terminal and gives setup and the `guesty team` commands a clearer interactive layout.
 
 ## Install or update
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.0/guesty-cli-1.4.0.tgz
+npm install -g https://github.com/164investments/guesty-cli/releases/download/v1.4.1/guesty-cli-1.4.1.tgz
 guesty setup
 ```
 
-Users on 1.2.0 or later can run `guesty update` instead. The release includes `SHA256SUMS` for the compiled tarball.
+Users on 1.2.0 or later can run `guesty update` instead. The CLI needs Node.js 20.12 or later. npm 12 blocks installs from a web address by default; with npm 12, add `--allow-remote=all` to the install command. The release includes `SHA256SUMS` for the compiled tarball.
 
-## New commands
+## Fixed
 
-- **`payments`:** Guesty's new Payments API, with 16 operations. It covers payments, holds, captures, refunds, chargebacks, recorded offline payments and saved payment methods. Guesty's changelog says it replaces the old per-reservation payment endpoints and the guest payment-method endpoints.
-- **`booking-engine` (alias `be`):** every Booking Engine API operation, using the cached booking-engine token (`guesty token --beapi`), `https://booking.guesty.com` and its own rate limits (5 a second, 275 a minute, 16,500 an hour).
-- **`basic-fees`, the channel commission `-v2` commands, owner payout methods, vendor create and update, and the rest of the operations that were reachable only through `raw`.**
+- **Setup questions disappeared in a terminal.** Each question was erased as soon as it appeared, so people typed their answers without seeing what was asked. Every question now stays on screen.
+- **Installing printed an npm warning about a blocked install script.** The package is built before it's published, so installing runs no script, and npm no longer warns.
 
-## Deprecated commands
+## Changed
 
-26 more commands are marked deprecated, because Guesty deprecated their endpoints or its changelog names a replacement. They still work. Each prints a notice on stderr naming its replacement and leaves stdout unchanged, so scripts keep working. [`docs/endpoint-coverage-2026-10-21.md`](docs/endpoint-coverage-2026-10-21.md) lists each one and its replacement, along with the places where Guesty's documentation contradicts itself and how the CLI handles them.
+- **Interactive setup.** At a terminal, `guesty setup` offers its choices in a menu you move through with the arrow keys, masks the client secret as you type it, shows a spinner while Guesty checks the credentials, and ends with a summary and the next command to run. Ctrl+C stops it without saving anything. If Guesty rejects the credentials, setup says so next to the step that failed.
+- **Team commands.** `guesty team invite`, `join`, `credentials` and `delete` use the same layout. `guesty team invite` prints the invite code on its own line, so it copies cleanly.
+- **`guesty team status`** shows tokens, recent token requests and access keys as a readable summary at a terminal. When its output is piped, it still prints JSON.
+- **Scripts keep working.** With piped input, setup still reads one answer per line, and the menu still takes 1, 2 or 3. An empty answer to a required question now stops setup with a message instead of asking again.
+- **Node.js 20.12 or later** is now required, up from 18, which reached end of life in April 2025.
 
 ## Unchanged
 
-The CLI still never requests OAuth tokens. The team token service from 1.3.0 (`guesty setup`, `guesty team`), the `SUPABASE_URL` cache, and the `token`, `raw` and 401 behavior are unchanged.
+The CLI still never requests OAuth tokens. The token service, the `SUPABASE_URL` cache, and the `token`, `raw` and API commands are unchanged.
 
 ## Verification
 
-`npm run check` runs strict TypeScript 7 checks, 657 offline tests and the contract check. The contract confirms that every documented Open API and Booking Engine operation has a command. `npm run check:server` type-checks and tests the token service and drives this CLI through team setup against it. No test contacts Guesty, and the new write commands are tested offline only.
+`npm run check` runs strict TypeScript 7 checks, 657 offline tests and the contract check. `npm run check:server` type-checks and tests the token service, and drives this CLI through team setup against it. That includes two new tests that run setup in a pseudo-terminal: one completes setup and confirms the secret never appears on screen, and one confirms Ctrl+C saves nothing and sends nothing. A separate terminal-emulator check went through every setup and team screen and confirmed each question is visible. No test contacts Guesty.

@@ -1,6 +1,6 @@
 {
   "name": "guesty-cli",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "CLI for the Guesty property management API with read-only cached-token authentication and rate limiting",
   "type": "module",
   "bin": {
@@ -31,8 +31,7 @@
     "link": "npm run build && npm link",
     "refresh:api-spec": "node scripts/refresh-api-spec.mjs",
     "refresh:booking-engine-spec": "node scripts/refresh-api-spec.mjs --booking-engine",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run build"
+    "prepack": "npm run build"
   },
   "keywords": [
     "guesty",
@@ -47,9 +46,10 @@
     "url": "git+https://github.com/164investments/guesty-cli.git"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.12"
   },
   "dependencies": {
+    "@clack/prompts": "^1.8.1",
     "commander": "^13.0.0"
   },
   "devDependencies": {

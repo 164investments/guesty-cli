@@ -1,8 +1,10 @@
+import { homedir } from "node:os";
 import { Command } from "commander";
 import { saveSettings } from "../config.js";
 import { print } from "../output.js";
-import { ask, askRequired, confirm } from "../prompt.js";
+import { command, confirm, done, frame, info, interactive, required, secret, success, summary, task, text, warn } from "../prompt.js";
 import {
+  HOSTED_TOKEN_SERVICE_URL,
   TOKEN_SERVICE_KEY_ENV,
   TOKEN_SERVICE_URL_ENV,
   callTokenService,
@@ -21,8 +23,20 @@ interface CreatedTeam {
   beapi_error?: { message: string };
 }
 
-function note(message: string): void {
-  process.stderr.write(`${message}\n`);
+interface TeamStatus {
+  team: { name: string; max_requests_per_day: number };
+  token_types: {
+    token_type: "openapi" | "beapi";
+    configured: boolean;
+    token_expires_at: number | null;
+    requests_last_24h: number;
+    last_request: { requested_at: number; outcome: string; http_status: number | null } | null;
+  }[];
+  keys: { label: string; role: string; last_used_at: number | null; revoked_at: number | null }[];
+}
+
+function tryIt(): string {
+  return `This CLI now uses your team's shared Guesty token. Try it: ${command("guesty listings list")}`;
 }
 
 function currentService(): ServiceSettings {
@@ -31,17 +45,31 @@ function currentService(): ServiceSettings {
   return service;
 }
 
-function useService(settings: ServiceSettings): void {
+function useService(settings: ServiceSettings): string {
   // The key comes from the service, which may be someone else's server.
   if (!isAccessKey(settings.key)) throw new Error("The token service returned an invalid access key. Nothing was saved.");
-  const file = saveSettings({ [TOKEN_SERVICE_URL_ENV]: settings.url, [TOKEN_SERVICE_KEY_ENV]: settings.key });
-  note(`Saved to ${file}.`);
+  return saveSettings({ [TOKEN_SERVICE_URL_ENV]: settings.url, [TOKEN_SERVICE_KEY_ENV]: settings.key });
+}
+
+function serviceName(url: string): string {
+  return url === HOSTED_TOKEN_SERVICE_URL ? "Simply VRM hosted service" : url;
+}
+
+function shortPath(file: string): string {
+  const home = homedir();
+  return file.startsWith(`${home}/`) ? `~${file.slice(home.length)}` : file;
+}
+
+function pacific(ms: number): string {
+  return new Date(ms).toLocaleString("en-US", {
+    timeZone: "America/Los_Angeles", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+  });
 }
 
 async function askCredentials(kind: string): Promise<{ client_id: string; client_secret: string }> {
   return {
-    client_id: await askRequired(`Guesty ${kind} client ID: `),
-    client_secret: await askRequired(`Guesty ${kind} client secret: `, { hidden: true }),
+    client_id: await text(`Guesty ${kind} client ID`, { check: required("Paste the client ID.") }),
+    client_secret: await secret(`Guesty ${kind} client secret`, required("Paste the client secret.")),
   };
 }
 
@@ -49,30 +77,46 @@ async function askCredentials(kind: string): Promise<{ client_id: string; client
 // uses one of the account's daily tokens; that token then serves the team.
 export async function createTeamOn(url: string): Promise<void> {
   const base = serviceUrl(url);
-  const name = await askRequired("Team name: ");
-  const adminLabel = await ask("Your name, shown to your team's admins [Admin]: ", { fallback: "Admin" });
-  note('Use an Open API key from your Guesty account. Guesty\'s help article "Using Guesty\'s Open API" shows how to create one.');
-  const openapi = await askCredentials("Open API");
-  const beapi = await confirm("Also add booking-engine API credentials?") ? await askCredentials("booking-engine") : undefined;
-  note("Checking the credentials with Guesty...");
-  const created = await callTokenService<CreatedTeam>(base, "POST", "/v1/teams", {
-    body: { name, admin_label: adminLabel, credentials: { openapi, ...(beapi ? { beapi } : {}) } },
-  });
-  useService({ url: base, key: created.admin_key });
-  if (created.recovered) {
-    note(`These credentials already belong to the team "${created.team.name}". This CLI now has a new admin key for it.`);
-  } else {
-    note(`Team "${created.team.name}" is ready, and this CLI uses its shared token.`);
+  if (base === HOSTED_TOKEN_SERVICE_URL) {
+    info(`Simply VRM's service stores your Guesty client ID and secret encrypted, and gives the token only to access keys your team creates. ${command("guesty team delete")} removes everything.`);
   }
-  if (created.beapi_error) note(`Booking-engine credentials were not added: ${created.beapi_error.message}`);
-  note('Invite a teammate with: guesty team invite "Their name"');
+  const name = await text("Team name", { placeholder: "Your company's name", check: required("Enter a team name.") });
+  const adminLabel = await text("Your name", { placeholder: "Shown to your team's admins", fallback: "Admin" });
+  info('Next, your Guesty Open API key. Guesty\'s help article "Using Guesty\'s Open API" shows how to create one.');
+  const openapi = await askCredentials("Open API");
+  const beapi = await confirm("Add booking engine API credentials too?") ? await askCredentials("booking engine") : undefined;
+  const created = await task(
+    "Checking your credentials with Guesty",
+    () => "Guesty accepted your credentials",
+    "Setup stopped",
+    () => callTokenService<CreatedTeam>(base, "POST", "/v1/teams", {
+      body: { name, admin_label: adminLabel, credentials: { openapi, ...(beapi ? { beapi } : {}) } },
+    }),
+  );
+  const file = useService({ url: base, key: created.admin_key });
+  if (created.recovered) {
+    info(`These credentials already belong to the team "${created.team.name}". This CLI now has a new admin key for it.`);
+  }
+  if (created.beapi_error) warn(`Booking engine credentials were not added: ${created.beapi_error.message}`);
+  summary(created.recovered ? `Reconnected to "${created.team.name}"` : `Team "${created.team.name}" is ready`, [
+    ["Service", serviceName(base)],
+    ["Your role", "Admin"],
+    ["Settings", shortPath(file)],
+    ["Invite", command('guesty team invite "Their name"')],
+  ]);
+  done(tryIt());
 }
 
 export async function joinTeam(code: string): Promise<void> {
   const settings = decodeInvite(code);
-  await callTokenService(settings.url, "POST", "/v1/token", { key: settings.key, body: { token_type: "openapi" } });
-  useService(settings);
-  note("Joined. This CLI now uses your team's shared Guesty token.");
+  await task("Joining your team", () => "Joined your team", "Couldn't join the team", () =>
+    callTokenService(settings.url, "POST", "/v1/token", { key: settings.key, body: { token_type: "openapi" } }));
+  const file = useService(settings);
+  summary("You're on the team", [
+    ["Service", serviceName(settings.url)],
+    ["Settings", shortPath(file)],
+  ]);
+  done(tryIt());
 }
 
 export const team = new Command("team")
@@ -82,7 +126,7 @@ team
   .command("join")
   .description("Join a team with the invite code its admin sent you")
   .argument("<invite>", "Invite code from guesty team invite")
-  .action(async (invite: string) => { await joinTeam(invite); });
+  .action(async (invite: string) => { await frame("Join a team", () => joinTeam(invite)); });
 
 team
   .command("invite")
@@ -91,13 +135,20 @@ team
   .option("--admin", "Let this teammate manage the team too")
   .action(async (name: string, opts: { admin?: boolean }) => {
     const service = currentService();
-    const created = await callTokenService<{ key: string }>(service.url, "POST", "/v1/team/keys", {
-      key: service.key,
-      body: { label: name, role: opts.admin ? "admin" : "member" },
+    let code = "";
+    await frame("Invite a teammate", async () => {
+      const created = await task(`Creating an access key for ${name}`, () => `Created ${name}'s access key`, "Couldn't create the key", () =>
+        callTokenService<{ key: string }>(service.url, "POST", "/v1/team/keys", {
+          key: service.key,
+          body: { label: name, role: opts.admin ? "admin" : "member" },
+        }));
+      if (!isAccessKey(created.key)) throw new Error("The token service returned an invalid access key.");
+      code = encodeInvite({ url: service.url, key: created.key });
+      info(`Send ${name} this code privately. They run ${command("guesty setup")} and choose "Join a team with an invite code", or run ${command("guesty team join <code>")}.`);
+      done(`Invite code for ${name}:`);
     });
-    if (!isAccessKey(created.key)) throw new Error("The token service returned an invalid access key.");
-    note(`Send this invite code to ${name} privately. They run: guesty team join <code>`);
-    print(encodeInvite({ url: service.url, key: created.key }));
+    // Printed on its own, outside the frame, so it copies cleanly.
+    print(code);
   });
 
 team
@@ -107,7 +158,7 @@ team
   .action(async (name: string) => {
     const service = currentService();
     await callTokenService(service.url, "DELETE", `/v1/team/keys/${encodeURIComponent(name)}`, { key: service.key });
-    note(`Revoked ${name}'s key. A token they already have works until it expires, at most 24 hours.`);
+    success(`Revoked ${name}'s key. A token they already have works until it expires, at most 24 hours.`);
   });
 
 team
@@ -115,7 +166,33 @@ team
   .description("Show the team's tokens, recent token requests and access keys (admin)")
   .action(async () => {
     const service = currentService();
-    print(await callTokenService(service.url, "GET", "/v1/team", { key: service.key }));
+    const status = await callTokenService<TeamStatus>(service.url, "GET", "/v1/team", { key: service.key });
+    if (!interactive() || !process.stdout.isTTY) {
+      print(status);
+      return;
+    }
+    await frame(`Team "${status.team.name}"`, async () => {
+      for (const type of status.token_types) {
+        const title = type.token_type === "openapi" ? "Open API" : "Booking engine";
+        if (!type.configured) {
+          summary(title, [["Status", `Not set up. Add it with ${command(`guesty team credentials${type.token_type === "beapi" ? " --beapi" : ""}`)}`]]);
+          continue;
+        }
+        const last = type.last_request;
+        summary(title, [
+          ["Token", type.token_expires_at && type.token_expires_at > Date.now()
+            ? `Valid until ${pacific(type.token_expires_at)}`
+            : "None yet. The next request gets one"],
+          ["Requests", `${type.requests_last_24h} of Guesty's 5 in the last 24 hours`],
+          ["Last request", last ? `${last.outcome}${last.http_status ? ` (HTTP ${last.http_status})` : ""}, ${pacific(last.requested_at)}` : "None in the last 24 hours"],
+        ]);
+      }
+      summary("Access keys", status.keys.map((key) => [
+        key.label,
+        `${key.role}, ${key.revoked_at ? "revoked" : key.last_used_at ? `last used ${pacific(key.last_used_at)}` : "never used"}`,
+      ]));
+      done(`The team may make ${status.team.max_requests_per_day} token requests a day. Change it with ${command("guesty team limit <1-5>")}.`);
+    });
   });
 
 team
@@ -124,11 +201,11 @@ team
   .option("--beapi", "Replace the booking-engine token instead of the Open API token")
   .action(async (opts: { beapi?: boolean }) => {
     const service = currentService();
-    const result = await callTokenService<{ expires_at: number }>(service.url, "POST", "/v1/team/refresh", {
-      key: service.key,
-      body: { token_type: opts.beapi ? "beapi" : "openapi" },
-    });
-    note(`New token issued; it expires ${new Date(result.expires_at).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })} Pacific.`);
+    await task("Asking the token service for a new token", (result) => `New token issued. It expires ${pacific(result.expires_at)}.`, "No new token was issued", () =>
+      callTokenService<{ expires_at: number }>(service.url, "POST", "/v1/team/refresh", {
+        key: service.key,
+        body: { token_type: opts.beapi ? "beapi" : "openapi" },
+      }));
   });
 
 team
@@ -137,13 +214,15 @@ team
   .option("--beapi", "Set booking-engine API credentials instead of Open API")
   .action(async (opts: { beapi?: boolean }) => {
     const service = currentService();
-    const input = await askCredentials(opts.beapi ? "booking-engine" : "Open API");
-    note("Checking the credentials with Guesty...");
-    await callTokenService(service.url, "PUT", "/v1/team/credentials", {
-      key: service.key,
-      body: { token_type: opts.beapi ? "beapi" : "openapi", ...input },
+    await frame("Update Guesty credentials", async () => {
+      const input = await askCredentials(opts.beapi ? "booking engine" : "Open API");
+      await task("Checking the credentials with Guesty", () => "Guesty accepted the credentials", "Nothing was changed", () =>
+        callTokenService(service.url, "PUT", "/v1/team/credentials", {
+          key: service.key,
+          body: { token_type: opts.beapi ? "beapi" : "openapi", ...input },
+        }));
+      done("Saved. The team now uses the new credentials.");
     });
-    note("Saved. The team now uses the new credentials.");
   });
 
 team
@@ -154,7 +233,7 @@ team
     const service = currentService();
     const value = Number(count);
     await callTokenService(service.url, "PATCH", "/v1/team", { key: service.key, body: { max_requests_per_day: value } });
-    note(`The team may now make ${value} token requests in any 24 hours.`);
+    success(`The team may now make ${value} token requests in any 24 hours.`);
   });
 
 team
@@ -163,11 +242,14 @@ team
   .option("--yes", "Confirm without asking")
   .action(async (opts: { yes?: boolean }) => {
     const service = currentService();
-    if (!opts.yes && !await confirm("Delete this team and its stored Guesty credentials for everyone?")) {
-      note("Nothing was deleted.");
-      return;
-    }
-    await callTokenService(service.url, "DELETE", "/v1/team", { key: service.key });
-    saveSettings({ [TOKEN_SERVICE_URL_ENV]: null, [TOKEN_SERVICE_KEY_ENV]: null });
-    note("Deleted the team and removed this CLI's token-service settings.");
+    await frame("Delete the team", async () => {
+      if (!opts.yes && !await confirm("Delete this team and its stored Guesty credentials for everyone?")) {
+        done("Nothing was deleted.");
+        return;
+      }
+      await task("Deleting the team", () => "Deleted the team", "Nothing was deleted", () =>
+        callTokenService(service.url, "DELETE", "/v1/team", { key: service.key }));
+      saveSettings({ [TOKEN_SERVICE_URL_ENV]: null, [TOKEN_SERVICE_KEY_ENV]: null });
+      done("Deleted the team and removed this CLI's token-service settings.");
+    });
   });
