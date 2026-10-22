@@ -78,13 +78,12 @@ function shape(value, names = false) {
 }
 
 // Guesty fills some date-time defaults with the time it built the page, so
-// they change with every publication.
+// their value changes with every publication. Whether there is one still counts.
 function withoutBuildTimes(value) {
   if (Array.isArray(value)) return value.map(withoutBuildTimes);
   if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !(key === "default" && value.format === "date-time"))
-    .map(([key, item]) => [key, withoutBuildTimes(item)]));
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key,
+    key === "default" && value.format === "date-time" && typeof item === "string" ? "a date-time" : withoutBuildTimes(item)]));
 }
 
 // A value and every component it reaches, so a change inside a shared schema
@@ -104,9 +103,17 @@ function footprint(schema, value) {
   return withoutBuildTimes({ value, components: Object.fromEntries([...components].sort(([a], [b]) => a.localeCompare(b))) });
 }
 
-const request = (schema, { pathItem, operation }) => footprint(schema, {
-  parameters: [...(pathItem.parameters ?? []), ...(operation.parameters ?? [])], requestBody: operation.requestBody ?? null,
-});
+// Authentication is part of the request: the operation's own requirement or
+// the document's, and the schemes it names (by name, not by $ref).
+function request(schema, { pathItem, operation }) {
+  const security = operation.security ?? schema.security ?? [];
+  const schemes = [...new Set(security.flatMap(Object.keys))].sort()
+    .map((name) => [name, schema.components?.securitySchemes?.[name] ?? null]);
+  return footprint(schema, {
+    parameters: [...(pathItem.parameters ?? []), ...(operation.parameters ?? [])], requestBody: operation.requestBody ?? null,
+    security, schemes: Object.fromEntries(schemes),
+  });
+}
 const response = (schema, { operation }) => footprint(schema, operation.responses ?? {});
 const whole = (schema, { pathItem, operation: { deprecated, ...operation } }) => footprint(schema, { pathParameters: pathItem.parameters ?? [], operation });
 
@@ -220,7 +227,7 @@ function siteSection(result, cliSpec) {
       ...list("Removed", changes.removed, operationLine),
       ...list("Newly deprecated", changes.deprecated, operationLine),
       ...list("No longer deprecated", changes.undeprecated, operationLine),
-      ...list("Parameters or request body changed", changes.request, operationLine),
+      ...list("Parameters, request body or authentication changed", changes.request, operationLine),
       ...list("Response changed", changes.response, operationLine),
       ...list("Only descriptions or examples changed", changes.wording, operationLine),
     ];

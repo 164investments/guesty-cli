@@ -176,6 +176,28 @@ test("a failed site is reported and leaves its files alone", async (t) => {
   assert.equal(readFileSync(join(watch.root, "openapi-spec.json"), "utf8"), original);
 });
 
+test("authentication and a default's presence are contract changes; a new build time isn't", () => {
+  const spec = ({ security, scheme = { type: "http", scheme: "bearer" }, at = "2026-10-21T11:11:45.748Z" } = {}) => ({
+    ...document,
+    paths: {
+      "/a": { get: { tags: ["A"], summary: "A", ...(security ? { security } : {}), responses: { 200: ok() } } },
+      "/b": { post: { tags: ["B"], summary: "B", requestBody: stamped(at), responses: { 200: ok() } } },
+    },
+    components: { securitySchemes: { bearerAuth: scheme, apiKey: { type: "apiKey", in: "header", name: "X-Key" } } },
+  });
+  const changed = (next) => {
+    const changes = describeChanges(spec(), next, OPEN_API);
+    return Object.fromEntries(["request", "response", "wording"].map((key) => [key, changes[key].map((item) => item.path)]));
+  };
+  assert.deepEqual(changed(spec({ security: [{ apiKey: [] }] })), { request: ["/v1/a"], response: [], wording: [] }, "an operation's own requirement");
+  assert.deepEqual(changed(spec({ scheme: { type: "apiKey", in: "query", name: "token" } })), { request: ["/v1/a", "/v1/b"], response: [], wording: [] }, "the document's scheme");
+  assert.deepEqual(changed(spec({ scheme: { type: "http", scheme: "bearer", description: "Reworded" } })), { request: [], response: [], wording: [] }, "a scheme's description is not a contract change");
+  assert.deepEqual(changed(spec({ at: "2026-10-22T11:55:00.141Z" })), { request: [], response: [], wording: [] }, "a new build time");
+  const withoutDefault = spec();
+  delete withoutDefault.paths["/b"].post.requestBody.content["application/json"].schema.properties.at.default;
+  assert.deepEqual(changed(withoutDefault), { request: ["/v1/b"], response: [], wording: [] }, "a default removed");
+});
+
 test("changelog entries after the recorded one, or after a date when it's gone", () => {
   const entries = [{ slug: "c", createdAt: "2026-10-23T00:00:00Z" }, { slug: "b", createdAt: "2026-10-22T00:00:00Z" }, { slug: "a", createdAt: "2026-10-21T00:00:00Z" }];
   assert.deepEqual(newChangelogEntries(entries, { latest: "b" }).map((entry) => entry.slug), ["c"]);
