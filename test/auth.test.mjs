@@ -316,6 +316,13 @@ test("token service on this machine may use plain HTTP for local development", (
   assert.equal(result.trace.requests[0].url, "http://127.0.0.1:8787/v1/token");
 });
 
+test("token service: control characters in a service message never reach the terminal", (t) => {
+  const result = run(t, ["token"], { team: true, teamStatus: 503, teamBody: { error: "limit_reached", message: "Limit \u001b]0;renamed\u0007 reached\u001b[2J" } });
+  assert.equal(result.status, 1);
+  assert.doesNotMatch(result.stderr, /[\u001b\u0007]/);
+  assert.match(result.stderr, /Limit \?\]0;renamed\? reached\?\[2J/);
+});
+
 test("token service: a 401 retries once with a newer shared token", (t) => {
   const result = run(t, ["raw", "GET", "/v1/listings"], {
     team: true,

@@ -16,6 +16,7 @@ This TypeScript CLI uses Commander for commands and native `fetch` for Guesty's 
 
 ## Implementation and verification
 
+- `src/prompt.ts` owns prompts and messages for `setup` and `team`. At a terminal it uses `@clack/prompts`; with piped input it prints plain prompts and reads one line per question, which tests and scripts rely on. Keep both paths asking the same questions in the same order, and keep results on stdout and everything else on stderr. `npm run check:server` also drives setup in a pseudo-terminal.
 - `src/commands/` defines CLI commands; `src/client.ts` centralizes API requests, retries, and rate limiting; `src/env.ts` loads configuration. Check the relevant source before changing behavior.
 - For command or option changes, regenerate the machine-readable contract with `npm run generate:cli-spec` and inspect its diff. Keep the README's authentication/setup guidance consistent with the implementation.
 - Run `npm ci`, then `npm run check` for authentication or command changes. This compiles strict TypeScript and runs offline regression tests. `npm run typecheck` is available when a standalone type check is sufficient. No separate formatter or linter is configured.

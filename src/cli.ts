@@ -49,6 +49,8 @@ import { token } from "./commands/token.js";
 import { setup } from "./commands/setup.js";
 import { team } from "./commands/team.js";
 import { checkForUpdate, runSelfUpdate } from "./update-check.js";
+import { ShownError } from "./prompt.js";
+import { printable } from "./output.js";
 
 function getCliVersion(): string {
   try {
@@ -122,7 +124,8 @@ program.parseAsync()
     if (process.stdout.isTTY && process.stderr.isTTY && !skipUpdateCheck) await checkForUpdate();
   })
   .catch((err: Error) => {
-    const message = err instanceof SyntaxError ? "Invalid JSON input. Check the JSON supplied through --data or stdin." : err.message;
-    process.stderr.write(`Error: ${message}\n`);
     process.exitCode = 1;
+    if (err instanceof ShownError) return;
+    const message = err instanceof SyntaxError ? "Invalid JSON input. Check the JSON supplied through --data or stdin." : err.message;
+    process.stderr.write(`Error: ${printable(message)}\n`);
   });

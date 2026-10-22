@@ -1,6 +1,8 @@
 // Client for the team token service in server/. Simply VRM hosts one copy;
 // teams can also run their own and point the CLI at it.
 
+import { printable } from "./output.js";
+
 export const HOSTED_TOKEN_SERVICE_URL = "https://guesty-tokens.simplyvacationrentalmanagement.com";
 export const TOKEN_SERVICE_URL_ENV = "GUESTY_TOKEN_SERVICE_URL";
 export const TOKEN_SERVICE_KEY_ENV = "GUESTY_TOKEN_SERVICE_KEY";
@@ -98,7 +100,7 @@ export async function callTokenService<T>(
   }
   if (!res.ok) {
     throw new TokenServiceError(
-      typeof body.message === "string" ? body.message : `The token service returned HTTP ${res.status}.`,
+      typeof body.message === "string" ? printable(body.message) : `The token service returned HTTP ${res.status}.`,
       res.status,
       typeof body.error === "string" ? body.error : undefined,
       typeof body.retry_at === "number" ? body.retry_at : undefined

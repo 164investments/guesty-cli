@@ -2,8 +2,8 @@
 // root) against the bundled Worker in Miniflare. Guesty's token endpoint is
 // mocked; nothing here contacts Guesty.
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const cliPath = join(root, "..", "dist", "cli.js");
 const oauthRequests = [];
 const homes = [];
+const terminals = [];
 let mf;
 let base;
 
@@ -35,6 +36,44 @@ function cli(homeDir, args, input = "") {
     child.on("close", (status) => resolve({ status, stdout, stderr }));
     child.stdin.end(input);
   });
+}
+
+// Runs the CLI in a pseudo-terminal, as a person would, through Python's
+// standard pty module. expect() waits for text, then the test types a reply.
+function terminal(homeDir, args) {
+  // A recent update check keeps the CLI from contacting GitHub afterwards.
+  mkdirSync(join(homeDir, ".guesty-cli"), { recursive: true });
+  writeFileSync(join(homeDir, ".guesty-cli", "update-check.json"), JSON.stringify({ source: "github-release", lastCheck: Date.now(), latestVersion: null }));
+  const env = { ...process.env, HOME: homeDir, TERM: "xterm-256color" };
+  for (const name of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "GUESTY_TOKEN_SERVICE_URL", "GUESTY_TOKEN_SERVICE_KEY", "NO_COLOR", "CI"]) delete env[name];
+  // stty gives the new terminal a size before the CLI starts; it has none otherwise.
+  const shim = "import os, pty, sys; sys.exit(os.waitstatus_to_exitcode(pty.spawn(sys.argv[1:])))";
+  const child = spawn("python3", ["-c", shim, "sh", "-c", 'stty cols 100 rows 40 && exec "$@"', "sh", process.execPath, cliPath, ...args], { cwd: homeDir, env });
+  terminals.push(child);
+  let output = "";
+  let seen = 0;
+  child.stdout.on("data", (chunk) => { output += chunk; });
+  const exit = new Promise((resolve) => child.on("close", resolve));
+  const visible = () => output.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "");
+  return {
+    exit,
+    visible,
+    raw: () => output,
+    async expect(text) {
+      for (const end = Date.now() + 15_000; Date.now() < end;) {
+        const at = visible().indexOf(text, seen);
+        if (at >= 0) {
+          seen = at + text.length;
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      throw new Error(`The terminal never showed "${text}":\n${visible()}`);
+    },
+    type(keys) {
+      child.stdin.write(keys);
+    },
+  };
 }
 
 function settings(homeDir) {
@@ -66,6 +105,7 @@ before(async () => {
 });
 
 after(async () => {
+  for (const child of terminals) child.kill();
   await mf?.dispose();
   for (const dir of homes) rmSync(dir, { recursive: true, force: true });
 });
@@ -145,4 +185,45 @@ test("deleting the team removes it from the service and this CLI's settings", as
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(settings(admin), /GUESTY_TOKEN_SERVICE/);
   assert.equal((await cli(member, ["team", "join", invite])).status, 1);
+});
+
+const hasPython = spawnSync("python3", ["--version"]).status === 0;
+
+test("in a terminal, setup shows each question, masks the secret and creates the team", { skip: !hasPython && "needs python3 for a pseudo-terminal" }, async () => {
+  const dir = home();
+  const session = terminal(dir, ["setup", "--server", base]);
+  await session.expect("Team name");
+  session.type("Terminal Co\r");
+  await session.expect("Your name");
+  session.type("\r");
+  await session.expect("Guesty Open API client ID");
+  session.type("terminal-id\r");
+  await session.expect("Guesty Open API client secret");
+  session.type("terminal-secret\r");
+  await session.expect("Add booking engine API credentials too?");
+  session.type("\r");
+  assert.equal(await session.exit, 0, session.visible());
+  assert.match(session.visible(), /Team "Terminal Co" is ready/);
+  assert.doesNotMatch(session.visible(), /terminal-secret/);
+  assert.match(settings(dir), /^GUESTY_TOKEN_SERVICE_KEY=gts_/m);
+
+  // A key label is whatever an admin typed; status shows it without its escape sequences.
+  assert.equal((await cli(dir, ["team", "invite", "Evil\u001b]0;renamed\u0007"])).status, 0);
+  const status = terminal(dir, ["team", "status"]);
+  assert.equal(await status.exit, 0, status.visible());
+  assert.match(status.visible(), /Evil\?\]0;renamed\?\s+member, never used/);
+  assert.doesNotMatch(status.raw(), /\u001b\]0;renamed/);
+});
+
+test("in a terminal, Ctrl+C stops setup before anything is sent or saved", { skip: !hasPython && "needs python3 for a pseudo-terminal" }, async () => {
+  const dir = home();
+  const before = oauthRequests.length;
+  const session = terminal(dir, ["setup", "--server", base]);
+  await session.expect("Team name");
+  session.type("\x03");
+  assert.equal(await session.exit, 1);
+  assert.match(session.visible(), /Stopped\. Nothing was changed\./);
+  assert.doesNotMatch(session.visible(), /Error:/);
+  assert.equal(settings(dir), "");
+  assert.equal(oauthRequests.length, before);
 });
