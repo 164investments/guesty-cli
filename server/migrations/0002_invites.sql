@@ -8,11 +8,10 @@ CREATE TABLE invites (
   label TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('admin', 'member')),
   invited_by TEXT NOT NULL,
+  -- The inviting key: revoking it cancels the invites it created.
+  invited_by_key TEXT NOT NULL,
   -- Shown in team status while the invite is pending, then cleared.
   email TEXT,
-  -- Kept after the invite closes, so the daily email caps still count it.
-  email_hash TEXT,
-  emailed_at INTEGER,
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
   -- Set when the invite is used or cancelled.
@@ -22,10 +21,25 @@ CREATE TABLE invites (
 );
 
 CREATE INDEX invites_by_team ON invites (team_id, created_at);
-CREATE INDEX invites_by_email ON invites (email_hash, emailed_at);
+CREATE INDEX invites_by_inviter ON invites (invited_by_key);
 
--- Wrong invite codes, by keyed hash of the caller's address, so codes can't
--- be guessed.
+-- Every invite email the service tried to send, failed or not. Not tied to a
+-- team, so deleting and recreating a team can't reset the daily caps: sender
+-- is the team's Guesty client fingerprint, and address a keyed hash of the
+-- normalized address.
+CREATE TABLE invite_emails (
+  sender TEXT NOT NULL,
+  address TEXT NOT NULL,
+  sent_at INTEGER NOT NULL
+);
+
+CREATE INDEX invite_emails_by_sender ON invite_emails (sender, sent_at);
+CREATE INDEX invite_emails_by_address ON invite_emails (address, sent_at);
+CREATE INDEX invite_emails_by_time ON invite_emails (sent_at);
+
+-- Invite code lookups by keyed hash of the caller's address. Each is recorded
+-- before the code is checked and removed when the code is real, so wrong
+-- codes can't be guessed in a burst.
 CREATE TABLE join_failures (
   client_hash TEXT NOT NULL,
   failed_at INTEGER NOT NULL

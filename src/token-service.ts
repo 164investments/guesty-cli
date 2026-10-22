@@ -94,6 +94,26 @@ export function parseInvite(value: string): Invite {
   return { kind: "code", url: HOSTED_TOKEN_SERVICE_URL, code: inviteCode(trimmed) };
 }
 
+export function displayCode(code: string): string {
+  return code.match(/.{4}/g)!.join("-");
+}
+
+// A link a service returned for a new invite. The service may be someone
+// else's server, so the link must point back at it, and the link and the
+// command to share are rebuilt here from the parsed code.
+export function invitedLink(service: string, value: unknown): { link: string; command: string } {
+  let invite: Invite | undefined;
+  try {
+    if (typeof value === "string" && /^https?:\/\//i.test(value)) invite = parseInvite(value);
+  } catch {
+    // Reported below.
+  }
+  if (invite?.kind !== "code") throw new Error("The token service returned an invalid invite link.");
+  if (invite.url !== serviceUrl(service)) throw new Error("The token service returned an invite link for a different service.");
+  const link = `${invite.url}/join/${displayCode(invite.code)}`;
+  return { link, command: `guesty join ${invite.url === HOSTED_TOKEN_SERVICE_URL ? displayCode(invite.code) : link}` };
+}
+
 export function configuredService(): ServiceSettings | undefined {
   const url = process.env[TOKEN_SERVICE_URL_ENV];
   const key = process.env[TOKEN_SERVICE_KEY_ENV];

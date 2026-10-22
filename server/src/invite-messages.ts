@@ -24,8 +24,20 @@ export function canEmail(env: MailEnv): boolean {
   return !!(env.RESEND_API_KEY && env.INVITE_EMAIL_FROM);
 }
 
+// Also drops zero-width and text-direction characters, which can disguise
+// what a name says.
 export function clean(value: string): string {
-  return value.replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ").replace(/\s+/g, " ").trim();
+  return value
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ")
+    .replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Names in an email are cut short, so a stranger can't fill it with a message.
+function short(value: string, max: number): string {
+  const text = clean(value);
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 }
 
 function escape(value: string): string {
@@ -38,20 +50,24 @@ export function pacific(ms: number): string {
   }).format(ms);
 }
 
+function inviter(view: InviteView): string | undefined {
+  return view.inviter && short(view.inviter, 40);
+}
+
 function headline(view: InviteView): string {
-  return view.inviter
-    ? `${clean(view.inviter)} invited you to the ${clean(view.team)} team`
-    : `You're invited to the ${clean(view.team)} team`;
+  const team = short(view.team, 60);
+  return inviter(view) ? `${inviter(view)} invited you to the ${team} team` : `You're invited to the ${team} team`;
 }
 
 const INTRO = "The Guesty CLI lets you work with Guesty from your terminal: listings, reservations, calendars and more. Your team shares one Guesty API token, so you don't need your own.";
 
+// The team name stays out of the subject, which mail apps show before anything else.
 export function inviteSubject(view: InviteView): string {
-  return `${headline(view)} on Guesty CLI`;
+  return inviter(view) ? `${inviter(view)} invited you to Guesty CLI` : "You're invited to a team on Guesty CLI";
 }
 
 export function inviteEmailText(view: InviteView): string {
-  const sender = view.inviter ? clean(view.inviter) : `An admin of the ${clean(view.team)} team`;
+  const sender = inviter(view) ?? `An admin of the ${short(view.team, 60)} team`;
   return [
     `${headline(view)} on Guesty CLI.`,
     "",
@@ -84,7 +100,7 @@ function emailStep(number: number, body: string): string {
 }
 
 export function inviteEmailHtml(view: InviteView): string {
-  const sender = view.inviter ? escape(clean(view.inviter)) : `An admin of the ${escape(clean(view.team))} team`;
+  const sender = escape(inviter(view) ?? `An admin of the ${short(view.team, 60)} team`);
   const command = `${INSTALL_COMMAND} && ${view.joinCommand}`;
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${escape(inviteSubject(view))}</title></head>
@@ -174,7 +190,7 @@ const COPY_SCRIPT = `for (const button of document.querySelectorAll("button[data
 
 export function joinPage(view: InviteView, nonce: string): string {
   const command = `${INSTALL_COMMAND} && ${view.joinCommand}`;
-  return page(`Join ${clean(view.team)} · Guesty CLI`, `
+  return page(`Join ${short(view.team, 60)} · Guesty CLI`, `
 <h1>${escape(headline(view))}</h1>
 <p>${escape(INTRO)}</p>
 <ol>
@@ -182,7 +198,7 @@ export function joinPage(view: InviteView, nonce: string): string {
 <li><h2>Install the Guesty CLI and join</h2><p>Open Terminal (Command Prompt on Windows) on the computer where you'll use the CLI, and run:</p><div class="command"><code id="join">${escape(command)}</code><button type="button" data-copy="join">Copy</button></div></li>
 <li><h2>Try it</h2><p>Your CLI now uses the team's token.</p><div class="command"><code id="try">guesty listings list</code><button type="button" data-copy="try">Copy</button></div></li>
 </ol>
-<p class="note">This invite works once and expires ${escape(pacific(view.expiresAt))}. Already have the CLI? Run <code class="inline">${escape(view.joinCommand)}</code>.</p>`, nonce, COPY_SCRIPT);
+<p class="note">This invite works once and expires ${escape(pacific(view.expiresAt))}. Already have Guesty CLI 1.5 or later? Run <code class="inline">${escape(view.joinCommand)}</code>.</p>`, nonce, COPY_SCRIPT);
 }
 
 export function closedInvitePage(heading: string, detail: string, nonce: string): string {

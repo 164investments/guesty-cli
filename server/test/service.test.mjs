@@ -396,6 +396,7 @@ test("an invite link shows the steps, and its code works once for a member key",
     const html = await page.text();
     assert.match(html, /Dana invited you to the Acme team/);
     assert.ok(html.includes(`releases/latest/download/guesty-cli.tgz &#38;&#38; ${joinCommand}`));
+    assert.match(html, /Already have Guesty CLI 1\.5 or later\?/);
   }
 
   // Lower case, spaces, and O and l for 0 and 1 all read as the same code.
@@ -439,7 +440,7 @@ test("a new invite for the same name replaces the pending one; revoke cancels it
 });
 
 test("an emailed invite goes through Resend once, escapes the names, and keeps to the daily caps", async () => {
-  const sender = (await callJson("POST", "/v1/team/keys", { key: admin, body: { label: "<b>Ana</b>\u001b[31m", role: "admin" } })).body.key;
+  const sender = (await callJson("POST", "/v1/team/keys", { key: admin, body: { label: "<b>Ana</b>\u001b[31m\u202e\u200b", role: "admin" } })).body.key;
   resend.requests.length = 0;
   const created = await invite(sender, { label: "Quinn", email: " quinn@example.com " });
   assert.equal(created.status, 201);
@@ -449,10 +450,11 @@ test("an emailed invite goes through Resend once, escapes the names, and keeps t
   assert.equal(authorization, "Bearer re_test_key");
   assert.equal(sent.from, "Simply VRM <invites@example.com>");
   assert.deepEqual(sent.to, ["quinn@example.com"]);
-  assert.equal(sent.subject, "<b>Ana</b> [31m invited you to the Acme team on Guesty CLI");
+  // The team name stays out of the subject; names lose control, zero-width and direction characters.
+  assert.equal(sent.subject, "<b>Ana</b> [31m invited you to Guesty CLI");
   assert.ok(sent.html.includes("&#60;b&#62;Ana&#60;/b&#62; [31m invited you to the Acme team"));
   assert.doesNotMatch(sent.html, /<b>Ana/);
-  assert.doesNotMatch(sent.subject + sent.html + sent.text, /\u001b/);
+  assert.doesNotMatch(sent.subject + sent.html + sent.text, /[\u001b\u202e\u200b]/);
   assert.ok(sent.text.includes(`guesty-cli.tgz && ${created.body.join_command}`));
   assert.ok(sent.html.includes(`href="${created.body.link}"`));
   assert.match(sent.text, /works once and expires (Mon|Tue|Wed|Thu|Fri|Sat|Sun), [A-Z][a-z]{2} \d{1,2}, \d{1,2}:\d{2} [AP]M P[DS]T\./);
@@ -461,8 +463,9 @@ test("an emailed invite goes through Resend once, escapes the names, and keeps t
   assert.doesNotMatch(page, /<b>Ana/);
   assert.equal((await callJson("GET", "/v1/team", { key: admin })).body.invites.find(({ label }) => label === "Quinn").email, "quinn@example.com");
 
-  // Three emails a day per address, whatever its case.
-  for (const label of ["Quinn 2", "Quinn 3"]) assert.equal((await invite(admin, { label, email: "QUINN@example.com" })).body.email.sent, true);
+  // Three emails a day per address, whatever its case or plus tag.
+  assert.equal((await invite(admin, { label: "Quinn 2", email: "QUINN+cli@example.com" })).body.email.sent, true);
+  assert.equal((await invite(admin, { label: "Quinn 3", email: "quinn+other@example.com" })).body.email.sent, true);
   const capped = await invite(admin, { label: "Quinn 4", email: "quinn@example.com" });
   assert.equal(capped.status, 201);
   assert.deepEqual(capped.body.email, { address: "quinn@example.com", sent: false, message: "That address got 3 invite emails in the last 24 hours, the most allowed." });
@@ -475,20 +478,53 @@ test("an emailed invite goes through Resend once, escapes the names, and keeps t
   assert.equal((await call("GET", `/join/${failed.body.code}`)).status, 200);
   assert.equal(resend.requests.length, 4);
 
-  // Twenty emails a day per team.
+  // Twenty emails a day per team, failed sends included.
   const teamId = (await callJson("GET", "/v1/team", { key: admin })).body.team.id;
-  for (let n = 0; n < 20; n += 1) {
-    await sql("INSERT INTO invites (code_hash, team_id, label, role, invited_by, created_at, expires_at, closed_at, emailed_at) VALUES (?, ?, ?, 'member', 'Dana', ?, ?, ?, ?)",
-      `earlier-${n}`, teamId, `Earlier ${n}`, Date.now(), Date.now(), Date.now(), Date.now()).run();
-  }
+  const { fingerprint } = await sql("SELECT fingerprint FROM credentials WHERE team_id = ? AND token_type = 'openapi'", teamId).first();
+  assert.equal((await sql("SELECT COUNT(*) AS n FROM invite_emails WHERE sender = ?", fingerprint).first()).n, 4);
+  for (let n = 0; n < 16; n += 1) await sql("INSERT INTO invite_emails (sender, address, sent_at) VALUES (?, ?, ?)", fingerprint, `earlier-${n}`, Date.now()).run();
   assert.equal((await invite(admin, { label: "Blair", email: "blair@example.com" })).body.email.message, "This team emailed 20 invites in the last 24 hours, the most allowed.");
-  await sql("DELETE FROM invites WHERE code_hash LIKE 'earlier-%'").run();
+  await sql("DELETE FROM invite_emails WHERE address LIKE 'earlier-%'").run();
   assert.equal(resend.requests.length, 4);
 
-  // Only a pending invite keeps its address; one that was never emailed has none.
+  // Only a pending invite keeps its address, and the email records hold none.
   assert.equal((await callJson("POST", "/v1/join", { body: { code: created.body.code } })).status, 201);
-  const rows = (await sql("SELECT label, email, email_hash FROM invites WHERE label IN ('Quinn', 'Quinn 4', 'Avery') ORDER BY label").all()).results;
-  assert.deepEqual(rows.map(({ label, email, email_hash: hash }) => [label, email, !!hash]), [["Avery", null, false], ["Quinn", null, true], ["Quinn 4", null, false]]);
+  const rows = (await sql("SELECT label, email FROM invites WHERE label IN ('Quinn', 'Quinn 2', 'Quinn 4', 'Avery') ORDER BY label").all()).results;
+  assert.deepEqual(rows.map(({ label, email }) => [label, email]), [["Avery", null], ["Quinn", null], ["Quinn 2", "QUINN+cli@example.com"], ["Quinn 4", null]]);
+  assert.doesNotMatch(JSON.stringify((await sql("SELECT * FROM invite_emails").all()).results), /quinn|avery|example/i);
+});
+
+test("email caps hold for requests sent together and after the team is deleted and recreated", async () => {
+  const first = await createTeam("caps");
+  const before = resend.requests.length;
+  // Gmail ignores dots and plus tags, so these are all one inbox.
+  const addresses = ["r.iver@gmail.com", "river+a@gmail.com", "RIVER@googlemail.com", "ri.ver+b@gmail.com", "river@gmail.com", "riv.er@gmail.com"];
+  const results = await Promise.all(addresses.map((email, n) => invite(first.body.admin_key, { label: `River ${n}`, email })));
+  assert.equal(results.filter(({ body }) => body.email.sent).length, 3);
+  assert.equal(resend.requests.length - before, 3);
+
+  // The history is keyed by the team's Guesty client, so it outlives the team.
+  assert.equal((await call("DELETE", "/v1/team", { key: first.body.admin_key })).status, 200);
+  const again = await createTeam("caps");
+  assert.equal(again.status, 201);
+  const { fingerprint } = await sql("SELECT fingerprint FROM credentials WHERE team_id = ?", again.body.team.id).first();
+  assert.equal((await sql("SELECT COUNT(*) AS n FROM invite_emails WHERE sender = ?", fingerprint).first()).n, 3);
+  for (let n = 0; n < 17; n += 1) await sql("INSERT INTO invite_emails (sender, address, sent_at) VALUES (?, ?, ?)", fingerprint, `earlier-${n}`, Date.now()).run();
+  assert.equal((await invite(again.body.admin_key, { label: "Sky", email: "sky@example.com" })).body.email.message, "This team emailed 20 invites in the last 24 hours, the most allowed.");
+  await sql("DELETE FROM invite_emails WHERE address LIKE 'earlier-%'").run();
+
+  // And the whole service sends at most 200 a day.
+  const { n: sentToday } = await sql("SELECT COUNT(*) AS n FROM invite_emails WHERE sent_at > ?", Date.now() - 86400_000).first();
+  for (let n = sentToday; n < 200; n += 1) await sql("INSERT INTO invite_emails (sender, address, sent_at) VALUES (?, ?, ?)", `elsewhere-${n}`, `elsewhere-${n}`, Date.now()).run();
+  assert.equal((await invite(again.body.admin_key, { label: "Wren", email: "wren@example.com" })).body.email.message, "This token service sent as many invite emails today as it allows.");
+  await sql("DELETE FROM invite_emails WHERE sender LIKE 'elsewhere-%'").run();
+});
+
+test("revoking a key cancels the invites it created", async () => {
+  const temporary = (await callJson("POST", "/v1/team/keys", { key: admin, body: { label: "Temp admin", role: "admin" } })).body.key;
+  const left = (await invite(temporary, { label: "Left behind", role: "admin" })).body;
+  assert.deepEqual((await callJson("DELETE", "/v1/team/keys/Temp%20admin", { key: admin })).body, { revoked: "Temp admin", key: true, invite: false });
+  assert.match((await callJson("POST", "/v1/join", { body: { code: left.code } })).body.message, /was cancelled/);
 });
 
 test("a service without a mail key still creates invite links and says email isn't set up", async () => {
@@ -523,6 +559,12 @@ test("a service without a mail key still creates invite links and says email isn
 
 test("wrong invite codes are limited per address, and an unknown link reflects nothing back", async () => {
   await sql("DELETE FROM join_failures").run();
+  // Requests sent together can't get past the limit either.
+  const burst = await Promise.all(Array.from({ length: 30 }, () => call("POST", "/v1/join", { body: { code: "AAAA-AAAA-AAAA" } })));
+  assert.ok(burst.filter(({ status }) => status === 404).length <= 10);
+  assert.ok(burst.some(({ status }) => status === 429));
+  await sql("DELETE FROM join_failures").run();
+
   for (let n = 0; n < 9; n += 1) assert.equal((await callJson("POST", "/v1/join", { body: { code: "AAAA-AAAA-AAAA" } })).body.error, "invite_not_found");
   const unknown = await call("GET", "/join/%3Cscript%3Ealert(1)%3C%2Fscript%3E");
   assert.equal(unknown.status, 404);
@@ -535,6 +577,14 @@ test("wrong invite codes are limited per address, and an unknown link reflects n
   assert.equal((await call("GET", `/join/${real.code}`)).status, 429);
   await sql("DELETE FROM join_failures").run();
   assert.equal((await callJson("POST", "/v1/join", { body: { code: real.code } })).status, 201);
+
+  // An IPv6 /64 counts as one address.
+  const from = (ip) => ({ "CF-Connecting-IP": ip });
+  for (let n = 1; n <= 10; n += 1) await call("POST", "/v1/join", { body: { code: "AAAA-AAAA-AAAA" }, headers: from(`2001:db8:1:2::${n}`) });
+  const next = (await invite(admin, { label: "Ash" })).body;
+  assert.equal((await call("POST", "/v1/join", { body: { code: next.code }, headers: from("2001:0db8:0001:0002:ffff::9") })).status, 429);
+  assert.equal((await call("POST", "/v1/join", { body: { code: next.code }, headers: from("2001:db8:1:3::1") })).status, 201);
+  await sql("DELETE FROM join_failures").run();
 });
 
 test("bad requests are refused before any work", async () => {

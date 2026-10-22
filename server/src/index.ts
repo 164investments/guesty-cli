@@ -1,7 +1,7 @@
 import { keyedHash, newAccessKey, serviceKeys, type ServiceKeys } from "./crypto.js";
 import { HttpError, errorResponse, json, readBody, requiredText } from "./http.js";
 import type { MailEnv } from "./invite-messages.js";
-import { cancelInvite, createInvite, invitePage, pendingInvites, redeemInvite } from "./invites.js";
+import { cancelInvite, closeInvitesFrom, createInvite, invitePage, pendingInvites, redeemInvite } from "./invites.js";
 import {
   TOKEN_TYPES,
   clientFingerprint,
@@ -34,6 +34,7 @@ interface Caller {
   teamId: string;
   teamName: string;
   label: string;
+  keyHash: string;
   role: "admin" | "member";
   maxPerDay: number;
 }
@@ -109,7 +110,7 @@ async function authenticate(request: Request, env: Env, keys: ServiceKeys): Prom
   if (!row.last_used_at || row.last_used_at < now - LAST_USED_RESOLUTION_MS) {
     await env.DB.prepare("UPDATE access_keys SET last_used_at = ? WHERE key_hash = ?").bind(now, keyHash).run();
   }
-  return { teamId: row.team_id, teamName: row.name, label: row.label, role: row.role, maxPerDay: row.max_requests_per_day };
+  return { teamId: row.team_id, teamName: row.name, label: row.label, keyHash, role: row.role, maxPerDay: row.max_requests_per_day };
 }
 
 async function createTeam(request: Request, env: Env, keys: ServiceKeys): Promise<Response> {
@@ -300,9 +301,9 @@ async function createKey(request: Request, env: Env, keys: ServiceKeys, caller: 
 
 // Revokes the teammate's key and cancels their pending invite, whichever exist.
 async function revokeKey(env: Env, caller: Caller, label: string): Promise<Response> {
-  const key = await env.DB.prepare("SELECT role FROM access_keys WHERE team_id = ? AND label = ? AND revoked_at IS NULL")
+  const key = await env.DB.prepare("SELECT key_hash, role FROM access_keys WHERE team_id = ? AND label = ? AND revoked_at IS NULL")
     .bind(caller.teamId, label)
-    .first<{ role: string }>();
+    .first<{ key_hash: string; role: string }>();
   if (!key) {
     if (await cancelInvite(env, caller.teamId, label)) return json({ revoked: label, key: false, invite: true });
     throw new HttpError(404, "not_found", `This team has no active key or pending invite named ${label}.`);
@@ -313,9 +314,11 @@ async function revokeKey(env: Env, caller: Caller, label: string): Promise<Respo
       .first<{ n: number }>();
     if ((admins?.n ?? 0) <= 1) throw new HttpError(409, "last_admin", "This is the team's only admin key. Create another admin key before revoking it.");
   }
-  await env.DB.prepare("UPDATE access_keys SET revoked_at = ? WHERE team_id = ? AND label = ? AND revoked_at IS NULL")
-    .bind(Date.now(), caller.teamId, label)
-    .run();
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE access_keys SET revoked_at = ? WHERE team_id = ? AND label = ? AND revoked_at IS NULL").bind(now, caller.teamId, label),
+    closeInvitesFrom(env, key.key_hash, now),
+  ]);
   return json({ revoked: label, key: true, invite: await cancelInvite(env, caller.teamId, label) });
 }
 

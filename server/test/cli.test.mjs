@@ -188,7 +188,7 @@ test("an emailed invite shows in status until it's cancelled, and a CLI 1.4 invi
   assert.match(emailed.stderr, /Emailing Lee an invite/);
   assert.equal(emails.length, 1);
   assert.deepEqual(emails[0].to, ["lee@example.com"]);
-  assert.match(emails[0].subject, /^Dana invited you to the Acme team on Guesty CLI$/);
+  assert.equal(emails[0].subject, "Dana invited you to Guesty CLI");
   const lee = emailed.stdout.trim();
   assert.ok(emails[0].text.includes(lee));
 
@@ -284,7 +284,8 @@ test("in a terminal, setup shows each question, masks the secret and creates the
   assert.doesNotMatch(session.visible(), /terminal-secret/);
   assert.match(settings(dir), /^GUESTY_TOKEN_SERVICE_KEY=gts_/m);
   assert.deepEqual(emails.at(-1).to, ["pat@example.com"]);
-  assert.match(emails.at(-1).subject, /^You're invited to the Terminal Co team on Guesty CLI$/);
+  assert.equal(emails.at(-1).subject, "You're invited to a team on Guesty CLI");
+  assert.match(emails.at(-1).text, /^You're invited to the Terminal Co team on Guesty CLI\./);
 
   // A name is whatever an admin typed; status shows it without its escape sequences.
   assert.equal((await cli(dir, ["team", "invite", "Evil\u001b]0;renamed\u0007"])).status, 0);

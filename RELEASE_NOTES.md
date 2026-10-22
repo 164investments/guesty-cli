@@ -29,10 +29,10 @@ Users on 1.2.0 or later can run `guesty update` instead. The CLI needs Node.js 2
 Self-hosted services need the update for invites; redeploy with `npm run deploy` in `server/`, which applies the new migration. Invite email is optional: set `INVITE_EMAIL_FROM` and the `RESEND_API_KEY` secret to turn it on. Without them, invites are links only. The service:
 
 - stores invite codes only as keyed hashes, and keeps a teammate's address only while the invite is pending;
-- turns a code into a key once, inside one database transaction;
-- allows ten wrong codes an hour from one address;
-- allows each team 50 invites and 20 invite emails a day, and sends one address at most three invite emails a day;
-- escapes team and inviter names in emails and on the join page, and strips control characters from them.
+- turns a code into a key once, inside one database transaction, and cancels a key's invites when the key is revoked;
+- allows ten wrong codes an hour from one address, counting an IPv6 /64 as one address;
+- allows each team 50 invites and 20 invite emails a day, sends one recipient at most three a day (ignoring case, `+tags`, and dots at Gmail), and sends at most 200 a day in all. Each cap is checked in a single database statement, failed sends count, and the email history is kept by Guesty client, so deleting and recreating a team doesn't reset it;
+- leaves the team name out of email subjects, shortens names in emails, escapes them in HTML, and strips control, zero-width and text-direction characters from them.
 
 ## Unchanged
 
@@ -40,4 +40,4 @@ The CLI still never requests OAuth tokens. Token renewal, the request limits, an
 
 ## Verification
 
-`npm run check` runs strict TypeScript 7 checks, the offline tests, and the contract check. `npm run check:server` type-checks the token service and runs it in Miniflare against mocks of Guesty's token endpoint and Resend. Its tests cover one-time use, expiry, cancellation, replacement, wrong-code limits, email caps, escaping, and a service without email. They also drive this CLI through inviting, joining by link, joining with a CLI 1.4 code, cancelling, and an interactive setup that invites a teammate by email in a pseudo-terminal. No test contacts Guesty or sends email.
+`npm run check` runs strict TypeScript 7 checks, the offline tests, and the contract check. `npm run check:server` type-checks the token service and runs it in Miniflare against mocks of Guesty's token endpoint and Resend. Its tests cover one-time use, expiry, cancellation, replacement, revoking an inviting key, wrong-code limits (including requests sent together and IPv6), email caps (including requests sent together, address aliases, and a deleted and recreated team), escaping, and a service without email. They also drive this CLI through inviting, joining by link, joining with a CLI 1.4 code, cancelling, and an interactive setup that invites a teammate by email in a pseudo-terminal. No test contacts Guesty or sends email.

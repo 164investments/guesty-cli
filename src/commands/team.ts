@@ -10,6 +10,7 @@ import {
   TokenServiceError,
   callTokenService,
   configuredService,
+  invitedLink,
   isAccessKey,
   parseInvite,
   serviceUrl,
@@ -25,7 +26,6 @@ interface CreatedTeam {
 
 interface CreatedInvite {
   link: string;
-  join_command: string;
   expires_at: number;
   email?: { address: string; sent: boolean; message?: string };
 }
@@ -93,17 +93,6 @@ async function askCredentials(kind: string): Promise<{ client_id: string; client
   };
 }
 
-// The link comes from the service, which may be someone else's server.
-function isInviteLink(value: unknown): value is string {
-  if (typeof value !== "string" || !/^https?:\/\//.test(value)) return false;
-  try {
-    parseInvite(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // Asks for the teammate's name and email unless the name was given, then
 // creates a one-time invite, which the service emails when given an address.
 async function inviteTeammate(service: ServiceSettings, given: { name?: string; email?: string; admin?: boolean }): Promise<{ name: string; link: string }> {
@@ -129,17 +118,17 @@ async function inviteTeammate(service: ServiceSettings, given: { name?: string; 
     }
     throw err;
   }
-  if (!isInviteLink(invite.link) || typeof invite.join_command !== "string") throw new Error("The token service returned an invalid invite.");
+  const { link, command: joinCommand } = invitedLink(service.url, invite.link);
   if (email && !invite.email?.sent) {
     warn(`The invite wasn't emailed. ${printable(invite.email?.message ?? "The token service didn't say why.")} Send ${shown} the link instead.`);
   }
   summary(`Invite for ${shown}`, [
-    ["Link", printable(invite.link)],
-    ["Or they run", command(printable(invite.join_command))],
+    ["Link", link],
+    ["Or they run", command(joinCommand)],
     ["Expires", pacific(invite.expires_at)],
     ...(given.admin ? [["Role", "Admin"] as [string, string]] : []),
   ]);
-  return { name, link: printable(invite.link) };
+  return { name, link };
 }
 
 // Guesty confirms the credentials before the service saves anything, so this
