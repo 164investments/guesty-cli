@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 import { styleText } from "node:util";
 import * as clack from "@clack/prompts";
+import { printable } from "./output.js";
 
 // A person at a terminal gets interactive prompts. Piped input (scripts and
 // tests) gets plain prompts and is read one line per question. Both write to
@@ -78,7 +79,7 @@ export async function frame(title: string, run: () => Promise<void>): Promise<vo
     await run();
   } catch (err) {
     if (err instanceof ShownError) throw err;
-    const message = err instanceof Error ? err.message : String(err);
+    const message = printable(err instanceof Error ? err.message : String(err));
     clack.cancel(wrap(message, "   "), view());
     throw new ShownError(message);
   } finally {

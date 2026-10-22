@@ -14,6 +14,7 @@ Users on 1.2.0 or later can run `guesty update` instead. The CLI needs Node.js 2
 ## Fixed
 
 - **Setup questions disappeared in a terminal.** Each question was erased as soon as it appeared, so people typed their answers without seeing what was asked. Every question now stays on screen.
+- **Text from a token service can't control your terminal.** Control characters in anything a service sends, such as error messages, team names and key labels, are shown as `?`. A self-hosted service, or a key label an admin typed, can no longer send terminal escape codes.
 - **Installing printed an npm warning about a blocked install script.** The package is built before it's published, so installing runs no script, and npm no longer warns.
 
 ## Changed
@@ -30,4 +31,4 @@ The CLI still never requests OAuth tokens. The token service, the `SUPABASE_URL`
 
 ## Verification
 
-`npm run check` runs strict TypeScript 7 checks, 657 offline tests and the contract check. `npm run check:server` type-checks and tests the token service, and drives this CLI through team setup against it. That includes two new tests that run setup in a pseudo-terminal: one completes setup and confirms the secret never appears on screen, and one confirms Ctrl+C saves nothing and sends nothing. A separate terminal-emulator check went through every setup and team screen and confirmed each question is visible. No test contacts Guesty.
+`npm run check` runs strict TypeScript 7 checks, 658 offline tests and the contract check. `npm run check:server` type-checks and tests the token service, and drives this CLI through team setup against it. That includes two new tests that run setup in a pseudo-terminal: one completes setup, confirms the secret never appears on screen, and confirms `team status` shows a key label without its escape codes; the other confirms Ctrl+C saves nothing and sends nothing. A separate terminal-emulator check went through every setup and team screen and confirmed each question is visible. No test contacts Guesty.

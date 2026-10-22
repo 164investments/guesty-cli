@@ -1,3 +1,9 @@
+// Text from a token service, which may be someone else's server, can carry
+// terminal escape sequences. Control characters other than newline become "?".
+export function printable(value: string): string {
+  return value.replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/g, "?");
+}
+
 export function print(data: unknown): void {
   if (data === undefined || data === null) {
     process.stdout.write("null\n");

@@ -58,6 +58,7 @@ function terminal(homeDir, args) {
   return {
     exit,
     visible,
+    raw: () => output,
     async expect(text) {
       for (const end = Date.now() + 15_000; Date.now() < end;) {
         const at = visible().indexOf(text, seen);
@@ -205,6 +206,13 @@ test("in a terminal, setup shows each question, masks the secret and creates the
   assert.match(session.visible(), /Team "Terminal Co" is ready/);
   assert.doesNotMatch(session.visible(), /terminal-secret/);
   assert.match(settings(dir), /^GUESTY_TOKEN_SERVICE_KEY=gts_/m);
+
+  // A key label is whatever an admin typed; status shows it without its escape sequences.
+  assert.equal((await cli(dir, ["team", "invite", "Evil\u001b]0;renamed\u0007"])).status, 0);
+  const status = terminal(dir, ["team", "status"]);
+  assert.equal(await status.exit, 0, status.visible());
+  assert.match(status.visible(), /Evil\?\]0;renamed\?\s+member, never used/);
+  assert.doesNotMatch(status.raw(), /\u001b\]0;renamed/);
 });
 
 test("in a terminal, Ctrl+C stops setup before anything is sent or saved", { skip: !hasPython && "needs python3 for a pseudo-terminal" }, async () => {

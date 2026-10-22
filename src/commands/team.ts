@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { Command } from "commander";
 import { saveSettings } from "../config.js";
-import { print } from "../output.js";
+import { print, printable } from "../output.js";
 import { command, confirm, done, frame, info, interactive, required, secret, success, summary, task, text, warn } from "../prompt.js";
 import {
   HOSTED_TOKEN_SERVICE_URL,
@@ -94,11 +94,12 @@ export async function createTeamOn(url: string): Promise<void> {
     }),
   );
   const file = useService({ url: base, key: created.admin_key });
+  const teamName = printable(created.team.name);
   if (created.recovered) {
-    info(`These credentials already belong to the team "${created.team.name}". This CLI now has a new admin key for it.`);
+    info(`These credentials already belong to the team "${teamName}". This CLI now has a new admin key for it.`);
   }
-  if (created.beapi_error) warn(`Booking engine credentials were not added: ${created.beapi_error.message}`);
-  summary(created.recovered ? `Reconnected to "${created.team.name}"` : `Team "${created.team.name}" is ready`, [
+  if (created.beapi_error) warn(`Booking engine credentials were not added: ${printable(created.beapi_error.message)}`);
+  summary(created.recovered ? `Reconnected to "${teamName}"` : `Team "${teamName}" is ready`, [
     ["Service", serviceName(base)],
     ["Your role", "Admin"],
     ["Settings", shortPath(file)],
@@ -171,7 +172,7 @@ team
       print(status);
       return;
     }
-    await frame(`Team "${status.team.name}"`, async () => {
+    await frame(`Team "${printable(status.team.name)}"`, async () => {
       for (const type of status.token_types) {
         const title = type.token_type === "openapi" ? "Open API" : "Booking engine";
         if (!type.configured) {
@@ -184,12 +185,12 @@ team
             ? `Valid until ${pacific(type.token_expires_at)}`
             : "None yet. The next request gets one"],
           ["Requests", `${type.requests_last_24h} of Guesty's 5 in the last 24 hours`],
-          ["Last request", last ? `${last.outcome}${last.http_status ? ` (HTTP ${last.http_status})` : ""}, ${pacific(last.requested_at)}` : "None in the last 24 hours"],
+          ["Last request", last ? `${printable(last.outcome)}${last.http_status ? ` (HTTP ${last.http_status})` : ""}, ${pacific(last.requested_at)}` : "None in the last 24 hours"],
         ]);
       }
       summary("Access keys", status.keys.map((key) => [
-        key.label,
-        `${key.role}, ${key.revoked_at ? "revoked" : key.last_used_at ? `last used ${pacific(key.last_used_at)}` : "never used"}`,
+        printable(key.label),
+        `${printable(key.role)}, ${key.revoked_at ? "revoked" : key.last_used_at ? `last used ${pacific(key.last_used_at)}` : "never used"}`,
       ]));
       done(`The team may make ${status.team.max_requests_per_day} token requests a day. Change it with ${command("guesty team limit <1-5>")}.`);
     });
