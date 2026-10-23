@@ -365,4 +365,4 @@ See the [October 2026 endpoint coverage record](./docs/endpoint-coverage-2026-10
 
 ## License
 
-MIT
+MIT. See [LICENSE](./LICENSE). Copyright 2026 164 Investments LLC.
