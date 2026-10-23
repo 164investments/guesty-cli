@@ -5,11 +5,10 @@ Command-line access to the [Guesty](https://guesty.com) Open API and Booking Eng
 ## Quick Start
 
 ```bash
-npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
-guesty setup
+npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz && guesty setup
 ```
 
-It needs Node.js 20.12 or later. `--allow-remote=all` is for npm 12, which otherwise refuses to install from a web address; npm 10 and 11 accept it.
+That one line installs the CLI and starts setup. It needs Node.js 20.12 or later. `--allow-remote=all` is for npm 12, which otherwise refuses to install from a web address; npm 10 and 11 accept it.
 
 `guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use StayKit's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
 
@@ -19,7 +18,7 @@ It needs Node.js 20.12 or later. `--allow-remote=all` is for npm 12, which other
 npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
 ```
 
-That address always serves the newest release. Download a specific version and the checksums from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
+That address always serves the newest release. Download a specific version and the checksums from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). It's also on the npm registry as `guesty-cli`; GitHub gets each release first.
 
 To upgrade an older installation (including npm version 1.1.0), run the compiled-package installation command above. For version 1.2.0 and later:
 
