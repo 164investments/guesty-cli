@@ -395,7 +395,7 @@ test("an invite link shows the steps, and its code works once for a member key",
     assert.match(page.headers.get("content-security-policy"), /default-src 'none'/);
     const html = await page.text();
     assert.match(html, /Dana invited you to the Acme team/);
-    assert.ok(html.includes(`releases/latest/download/guesty-cli.tgz &#38;&#38; ${joinCommand}`));
+    assert.ok(html.includes(`npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz &#38;&#38; ${joinCommand}`));
     assert.match(html, /Already have Guesty CLI 1\.5 or later\?/);
   }
 

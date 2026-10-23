@@ -5,18 +5,18 @@ Command-line access to the [Guesty](https://guesty.com) Open API and Booking Eng
 ## Quick Start
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
+npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
 guesty setup
 ```
 
-It needs Node.js 20.12 or later. npm 12 blocks installs from a web address by default; with npm 12, add `--allow-remote=all` to the install command.
+It needs Node.js 20.12 or later. `--allow-remote=all` is for npm 12, which otherwise refuses to install from a web address; npm 10 and 11 accept it.
 
 `guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use StayKit's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
 
 ## Install
 
 ```bash
-npm install -g https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
+npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz
 ```
 
 That address always serves the newest release. Download a specific version and the checksums from [GitHub Releases](https://github.com/164investments/guesty-cli/releases). GitHub is the current release channel; the npm registry's `guesty-cli` package may lag behind these releases.
@@ -71,7 +71,7 @@ The admin runs `guesty setup` and chooses where the team's token lives:
 1. **StayKit's hosted token service.** It's free, and there's nothing to run. It used to be Simply VRM's, at `guesty-tokens.simplyvacationrentalmanagement.com`; that address still works, and the CLI reads it as the new one.
 2. **A token service you run yourself.** See [Run your own token service](#run-your-own-token-service).
 
-Setup asks for a team name, your name, and the Guesty Open API client ID and secret; Guesty's help article "Using Guesty's Open API" shows how to create them. Booking-engine API credentials are optional. At a terminal, setup shows a menu you move through with the arrow keys and hides the secret as you type it; with piped input, as in scripts, it reads one answer per line. The service checks the credentials with Guesty before saving them. That check uses one of the day's five tokens, and the team then uses that token.
+Setup asks for a team name, your name, and the Guesty Open API client ID and secret. Create a new OAuth application in Guesty just for the CLI, so your other tools keep their own five tokens a day; an account can have five, and Guesty's [Using Guesty's Open API](https://help.guesty.com/hc/en-gb/articles/9370472424605-Using-Guesty-s-Open-API) shows how. Booking-engine API credentials are optional. At a terminal, setup shows a menu you move through with the arrow keys and hides the secret as you type it; with piped input, as in scripts, it reads one answer per line. The service checks the credentials with Guesty before saving them. That check uses one of the day's five tokens, and the team then uses that token.
 
 ### Invite your team
 

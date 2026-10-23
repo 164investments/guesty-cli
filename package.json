@@ -1,10 +1,10 @@
 {
   "name": "guesty-cli",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "CLI for the Guesty property management API with read-only cached-token authentication and rate limiting",
   "type": "module",
   "bin": {
-    "guesty": "dist/cli.js"
+    "guesty": "dist/bin.js"
   },
   "files": [
     "dist",
