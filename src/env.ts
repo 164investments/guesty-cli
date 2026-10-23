@@ -12,10 +12,13 @@ function getScriptEnvPath(): string | null {
 }
 
 export function loadEnv(): void {
+  // Agents start the MCP server inside whatever project they're working in, so
+  // it must not pick up that project's .env (and, say, its database keys).
+  const forAgents = process.argv[2] === "mcp";
   const paths = [
     resolve(homedir(), ".guesty-cli", ".env"),
     getScriptEnvPath(),
-    resolve(process.cwd(), ".env"),
+    forAgents ? null : resolve(process.cwd(), ".env"),
   ].filter((p): p is string => p !== null);
 
   for (const envPath of new Set(paths)) {

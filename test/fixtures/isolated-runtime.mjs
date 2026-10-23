@@ -139,6 +139,9 @@ globalThis.fetch = async (input, options = {}) => {
     trace.beapiCacheReads++;
     const replies = scenario.beapiSharedReplies ?? [[beapiToken()]];
     reply = { json: replies[Math.min(beapiSharedIndex++, replies.length - 1)] };
+  } else if (url.hostname === "tokens.invalid") {
+    // A fake team token service, answered by "METHOD /path" from the scenario.
+    reply = scenario.tokenService?.[`${options.method ?? "GET"} ${url.pathname}`] ?? { status: 404, json: { error: "not_found", message: "Not found." } };
   } else if (url.href === "https://api.github.com/repos/164investments/guesty-cli/releases/latest") {
     reply = scenario.github ?? { status: 404, json: {} };
   } else if (url.hostname === "cache.invalid" && url.pathname === "/rest/v1/guesty_tokens" && options.method === "GET" && url.searchParams.get("token_type") === "eq.openapi") {

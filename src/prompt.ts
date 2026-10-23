@@ -194,6 +194,11 @@ export async function choose<T extends string>(message: string, options: { value
   return answered(await clack.select<T>({ message, options: options as clack.Option<T>[], ...view() }));
 }
 
+// Only asked at a terminal; scripts name their choices with options instead.
+export async function chooseMany<T extends string>(message: string, options: { value: T; label: string; hint?: string }[], initialValues: T[]): Promise<T[]> {
+  return answered(await clack.multiselect<T>({ message, options: options as clack.Option<T>[], initialValues, required: true, ...view() }));
+}
+
 // Shows a spinner while the work runs, then what happened.
 export async function task<T>(working: string, finished: (result: T) => string, failed: string, work: () => Promise<T>): Promise<T> {
   if (!interactive()) {
