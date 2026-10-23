@@ -39,12 +39,22 @@ function usesTokenService(): boolean {
   return !!(process.env[TOKEN_SERVICE_URL_ENV] || process.env[TOKEN_SERVICE_KEY_ENV]);
 }
 
+// With no token source at all, this is most likely a new install, so point to setup.
+function usesSharedCache(): boolean {
+  return !!(process.env.SUPABASE_URL || process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 export function cacheGuidance(tokenType: TokenType): string {
-  return usesTokenService()
-    ? `Check ${TOKEN_SERVICE_URL_ENV} and ${TOKEN_SERVICE_KEY_ENV}, or run guesty setup. The token service renews ` +
-      `the team's token; an admin can run guesty team status, and guesty team refresh${tokenType === "beapi" ? " --beapi" : ""} replaces a token Guesty rejected.`
-    : "Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and have the designated " +
-      `server refresh workflow restore a valid ${tokenType} token in the shared cache.`;
+  if (usesTokenService()) {
+    return `Check ${TOKEN_SERVICE_URL_ENV} and ${TOKEN_SERVICE_KEY_ENV}, or run guesty setup. The token service renews ` +
+      `the team's token; an admin can run guesty team status, and guesty team refresh${tokenType === "beapi" ? " --beapi" : ""} replaces a token Guesty rejected.`;
+  }
+  if (!usesSharedCache()) {
+    return "Run guesty setup to create a team or join one with an invite, so this CLI uses your team's shared token. " +
+      "guesty init lists the other options.";
+  }
+  return "Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and have the designated " +
+    `server refresh workflow restore a valid ${tokenType} token in the shared cache.`;
 }
 
 function cacheUnavailable(tokenType: TokenType, reason: string): Error {
@@ -72,7 +82,7 @@ async function readSharedToken(tokenType: TokenType): Promise<CachedToken> {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
-    throw cacheUnavailable(tokenType, "shared-cache configuration is missing");
+    throw cacheUnavailable(tokenType, usesSharedCache() ? "shared-cache configuration is incomplete" : "this CLI isn't connected to a team yet");
   }
 
   let res: Response;

@@ -10,6 +10,8 @@ const REPO = "164investments/guesty-cli";
 const RELEASES_URL = `https://github.com/${REPO}/releases/latest`;
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000;
 const PACKAGE_ROOT = fileURLToPath(new URL("../", import.meta.url));
+// npm 12 refuses packages from a web address unless allowed; npm 10 and 11 accept the flag silently.
+const ALLOW_REMOTE = "--allow-remote=all";
 
 interface Version {
   core: bigint[];
@@ -147,7 +149,7 @@ export async function runSelfUpdate(): Promise<void> {
     process.stdout.write(`guesty-cli ${local} is up to date.\n`);
     return;
   }
-  const installCommand = `npm install -g ${release.installUrl}`;
+  const installCommand = `npm install -g ${ALLOW_REMOTE} ${release.installUrl}`;
   // npm-linked source checkouts and project-local packages belong to the user.
   // Only replace this CLI's verified global npm installation.
   if (existsSync(join(PACKAGE_ROOT, ".git"))) {
@@ -164,7 +166,7 @@ export async function runSelfUpdate(): Promise<void> {
   }
   process.stdout.write(`Updating guesty-cli ${local} → ${release.version} from GitHub...\n`);
   try {
-    execFileSync("npm", ["install", "--global", release.installUrl], { stdio: "inherit", cwd: tmpdir() });
+    execFileSync("npm", ["install", "--global", ALLOW_REMOTE, release.installUrl], { stdio: "inherit", cwd: tmpdir() });
   } catch {
     throw new Error(`Update failed. Try running manually:\n  ${installCommand}`);
   }

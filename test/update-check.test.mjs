@@ -87,7 +87,7 @@ test("self-update protects source checkouts and offers the exact released tarbal
   const result = run(t, { args: ["update"], scenario: { github: { json: release() } } });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /source checkout/);
-  assert.ok(result.stderr.includes(`npm install -g ${installUrl}`));
+  assert.ok(result.stderr.includes(`npm install -g --allow-remote=all ${installUrl}`));
   assert.equal(result.trace.commands.length, 0);
   assert.equal(result.trace.writes.length, 0);
 });
@@ -103,7 +103,7 @@ test("self-update protects project-local or mismatched global installations", (t
 test("self-update installs the exact release asset in the verified global npm prefix and verifies its version", (t) => {
   const result = success(t, { args: ["update"], scenario: { sourceCheckout: false, github: { json: release() } } });
   assert.equal(result.trace.commands.length, 2);
-  assert.deepEqual(result.trace.commands[1].args, ["install", "--global", installUrl]);
+  assert.deepEqual(result.trace.commands[1].args, ["install", "--global", "--allow-remote=all", installUrl]);
   assert.ok(result.trace.commands.every(({ command }) => command === "npm"));
   assert.match(result.stdout, /Updated successfully to 1\.2\.0/);
   assert.equal(result.trace.tokenReads, 0);
