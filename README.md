@@ -12,6 +12,8 @@ That one line installs the CLI and starts setup. It needs Node.js 20.12 or later
 
 `guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use StayKit's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
 
+Using Claude Code, Codex or Cursor? Paste this into it instead: `Set up Guesty for me: https://guesty-tokens.staykit.ai/connect`. See [Use Guesty from AI agents](#use-guesty-from-ai-agents-mcp).
+
 ## Install
 
 ```bash
@@ -140,6 +142,36 @@ npm run deploy
 ```
 
 Invite codes from your service include its address, so teammates run `guesty join https://your-service/join/CODE`. Only codes from StayKit's hosted service work on their own.
+
+## Use Guesty from AI agents (MCP)
+
+`guesty mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server, so Claude Code, Codex, Cursor, Claude Desktop and other agents can work in Guesty for you. It uses your team's shared token, so agents never use up Guesty's five tokens a day, and it reaches every Open API and Booking Engine API operation, for reads and changes.
+
+Add it to the AI apps on your computer:
+
+```bash
+guesty mcp install                        # asks which apps
+guesty mcp install --client claude-code   # or codex, cursor, claude-desktop; separate several with commas
+guesty mcp install --print                # shows the settings to add by hand, and changes nothing
+```
+
+Or paste `Set up Guesty for me: https://guesty-tokens.staykit.ai/connect` into Claude Code, Codex or Cursor. That page tells the agent how to install the CLI, join your team with your invite and add the tools.
+
+The server gives the agent five tools:
+
+| Tool | What it does |
+|------|--------------|
+| `search_operations` | Finds operations from plain words, such as "cancel a reservation", or from a path, across both APIs |
+| `describe_operation` | Shows an operation's parameters, request body, response fields, docs link, and whether it changes data |
+| `call_operation` | Runs an operation with the team's token. Reads run straight away. Anything that changes data returns a preview and is sent only when the agent calls again with `confirm: true`, after you approve |
+| `team_status` | Shows the team's token use, keys and pending invites (admins) |
+| `invite_teammate` | Invites a member, after you approve that exact person (admins). Admin invites need `guesty team invite --admin` in a terminal |
+
+- The agent never sees your client secret or the token, and tool results never include them.
+- `guesty mcp --read-only` refuses every change. Install it that way with `guesty mcp install --read-only`, or set `GUESTY_MCP_READ_ONLY=1`. Read-only is a setting of the server on this computer, not a team permission: anyone with a team key can still make changes with the CLI's own commands.
+- The server reads settings only from `~/.guesty-cli/.env` and the environment, never from the `.env` of the folder the agent is working in.
+- Results longer than 60,000 characters are cut. Ask for less with `fields`, `limit` or filters.
+- Operations that upload files aren't available through the server; use their CLI commands.
 
 ## Getting a raw token
 
