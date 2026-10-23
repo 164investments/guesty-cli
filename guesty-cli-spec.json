@@ -1,7 +1,7 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-22T12:11:54.508Z",
+  "generatedAt": "2026-10-23T09:11:53.764Z",
   "cliVersion": "1.5.0",
   "generatedFrom": {
     "packageFile": "package.json",
@@ -69,7 +69,11 @@
   "openapiSource": {
     "file": "openapi-spec.json",
     "url": "https://open-api-docs.guesty.com/reference",
-    "updatedAt": "2026-10-21T16:01:14.461Z"
+    "updatedAt": "2026-10-22T12:46:42.779Z",
+    "changelog": {
+      "latest": "2026-10-21",
+      "createdAt": "2026-10-21T16:12:53.786Z"
+    }
   },
   "components": {
     "schemas": {
@@ -127,7 +131,11 @@
   "bookingEngineOpenapiSource": {
     "file": "booking-engine-openapi-spec.json",
     "url": "https://booking-api-docs.guesty.com/reference",
-    "updatedAt": "2026-06-01T13:04:19.980Z"
+    "updatedAt": "2026-06-01T13:04:19.980Z",
+    "changelog": {
+      "latest": "2026-05-18",
+      "createdAt": "2026-05-18T15:35:58.654Z"
+    }
   },
   "bookingEngineComponents": {
     "securitySchemes": {
@@ -105678,7 +105686,7 @@
                         "refundedAt": {
                           "format": "date-time",
                           "type": "string",
-                          "default": "2026-10-21T11:11:45.748Z",
+                          "default": "2026-10-22T11:55:00.141Z",
                           "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                           "example": "2026-10-01T12:00:00.000Z"
                         },
@@ -106647,7 +106655,7 @@
                         "refundedAt": {
                           "format": "date-time",
                           "type": "string",
-                          "default": "2026-10-21T11:11:45.748Z",
+                          "default": "2026-10-22T11:55:00.141Z",
                           "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                           "example": "2026-10-01T12:00:00.000Z"
                         },
@@ -269714,7 +269722,7 @@
                     "refundedAt": {
                       "format": "date-time",
                       "type": "string",
-                      "default": "2026-10-21T11:11:45.748Z",
+                      "default": "2026-10-22T11:55:00.141Z",
                       "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                       "example": "2026-10-01T12:00:00.000Z"
                     },
@@ -273522,7 +273530,7 @@
                     "refundedAt": {
                       "format": "date-time",
                       "type": "string",
-                      "default": "2026-10-21T11:11:45.748Z",
+                      "default": "2026-10-22T11:55:00.141Z",
                       "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                       "example": "2026-10-01T12:00:00.000Z"
                     },
