@@ -212,9 +212,9 @@ test("mcp: the server ignores the .env of the folder it was started in", (t) => 
 
 test("mcp: team_status and invite_teammate use the team's access key with the token service", (t) => {
   const status = call("team_status");
-  const invite = call("invite_teammate", { name: "Alex Rivera", email: "alex@example.com" });
-  const linkOnly = call("invite_teammate", { name: "Sam", admin: true });
-  const badEmail = call("invite_teammate", { name: "Lee", email: "not-an-email" });
+  const invite = call("invite_teammate", { name: "Alex Rivera", email: "alex@example.com", confirm: true });
+  const linkOnly = call("invite_teammate", { name: "Sam", confirm: true });
+  const badEmail = call("invite_teammate", { name: "Lee", email: "not-an-email", confirm: true });
   const expires = 1_800_604_800_000;
   const { reply, trace } = session(t, [status, invite, linkOnly, badEmail], {
     scenario: {
@@ -235,7 +235,18 @@ test("mcp: team_status and invite_teammate use the team's access key with the to
   assert.equal(sent.length, 3);
   for (const request of sent) assert.equal(request.headers.authorization, `Bearer ${SERVICE.GUESTY_TOKEN_SERVICE_KEY}`);
   assert.deepEqual(JSON.parse(sent[1].body), { label: "Alex Rivera", role: "member", email: "alex@example.com" });
-  assert.deepEqual(JSON.parse(sent[2].body), { label: "Sam", role: "admin" });
+  assert.deepEqual(JSON.parse(sent[2].body), { label: "Sam", role: "member" });
+});
+
+test("mcp: an invite needs the user's approval, and admin invites need a terminal", (t) => {
+  const preview = call("invite_teammate", { name: "Mallory", email: "mallory@example.com" });
+  const admin = call("invite_teammate", { name: "Mallory", email: "mallory@example.com", admin: true, confirm: true });
+  const { reply, trace } = session(t, [preview, admin], { scenario: { env: SERVICE } });
+  assert.match(textOf(reply(preview.id)), /^Not sent\. This would invite Mallory \(mallory@example\.com\) to the team as a member/);
+  assert.match(textOf(reply(preview.id)), /confirm: true/);
+  assert.equal(reply(admin.id).result.isError, true);
+  assert.match(textOf(reply(admin.id)), /Admin invites can't be made here\. Ask the user to run `guesty team invite --admin`/);
+  assert.equal(trace.requests.length, 0);
 });
 
 test("mcp: a member's team request shows the service's refusal", (t) => {

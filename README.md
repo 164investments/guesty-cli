@@ -165,7 +165,7 @@ The server gives the agent five tools:
 | `describe_operation` | Shows an operation's parameters, request body, response fields, docs link, and whether it changes data |
 | `call_operation` | Runs an operation with the team's token. Reads run straight away. Anything that changes data returns a preview and is sent only when the agent calls again with `confirm: true`, after you approve |
 | `team_status` | Shows the team's token use, keys and pending invites (admins) |
-| `invite_teammate` | Emails a teammate a one-time invite (admins) |
+| `invite_teammate` | Invites a member, after you approve that exact person (admins). Admin invites need `guesty team invite --admin` in a terminal |
 
 - The agent never sees your client secret or the token, and tool results never include them.
 - `guesty mcp --read-only` refuses every change. Install it that way with `guesty mcp install --read-only`, or set `GUESTY_MCP_READ_ONLY=1`. Read-only is a setting of the server on this computer, not a team permission: anyone with a team key can still make changes with the CLI's own commands.

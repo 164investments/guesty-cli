@@ -14,7 +14,7 @@ guesty mcp install
 ## New
 
 - **`guesty mcp`** gives agents five tools. `search_operations` finds any of the 362 Open API and 19 Booking Engine API operations from plain words. `describe_operation` shows its parameters, body and docs. `call_operation` runs it with the team's shared token. `team_status` and `invite_teammate` manage the team. Guesty's own MCP server, in beta, covers only reads.
-- **Changes need approval.** An operation that changes data returns a preview and sends nothing until the agent calls it again with `confirm: true`. `--read-only` refuses every change.
+- **Changes need approval.** An operation that changes data returns a preview and sends nothing until the agent calls it again with `confirm: true`. Invites work the same way, and admin invites can only be made in a terminal, so text an agent reads can't hand out the team's access. `--read-only` refuses every change.
 - **`guesty mcp install`** adds the server to Claude Code, Codex, Cursor and Claude Desktop. It changes only its own `guesty-cli` entry, keeps each settings file's permissions, and won't rewrite a file it can't read.
 - **One-link setup.** Pasting `Set up Guesty for me: https://guesty-tokens.staykit.ai/connect` into an agent walks it through installing, joining the team and adding the tools.
 - **No new packages.** The server is built in, so the install stays at 8 packages.
