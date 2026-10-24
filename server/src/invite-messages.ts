@@ -2,7 +2,8 @@
 // admin typed, so they lose control characters and are escaped in HTML.
 
 // The newest release, by a file name that stays the same between versions.
-export const INSTALL_COMMAND = "npm install -g https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz";
+// npm 12 refuses packages from a web address without --allow-remote; npm 10 and 11 accept it silently.
+export const INSTALL_COMMAND = "npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz";
 
 export interface MailEnv {
   RESEND_API_KEY?: string;
@@ -168,6 +169,7 @@ li p{margin:0 0 10px;font-size:15px}
 code.inline{padding:2px 6px;border-radius:5px;background:#f1f5f9;color:#0f172a;font:14px ${MONO};white-space:nowrap}
 a{color:#0e7490}
 .note{margin:8px 0 0;padding-top:20px;border-top:1px solid #e2e8f0;color:#64748b;font-size:14px}
+.note code.inline{white-space:normal;overflow-wrap:anywhere}
 footer{margin:20px 4px;color:#94a3b8;font-size:13px}
 @media (max-width:520px){main{margin:20px auto}.card{padding:24px 20px}h1{font-size:23px}li{padding-left:40px}.command{flex-direction:column}.command button{border-left:0;border-top:1px solid #334155;padding:11px}}
 `;

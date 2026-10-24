@@ -106,6 +106,13 @@ for (const tokenType of ["openapi", "beapi"]) {
       assert.equal(result.status, 1);
       assert.equal(result.stdout, "");
       assert.match(result.stderr, /CLI authentication is read-only/);
+      // A new install is pointed to setup; a configured shared cache keeps its own guidance.
+      if (scenario.noConfig) {
+        assert.match(result.stderr, /isn't connected to a team yet[\s\S]*Run guesty setup/);
+        assert.doesNotMatch(result.stderr, /SUPABASE/);
+      } else {
+        assert.match(result.stderr, /Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY/);
+      }
       assert.equal(result.trace.requests.length, scenario.noConfig ? 0 : 1);
     });
   }

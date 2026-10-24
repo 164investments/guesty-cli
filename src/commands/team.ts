@@ -17,6 +17,8 @@ import {
   type ServiceSettings,
 } from "../token-service.js";
 
+const GUESTY_OPEN_API_GUIDE = "https://help.guesty.com/hc/en-gb/articles/9370472424605-Using-Guesty-s-Open-API";
+
 interface CreatedTeam {
   team: { id: string; name: string };
   admin_key: string;
@@ -140,7 +142,8 @@ export async function createTeamOn(url: string): Promise<void> {
   }
   const name = await text("Team name", { placeholder: "Your company's name", check: required("Enter a team name.") });
   const adminLabel = await text("Your name", { placeholder: "Shown to your team's admins", fallback: "Admin" });
-  info('Next, your Guesty Open API key. Guesty\'s help article "Using Guesty\'s Open API" shows how to create one.');
+  // Every tool using a client ID shares its five tokens a day, and Guesty allows five client IDs per account.
+  info(`Next, a Guesty Open API key. Create a new OAuth application in Guesty just for this team, so your other tools keep their own five tokens a day. How: ${GUESTY_OPEN_API_GUIDE}`);
   const openapi = await askCredentials("Open API");
   const beapi = await confirm("Add booking engine API credentials too?") ? await askCredentials("booking engine") : undefined;
   const created = await task(

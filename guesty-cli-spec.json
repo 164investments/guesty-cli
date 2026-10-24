@@ -1,8 +1,8 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-23T09:11:53.764Z",
-  "cliVersion": "1.5.0",
+  "generatedAt": "2026-10-23T16:03:11.113Z",
+  "cliVersion": "1.5.1",
   "generatedFrom": {
     "packageFile": "package.json",
     "commandFiles": [
@@ -69,11 +69,7 @@
   "openapiSource": {
     "file": "openapi-spec.json",
     "url": "https://open-api-docs.guesty.com/reference",
-    "updatedAt": "2026-10-22T12:46:42.779Z",
-    "changelog": {
-      "latest": "2026-10-21",
-      "createdAt": "2026-10-21T16:12:53.786Z"
-    }
+    "updatedAt": "2026-10-21T16:01:14.461Z"
   },
   "components": {
     "schemas": {
@@ -131,11 +127,7 @@
   "bookingEngineOpenapiSource": {
     "file": "booking-engine-openapi-spec.json",
     "url": "https://booking-api-docs.guesty.com/reference",
-    "updatedAt": "2026-06-01T13:04:19.980Z",
-    "changelog": {
-      "latest": "2026-05-18",
-      "createdAt": "2026-05-18T15:35:58.654Z"
-    }
+    "updatedAt": "2026-06-01T13:04:19.980Z"
   },
   "bookingEngineComponents": {
     "securitySchemes": {
@@ -105686,7 +105678,7 @@
                         "refundedAt": {
                           "format": "date-time",
                           "type": "string",
-                          "default": "2026-10-22T11:55:00.141Z",
+                          "default": "2026-10-21T11:11:45.748Z",
                           "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                           "example": "2026-10-01T12:00:00.000Z"
                         },
@@ -106655,7 +106647,7 @@
                         "refundedAt": {
                           "format": "date-time",
                           "type": "string",
-                          "default": "2026-10-22T11:55:00.141Z",
+                          "default": "2026-10-21T11:11:45.748Z",
                           "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                           "example": "2026-10-01T12:00:00.000Z"
                         },
@@ -161741,7 +161733,7 @@
       "alias": null,
       "description": "Share one Guesty token with your team through a token service",
       "sourceFile": "src/commands/team.ts",
-      "line": 215,
+      "line": 218,
       "operations": [
         {
           "id": "guesty team join",
@@ -161764,7 +161756,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 218
+          "line": 221
         },
         {
           "id": "guesty team invite",
@@ -161781,14 +161773,14 @@
               "description": "Email the invite to this address",
               "required": false,
               "defaultValue": null,
-              "line": 224
+              "line": 227
             },
             {
               "flags": "--admin",
               "description": "Let this teammate manage the team too",
               "required": false,
               "defaultValue": null,
-              "line": 224
+              "line": 227
             }
           ],
           "inputCapabilities": {
@@ -161802,7 +161794,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 224
+          "line": 227
         },
         {
           "id": "guesty team revoke",
@@ -161825,7 +161817,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 242
+          "line": 245
         },
         {
           "id": "guesty team status",
@@ -161848,7 +161840,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 257
+          "line": 260
         },
         {
           "id": "guesty team refresh",
@@ -161865,7 +161857,7 @@
               "description": "Replace the booking-engine token instead of the Open API token",
               "required": false,
               "defaultValue": null,
-              "line": 297
+              "line": 300
             }
           ],
           "inputCapabilities": {
@@ -161879,7 +161871,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 297
+          "line": 300
         },
         {
           "id": "guesty team credentials",
@@ -161896,7 +161888,7 @@
               "description": "Set booking-engine API credentials instead of Open API",
               "required": false,
               "defaultValue": null,
-              "line": 310
+              "line": 313
             }
           ],
           "inputCapabilities": {
@@ -161910,7 +161902,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 310
+          "line": 313
         },
         {
           "id": "guesty team limit",
@@ -161933,7 +161925,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 327
+          "line": 330
         },
         {
           "id": "guesty team delete",
@@ -161950,7 +161942,7 @@
               "description": "Confirm without asking",
               "required": false,
               "defaultValue": null,
-              "line": 338
+              "line": 341
             }
           ],
           "inputCapabilities": {
@@ -161964,7 +161956,7 @@
           },
           "requests": [],
           "sourceFile": "src/commands/team.ts",
-          "line": 338
+          "line": 341
         }
       ]
     },
@@ -269722,7 +269714,7 @@
                     "refundedAt": {
                       "format": "date-time",
                       "type": "string",
-                      "default": "2026-10-22T11:55:00.141Z",
+                      "default": "2026-10-21T11:11:45.748Z",
                       "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                       "example": "2026-10-01T12:00:00.000Z"
                     },
@@ -273530,7 +273522,7 @@
                     "refundedAt": {
                       "format": "date-time",
                       "type": "string",
-                      "default": "2026-10-22T11:55:00.141Z",
+                      "default": "2026-10-21T11:11:45.748Z",
                       "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                       "example": "2026-10-01T12:00:00.000Z"
                     },
@@ -327556,7 +327548,7 @@
           "description": "Set booking-engine API credentials instead of Open API",
           "required": false,
           "defaultValue": null,
-          "line": 310
+          "line": 313
         }
       ],
       "inputCapabilities": {
@@ -327570,7 +327562,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 310
+      "line": 313
     },
     {
       "id": "guesty team delete",
@@ -327587,7 +327579,7 @@
           "description": "Confirm without asking",
           "required": false,
           "defaultValue": null,
-          "line": 338
+          "line": 341
         }
       ],
       "inputCapabilities": {
@@ -327601,7 +327593,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 338
+      "line": 341
     },
     {
       "id": "guesty team invite",
@@ -327618,14 +327610,14 @@
           "description": "Email the invite to this address",
           "required": false,
           "defaultValue": null,
-          "line": 224
+          "line": 227
         },
         {
           "flags": "--admin",
           "description": "Let this teammate manage the team too",
           "required": false,
           "defaultValue": null,
-          "line": 224
+          "line": 227
         }
       ],
       "inputCapabilities": {
@@ -327639,7 +327631,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 224
+      "line": 227
     },
     {
       "id": "guesty team join",
@@ -327662,7 +327654,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 218
+      "line": 221
     },
     {
       "id": "guesty team limit",
@@ -327685,7 +327677,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 327
+      "line": 330
     },
     {
       "id": "guesty team refresh",
@@ -327702,7 +327694,7 @@
           "description": "Replace the booking-engine token instead of the Open API token",
           "required": false,
           "defaultValue": null,
-          "line": 297
+          "line": 300
         }
       ],
       "inputCapabilities": {
@@ -327716,7 +327708,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 297
+      "line": 300
     },
     {
       "id": "guesty team revoke",
@@ -327739,7 +327731,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 242
+      "line": 245
     },
     {
       "id": "guesty team status",
@@ -327762,7 +327754,7 @@
       },
       "requests": [],
       "sourceFile": "src/commands/team.ts",
-      "line": 257
+      "line": 260
     },
     {
       "id": "guesty token",
