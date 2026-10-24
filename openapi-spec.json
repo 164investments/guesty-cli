@@ -75831,7 +75831,7 @@
                   "refundedAt": {
                     "format": "date-time",
                     "type": "string",
-                    "default": "2026-10-21T11:11:45.748Z",
+                    "default": "2026-10-22T11:55:00.141Z",
                     "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                     "example": "2026-10-01T12:00:00.000Z"
                   },
@@ -76720,7 +76720,7 @@
                   "refundedAt": {
                     "format": "date-time",
                     "type": "string",
-                    "default": "2026-10-21T11:11:45.748Z",
+                    "default": "2026-10-22T11:55:00.141Z",
                     "description": "When the refund was made. Omit to use the current date and time. Format: `YYYY-MM-DDTHH:mm:ss.SSSZ`.",
                     "example": "2026-10-01T12:00:00.000Z"
                   },
@@ -127445,6 +127445,10 @@
   ],
   "x-cli-source": {
     "url": "https://open-api-docs.guesty.com/reference",
-    "updatedAt": "2026-10-21T16:01:14.461Z"
+    "updatedAt": "2026-10-22T12:46:42.779Z",
+    "changelog": {
+      "latest": "2026-10-21",
+      "createdAt": "2026-10-21T16:12:53.786Z"
+    }
   }
 }

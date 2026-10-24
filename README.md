@@ -322,7 +322,7 @@ Requests time out after 60 seconds by default; `raw --timeout <seconds>` can adj
 
 The repo includes [`guesty-cli-spec.json`](./guesty-cli-spec.json) as the machine-readable reference for all commands, options, and the Guesty endpoints they call. Each request names its API (`open-api` or `booking-engine`) and includes a `docsUrl` linking to the official Guesty API documentation.
 
-[`api-spec.json`](./api-spec.json) catalogs all 362 documented Open API operations (Guesty documentation of 2026-10-21); [`openapi-spec.json`](./openapi-spec.json) preserves their full request/response schemas and deprecation flags. [`booking-engine-api-spec.json`](./booking-engine-api-spec.json) and [`booking-engine-openapi-spec.json`](./booking-engine-openapi-spec.json) do the same for the 19 documented Booking Engine API operations.
+[`api-spec.json`](./api-spec.json) catalogs all 362 documented Open API operations (Guesty documentation of 2026-10-22); [`openapi-spec.json`](./openapi-spec.json) preserves their full request/response schemas and deprecation flags. [`booking-engine-api-spec.json`](./booking-engine-api-spec.json) and [`booking-engine-openapi-spec.json`](./booking-engine-openapi-spec.json) do the same for the 19 documented Booking Engine API operations.
 
 The contract's `referenceCoverage` checks the commands against the Open API catalog, and `bookingEngineReferenceCoverage` against the Booking Engine catalog. Each lists any documented operation without a named command under `missingImplementedEndpoints`; both lists are currently empty. Schema references in Booking Engine request entries resolve against `bookingEngineComponents`.
 

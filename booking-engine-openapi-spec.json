@@ -8821,6 +8821,10 @@
   },
   "x-cli-source": {
     "url": "https://booking-api-docs.guesty.com/reference",
-    "updatedAt": "2026-06-01T13:04:19.980Z"
+    "updatedAt": "2026-06-01T13:04:19.980Z",
+    "changelog": {
+      "latest": "2026-05-18",
+      "createdAt": "2026-05-18T15:35:58.654Z"
+    }
   }
 }
