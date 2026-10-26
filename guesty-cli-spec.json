@@ -1,7 +1,7 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-24T08:55:31.506Z",
+  "generatedAt": "2026-10-26T09:19:04.391Z",
   "cliVersion": "1.5.1",
   "generatedFrom": {
     "packageFile": "package.json",
@@ -131,7 +131,7 @@
   "bookingEngineOpenapiSource": {
     "file": "booking-engine-openapi-spec.json",
     "url": "https://booking-api-docs.guesty.com/reference",
-    "updatedAt": "2026-06-01T13:04:19.980Z",
+    "updatedAt": "2026-10-25T15:16:28.112Z",
     "changelog": {
       "latest": "2026-05-18",
       "createdAt": "2026-05-18T15:35:58.654Z"
