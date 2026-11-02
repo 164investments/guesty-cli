@@ -1,3 +1,4 @@
+import { connectResponse } from "./connect.js";
 import { keyedHash, newAccessKey, serviceKeys, type ServiceKeys } from "./crypto.js";
 import { HttpError, errorResponse, json, readBody, requiredText } from "./http.js";
 import type { MailEnv } from "./invite-messages.js";
@@ -355,6 +356,7 @@ async function route(request: Request, env: Env): Promise<Response> {
   if (route === "GET /" || route === "GET /health") return json({ service: "guesty-token-service", ok: true });
   if (route === "POST /v1/teams") return createTeam(request, env, keys);
   if (route === "POST /v1/join") return redeemInvite(request, env, keys);
+  if ((pathname === "/connect" || pathname === "/connect/") && (request.method === "GET" || request.method === "HEAD")) return connectResponse(request.method);
   const joinCode = /^\/join\/([^/]+)\/?$/.exec(pathname)?.[1];
   if (joinCode && (request.method === "GET" || request.method === "HEAD")) return invitePage(request, env, keys, joinCode);
 

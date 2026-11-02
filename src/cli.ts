@@ -49,6 +49,7 @@ import { token } from "./commands/token.js";
 import { setup } from "./commands/setup.js";
 import { join } from "./commands/join.js";
 import { team } from "./commands/team.js";
+import { mcp } from "./commands/mcp.js";
 import { checkForUpdate, runSelfUpdate } from "./update-check.js";
 import { ShownError } from "./prompt.js";
 import { printable } from "./output.js";
@@ -71,6 +72,7 @@ program.addCommand(init);
 program.addCommand(setup);
 program.addCommand(team);
 program.addCommand(join);
+program.addCommand(mcp);
 program.addCommand(reservations);
 program.addCommand(listings);
 program.addCommand(calendar);
@@ -118,7 +120,7 @@ program
   .action(async () => { await runSelfUpdate(); });
 
 const skipUpdateCheck = process.argv.slice(2).some((arg) =>
-  ["token", "update", "init", "--help", "-h", "--version", "-V"].includes(arg)
+  ["token", "update", "init", "mcp", "--help", "-h", "--version", "-V"].includes(arg)
 );
 
 program.parseAsync()

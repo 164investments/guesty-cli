@@ -1,8 +1,8 @@
 {
   "contractName": "guesty-cli-spec",
   "contractVersion": 1,
-  "generatedAt": "2026-10-23T16:03:11.113Z",
-  "cliVersion": "1.5.1",
+  "generatedAt": "2026-10-23T19:42:34.514Z",
+  "cliVersion": "1.6.0",
   "generatedFrom": {
     "packageFile": "package.json",
     "commandFiles": [
@@ -30,6 +30,7 @@
       "src/commands/join.ts",
       "src/commands/listings.ts",
       "src/commands/marketing.ts",
+      "src/commands/mcp.ts",
       "src/commands/owner-statement-options.ts",
       "src/commands/owners.ts",
       "src/commands/payment-providers.ts",
@@ -80466,6 +80467,98 @@
           ],
           "sourceFile": "src/commands/marketing.ts",
           "line": 103
+        }
+      ]
+    },
+    {
+      "name": "mcp",
+      "alias": null,
+      "description": "Run an MCP server so AI agents (Claude, Codex, Cursor) can search and call every Guesty operation with your team's shared token",
+      "sourceFile": "src/commands/mcp.ts",
+      "line": 8,
+      "operations": [
+        {
+          "id": "guesty mcp",
+          "rootAction": true,
+          "name": "mcp",
+          "syntax": "mcp",
+          "fullCommand": "guesty mcp",
+          "description": "Run an MCP server so AI agents (Claude, Codex, Cursor) can search and call every Guesty operation with your team's shared token",
+          "aliases": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--read-only",
+              "description": "Refuse every operation that changes data (also GUESTY_MCP_READ_ONLY=1)",
+              "required": false,
+              "defaultValue": null,
+              "line": 8
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/mcp.ts",
+          "line": 8
+        },
+        {
+          "id": "guesty mcp install",
+          "rootAction": false,
+          "name": "install",
+          "syntax": "install",
+          "fullCommand": "guesty mcp install",
+          "description": "Add the Guesty MCP server to Claude Code, Codex, Cursor or Claude Desktop on this computer",
+          "aliases": [],
+          "arguments": [],
+          "options": [
+            {
+              "flags": "--client <apps>",
+              "description": null,
+              "required": false,
+              "defaultValue": null,
+              "line": 15
+            },
+            {
+              "flags": "--all",
+              "description": "Add it to every supported app found on this computer",
+              "required": false,
+              "defaultValue": null,
+              "line": 15
+            },
+            {
+              "flags": "--read-only",
+              "description": "Install it so it refuses every operation that changes data",
+              "required": false,
+              "defaultValue": null,
+              "line": 15
+            },
+            {
+              "flags": "--print",
+              "description": "Print the server settings to add by hand, and change nothing",
+              "required": false,
+              "defaultValue": null,
+              "line": 15
+            }
+          ],
+          "inputCapabilities": {
+            "supportsDataOption": false,
+            "supportsTextOption": false,
+            "supportsDataFileOption": false,
+            "supportsStdinFlag": false,
+            "readsJsonFromStdin": false,
+            "readsTextFromStdin": false,
+            "writesToOutputFile": false
+          },
+          "requests": [],
+          "sourceFile": "src/commands/mcp.ts",
+          "line": 15
         }
       ]
     },
@@ -162012,7 +162105,7 @@
       "alias": null,
       "description": "Update guesty-cli to the latest version",
       "sourceFile": "src/cli.ts",
-      "line": 115,
+      "line": 117,
       "operations": [
         {
           "id": "guesty update",
@@ -162035,7 +162128,7 @@
           },
           "requests": [],
           "sourceFile": "src/cli.ts",
-          "line": 115
+          "line": 117
         }
       ]
     },
@@ -246419,6 +246512,89 @@
       "line": 36
     },
     {
+      "id": "guesty mcp",
+      "rootAction": true,
+      "name": "mcp",
+      "syntax": "mcp",
+      "fullCommand": "guesty mcp",
+      "description": "Run an MCP server so AI agents (Claude, Codex, Cursor) can search and call every Guesty operation with your team's shared token",
+      "aliases": [],
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--read-only",
+          "description": "Refuse every operation that changes data (also GUESTY_MCP_READ_ONLY=1)",
+          "required": false,
+          "defaultValue": null,
+          "line": 8
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/mcp.ts",
+      "line": 8
+    },
+    {
+      "id": "guesty mcp install",
+      "rootAction": false,
+      "name": "install",
+      "syntax": "install",
+      "fullCommand": "guesty mcp install",
+      "description": "Add the Guesty MCP server to Claude Code, Codex, Cursor or Claude Desktop on this computer",
+      "aliases": [],
+      "arguments": [],
+      "options": [
+        {
+          "flags": "--client <apps>",
+          "description": null,
+          "required": false,
+          "defaultValue": null,
+          "line": 15
+        },
+        {
+          "flags": "--all",
+          "description": "Add it to every supported app found on this computer",
+          "required": false,
+          "defaultValue": null,
+          "line": 15
+        },
+        {
+          "flags": "--read-only",
+          "description": "Install it so it refuses every operation that changes data",
+          "required": false,
+          "defaultValue": null,
+          "line": 15
+        },
+        {
+          "flags": "--print",
+          "description": "Print the server settings to add by hand, and change nothing",
+          "required": false,
+          "defaultValue": null,
+          "line": 15
+        }
+      ],
+      "inputCapabilities": {
+        "supportsDataOption": false,
+        "supportsTextOption": false,
+        "supportsDataFileOption": false,
+        "supportsStdinFlag": false,
+        "readsJsonFromStdin": false,
+        "readsTextFromStdin": false,
+        "writesToOutputFile": false
+      },
+      "requests": [],
+      "sourceFile": "src/commands/mcp.ts",
+      "line": 15
+    },
+    {
       "id": "guesty owners bulk-create",
       "rootAction": false,
       "name": "bulk-create",
@@ -327815,7 +327991,7 @@
       },
       "requests": [],
       "sourceFile": "src/cli.ts",
-      "line": 115
+      "line": 117
     },
     {
       "id": "guesty user-scope assign",

@@ -93,6 +93,20 @@ test("health check answers without a key", async () => {
   assert.deepEqual((await callJson("GET", "/health")).body, { service: "guesty-token-service", ok: true });
 });
 
+test("the /connect page gives an agent the setup steps, without a key", async () => {
+  const res = await call("GET", "/connect");
+  assert.equal(res.status, 200);
+  assert.equal(res.headers.get("content-type"), "text/markdown; charset=utf-8");
+  const text = await res.text();
+  assert.match(text, /npm install -g --allow-remote=all https:\/\/github\.com\/164investments\/guesty-cli\/releases\/latest\/download\/guesty-cli\.tgz/);
+  assert.match(text, /guesty join <the link or code>/);
+  assert.match(text, /guesty mcp install --client <app>/);
+  assert.match(text, /Never ask for, print or save a Guesty client secret/);
+  const head = await call("HEAD", "/connect");
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+});
+
 let admin;
 let member;
 
