@@ -35,6 +35,20 @@ function deprecated(name: string, replacement: string) {
   );
 }
 
+function reportParams(opts: { timezone: string; limit?: string; skip?: string }): Record<string, string | number> {
+  try { new Intl.DateTimeFormat("en-US", { timeZone: opts.timezone }); }
+  catch { throw new Error("--timezone must be a valid IANA timezone, such as America/Los_Angeles."); }
+  const params: Record<string, string | number> = { timezone: opts.timezone };
+  if (opts.limit !== undefined) params.limit = integer(opts.limit, "--limit", 1);
+  if (opts.skip !== undefined) params.skip = integer(opts.skip, "--skip");
+  return params;
+}
+
+function guestId(value: string): string {
+  if (!value.trim()) throw new Error("--guest-id must be a non-empty guest ID.");
+  return value;
+}
+
 export const reservations = new Command("reservations")
   .alias("res")
   .description("Manage reservations");
@@ -385,6 +399,22 @@ reservations
   });
 
 reservations
+  .command("lock-property <reservationId>")
+  .description("Lock the reservation's listing/unit against changes (refreshes the lock when already locked)")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/property-lock`, { method: "POST" });
+    print(data);
+  });
+
+reservations
+  .command("unlock-property <reservationId>")
+  .description("Unlock the reservation's listing/unit so it can be changed again")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/property-lock`, { method: "DELETE" });
+    print(data);
+  });
+
+reservations
   .command("update-booking-date <reservationId>")
   .description("Update the real-world booking date (--data or stdin)")
   .option("--data <json>", "JSON body with bookingDate (ISO datetime with timezone)")
@@ -467,6 +497,41 @@ reservations
       method: "PUT",
       body,
       params: financialParams(opts),
+    });
+    print(data);
+  });
+
+reservations
+  .command("guests <reservationId>")
+  .description("List the guest entity refs linked to a reservation, including the booker (refs only, no profiles)")
+  .action(async (reservationId: string) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/guests`);
+    print(data);
+  });
+
+reservations
+  .command("assign-guest <reservationId>")
+  .description("Assign one guest entity to a reservation (not tied to the guest count)")
+  .requiredOption("--guest-id <id>", "Guest entity ID")
+  .addOption(new Option("--type <type>", "Guest type for this assignment")
+    .choices(["adult", "children", "infant", "pet"])
+    .makeOptionMandatory())
+  .action(async (reservationId: string, opts) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/guests/assign`, {
+      method: "PUT",
+      body: { _id: guestId(opts.guestId), type: opts.type },
+    });
+    print(data);
+  });
+
+reservations
+  .command("unassign-guest <reservationId>")
+  .description("Unassign one guest entity from a reservation (the booker cannot be unassigned)")
+  .requiredOption("--guest-id <id>", "Guest entity ID")
+  .action(async (reservationId: string, opts) => {
+    const data = await guestyFetch(`/v1/reservations-v3/${encodeURIComponent(reservationId)}/guests/unassign`, {
+      method: "PUT",
+      body: { _id: guestId(opts.guestId) },
     });
     print(data);
   });
@@ -747,13 +812,79 @@ reservations
   .option("--limit <n>", "Max results")
   .option("--skip <n>", "Offset")
   .action(async (viewId: string, opts) => {
-    try { new Intl.DateTimeFormat("en-US", { timeZone: opts.timezone }); }
-    catch { throw new Error("--timezone must be a valid IANA timezone, such as America/Los_Angeles."); }
-    const params: Record<string, string | number> = { timezone: opts.timezone };
-    if (opts.limit !== undefined) params.limit = integer(opts.limit, "--limit", 1);
-    if (opts.skip !== undefined) params.skip = integer(opts.skip, "--skip");
-    const data = await guestyFetch(`/v1/reservations-reports/${encodeURIComponent(viewId)}`, { params });
+    const data = await guestyFetch(`/v1/reservations-reports/${encodeURIComponent(viewId)}`, { params: reportParams(opts) });
     print(data);
+  });
+
+reservations
+  .command("report-csv <viewId>")
+  .description("Get reservations report by view ID as CSV")
+  .requiredOption("--timezone <tz>", "Timezone (e.g. America/Los_Angeles)")
+  .option("--limit <n>", "Max results")
+  .option("--skip <n>", "Offset")
+  .option("--output <path>", "Write CSV output to a file")
+  .action(async (viewId: string, opts) => {
+    const data = await guestyFetch<string>(`/v1/reservations-reports/${encodeURIComponent(viewId)}/csv`, {
+      params: reportParams(opts),
+      responseType: "text",
+    });
+    if (opts.output) {
+      writeFileSync(opts.output, data);
+      process.stderr.write(`Saved CSV to ${opts.output}\n`);
+      return;
+    }
+    print(data);
+  });
+
+reservations
+  .command("report-search")
+  .description("Search reservations with report enrichments (money, listing, guest, accounting); dates are in the listing's timezone")
+  .option("--from <date>", "Check-in date on/after (YYYY-MM-DD)")
+  .option("--to <date>", "Check-in date on/before (YYYY-MM-DD)")
+  .option("--check-out-from <date>", "Check-out date on/after (YYYY-MM-DD)")
+  .option("--check-out-to <date>", "Check-out date on/before (YYYY-MM-DD)")
+  .option("--created-from <timestamp>", "Created on/after ISO datetime with timezone")
+  .option("--created-before <timestamp>", "Created strictly before ISO datetime with timezone")
+  .option("--status <statuses>", "Status or comma-separated statuses")
+  .option("--exclude-status <statuses>", "Exclude a status or comma-separated statuses")
+  .option("--listing <ids>", "Listing ID or comma-separated IDs")
+  .option("--confirmation-code <codes>", "Confirmation code or comma-separated codes")
+  .option("--source <sources>", "Source or comma-separated sources")
+  .option("--limit <n>", "Page size (1-100)", "25")
+  .option("--skip <n>", "Initial offset", "0")
+  .addOption(new Option("--sort <field>", "Sort field; prefix with - for descending")
+    .choices(["_id", "-_id", "checkIn", "-checkIn", "checkOut", "-checkOut", "createdAt", "-createdAt"])
+    .default("-_id"))
+  .option("--all", "Fetch all pages from --skip (up to 10k)")
+  .action(async (opts) => {
+    const params: Record<string, string | number> = {
+      limit: integer(opts.limit, "--limit", 1, 100),
+      skip: integer(opts.skip, "--skip"),
+      sort: opts.sort,
+    };
+    if (opts.from) date(opts.from, "--from");
+    if (opts.to) date(opts.to, "--to");
+    if (opts.checkOutFrom) date(opts.checkOutFrom, "--check-out-from");
+    if (opts.checkOutTo) date(opts.checkOutTo, "--check-out-to");
+    dateRange(opts.from, opts.to);
+    dateRange(opts.checkOutFrom, opts.checkOutTo, "--check-out-from", "--check-out-to");
+    if (opts.createdFrom) dateTime(opts.createdFrom, "--created-from");
+    if (opts.createdBefore) dateTime(opts.createdBefore, "--created-before");
+    dateRange(opts.createdFrom, opts.createdBefore, "--created-from", "--created-before");
+    if (opts.from) params["filter[checkInDate][gte]"] = opts.from;
+    if (opts.to) params["filter[checkInDate][lte]"] = opts.to;
+    if (opts.checkOutFrom) params["filter[checkOutDate][gte]"] = opts.checkOutFrom;
+    if (opts.checkOutTo) params["filter[checkOutDate][lte]"] = opts.checkOutTo;
+    if (opts.createdFrom) params["filter[createdAt][gte]"] = opts.createdFrom;
+    if (opts.createdBefore) params["filter[createdAt][lt]"] = opts.createdBefore;
+    if (opts.status) params["filter[status]"] = opts.status;
+    if (opts.excludeStatus) params["filter[status][nin]"] = opts.excludeStatus;
+    if (opts.listing) params["filter[listingId]"] = opts.listing;
+    if (opts.confirmationCode) params["filter[confirmationCode]"] = opts.confirmationCode;
+    if (opts.source) params["filter[source]"] = opts.source;
+    print(opts.all
+      ? await paginateAll("/v1/reservations-reports/reservations/search", params, "results")
+      : await guestyFetch("/v1/reservations-reports/reservations/search", { params }));
   });
 
 reservations

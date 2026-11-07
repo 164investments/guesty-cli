@@ -1781,7 +1781,7 @@
     {
       "method": "GET",
       "path": "/v1/reservations",
-      "title": "List reservations",
+      "title": "[DEPRECATED] List reservations",
       "slug": "reservationsv2list",
       "operationId": "reservationsV2List",
       "deprecated": true
@@ -1789,15 +1789,50 @@
     {
       "method": "POST",
       "path": "/v1/reservations",
-      "title": "Create a reservation",
+      "title": "[DEPRECATED] Create a reservation",
       "slug": "reservationsv2create",
       "operationId": "reservationsV2Create",
       "deprecated": true
     },
     {
       "method": "GET",
+      "path": "/v1/reservations-v3/{reservationId}/guests",
+      "title": "List reservation guest refs",
+      "slug": "reservationguestslistopenapicontroller_getguests",
+      "operationId": "ReservationGuestsListOpenApiController_getGuests"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/reservations-v3/{reservationId}/guests/assign",
+      "title": "Assign a guest to a reservation",
+      "slug": "reservationguestsassignopenapicontroller_assignguest",
+      "operationId": "ReservationGuestsAssignOpenApiController_assignGuest"
+    },
+    {
+      "method": "PUT",
+      "path": "/v1/reservations-v3/{reservationId}/guests/unassign",
+      "title": "Unassign a guest from a reservation",
+      "slug": "reservationguestsunassignopenapicontroller_unassignguest",
+      "operationId": "ReservationGuestsUnassignOpenApiController_unassignGuest"
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/reservations-v3/{reservationId}/property-lock",
+      "title": "Unlock reservation property",
+      "slug": "reservationsopenapicontroller_unlockproperty",
+      "operationId": "ReservationsOpenApiController_unlockProperty"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/reservations-v3/{reservationId}/property-lock",
+      "title": "Lock reservation property",
+      "slug": "reservationsopenapicontroller_lockproperty",
+      "operationId": "ReservationsOpenApiController_lockProperty"
+    },
+    {
+      "method": "GET",
       "path": "/v1/reservations/{id}",
-      "title": "Get a reservation",
+      "title": "[DEPRECATED] Get a reservation",
       "slug": "reservationsv2get",
       "operationId": "reservationsV2Get",
       "deprecated": true
@@ -1805,7 +1840,7 @@
     {
       "method": "PUT",
       "path": "/v1/reservations/{id}",
-      "title": "Update a reservation",
+      "title": "[DEPRECATED] Update a reservation",
       "slug": "reservationsv2update",
       "operationId": "reservationsV2Update",
       "deprecated": true
@@ -1813,7 +1848,7 @@
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/approve",
-      "title": "Approve a pending booking request",
+      "title": "[DEPRECATED] Approve a pending booking request",
       "slug": "reservationsv2bookingrequestapprove",
       "operationId": "reservationsV2BookingRequestApprove",
       "deprecated": true
@@ -1821,7 +1856,7 @@
     {
       "method": "GET",
       "path": "/v1/reservations/{id}/custom-fields",
-      "title": "List a reservation's populated custom field values",
+      "title": "[DEPRECATED] List a reservation's populated custom field values",
       "slug": "reservationsv2customfieldlist",
       "operationId": "reservationsV2CustomFieldList",
       "deprecated": true
@@ -1829,7 +1864,7 @@
     {
       "method": "PUT",
       "path": "/v1/reservations/{id}/custom-fields",
-      "title": "Update a reservation's custom field values",
+      "title": "[DEPRECATED] Update a reservation's custom field values",
       "slug": "reservationsv2customfieldupdate",
       "operationId": "reservationsV2CustomFieldUpdate",
       "deprecated": true
@@ -1837,7 +1872,7 @@
     {
       "method": "GET",
       "path": "/v1/reservations/{id}/custom-fields/{field_id}",
-      "title": "Get a reservation's custom field value",
+      "title": "[DEPRECATED] Get a reservation's custom field value",
       "slug": "reservationsv2customfieldget",
       "operationId": "reservationsV2CustomFieldGet",
       "deprecated": true
@@ -1845,7 +1880,7 @@
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/decline",
-      "title": "Decline a pending booking request",
+      "title": "[DEPRECATED] Decline a pending booking request",
       "slug": "reservationsv2bookingrequestdecline",
       "operationId": "reservationsV2BookingRequestDecline",
       "deprecated": true
@@ -1853,7 +1888,7 @@
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/invoiceItems",
-      "title": "Create an invoice item",
+      "title": "[DEPRECATED] Create an invoice item",
       "slug": "reservationsv2invoiceitemscreate",
       "operationId": "reservationsV2InvoiceItemsCreate",
       "deprecated": true
@@ -1861,7 +1896,7 @@
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/payments",
-      "title": "Record or process a reservation payment",
+      "title": "[DEPRECATED] Record or process a reservation payment",
       "slug": "reservationsv2paymentcreate",
       "operationId": "reservationsV2PaymentCreate",
       "deprecated": true
@@ -1869,7 +1904,7 @@
     {
       "method": "PUT",
       "path": "/v1/reservations/{id}/payments/{paymentId}",
-      "title": "Update or cancel a pending payment",
+      "title": "[DEPRECATED] Update or cancel a pending payment",
       "slug": "reservationsv2paymentupdate",
       "operationId": "reservationsV2PaymentUpdate",
       "deprecated": true
@@ -1877,7 +1912,7 @@
     {
       "method": "PATCH",
       "path": "/v1/reservations/{id}/payments/{paymentId}/cancel",
-      "title": "Cancel a pending or recorded payment",
+      "title": "[DEPRECATED] Cancel a pending or recorded payment",
       "slug": "reservationsv2paymentcancelupdate",
       "operationId": "reservationsV2PaymentCancelUpdate",
       "deprecated": true
@@ -1885,7 +1920,7 @@
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/payments/{paymentId}/refund",
-      "title": "Refund a payment",
+      "title": "[DEPRECATED] Refund a payment",
       "slug": "reservationsv2paymentrefundcreate",
       "operationId": "reservationsV2PaymentRefundCreate",
       "deprecated": true
@@ -1893,7 +1928,7 @@
     {
       "method": "POST",
       "path": "/v1/reservations/{id}/request-cancellation-sync",
-      "title": "Request an airbnb reservation cancellation",
+      "title": "[DEPRECATED] Request an airbnb reservation cancellation",
       "slug": "reservationsv2requestairbnbcancellationpost",
       "operationId": "reservationsV2RequestAirbnbCancellationPost",
       "deprecated": true
@@ -1901,7 +1936,7 @@
     {
       "method": "DELETE",
       "path": "/v1/reservations/{reservation_id}/custom-fields/{field_id}",
-      "title": "Delete a reservation's custom field value",
+      "title": "[DEPRECATED] Delete a reservation's custom field value",
       "slug": "reservationsv2customfielddelete",
       "operationId": "reservationsV2CustomFieldDelete",
       "deprecated": true
@@ -1972,6 +2007,20 @@
       "title": "Get reservations report by view id",
       "slug": "reservationsreportsopenapicontroller_getreportbyviewid",
       "operationId": "ReservationsReportsOpenApiController_getReportByViewId"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/reservations-reports/{viewId}/csv",
+      "title": "Get reservations report as CSV by view id",
+      "slug": "reservationsreportsopenapicontroller_getreportbyviewidcsv",
+      "operationId": "ReservationsReportsOpenApiController_getReportByViewIdCsv"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/reservations-reports/reservations/search",
+      "title": "Search Reservations",
+      "slug": "reservationsreportsopenapicontroller_searchreservations",
+      "operationId": "ReservationsReportsOpenApiController_searchReservations"
     }
   ],
   "reservations-v3": [
@@ -2141,7 +2190,7 @@
     {
       "method": "POST",
       "path": "/v1/reservations.csv",
-      "title": "Download a reservation list as a CSV",
+      "title": "[DEPRECATED] Download a reservation list as a CSV",
       "slug": "reservationsv2listcsvdownload",
       "operationId": "reservationsV2ListCsvDownload",
       "deprecated": true
@@ -2151,7 +2200,7 @@
     {
       "method": "POST",
       "path": "/v1/reservations.email",
-      "title": "Email a reservation list",
+      "title": "[DEPRECATED] Email a reservation list",
       "slug": "reservationsv2listemailsend",
       "operationId": "reservationsV2ListEmailSend",
       "deprecated": true
