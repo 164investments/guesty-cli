@@ -248,9 +248,15 @@ pub fn list(value: &str, option: &str) -> Result<Vec<String>> {
     Ok(values)
 }
 
-/// `String#trim()`: JavaScript's whitespace includes U+FEFF.
+/// `String#trim()`. JavaScript's whitespace includes U+FEFF and, unlike
+/// Rust's, not U+0085.
 pub fn js_trim(value: &str) -> &str {
-    value.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}')
+    value.trim_matches(is_js_whitespace)
+}
+
+/// JavaScript's `\s`.
+pub fn is_js_whitespace(c: char) -> bool {
+    (c.is_whitespace() && c != '\u{85}') || c == '\u{feff}'
 }
 
 #[cfg(test)]

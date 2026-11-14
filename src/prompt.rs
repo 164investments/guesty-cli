@@ -581,7 +581,7 @@ mod interactive_ui {
     }
 
     pub fn multiselect(message: &str, options: &[Choice], initial: &[String]) -> Result<Vec<String>> {
-        let mut select = cliclack::multiselect(message).initial_values(initial.to_vec()).required(false);
+        let mut select = cliclack::multiselect(message).initial_values(initial.to_vec()).required(true);
         for option in options {
             select = select.item(option.value.clone(), &option.label, option.hint.as_deref().unwrap_or(""));
         }

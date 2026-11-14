@@ -62,6 +62,7 @@
     "@types/node": "^22.0.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "tsrs": "0.18.0-ts7.1.0-dev.20260929",
-    "typescript": "npm:@typescript/typescript6@^6.0.2"
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "@modelcontextprotocol/sdk": "^1.32.2"
   }
 }

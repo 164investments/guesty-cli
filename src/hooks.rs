@@ -117,8 +117,9 @@ mod imp {
         let Some(path) = std::env::var_os("GUESTY_TEST_TRACE") else { return };
         let at = crate::json::number(now_ms());
         let line = crate::json::compact(&crate::json::json!({ "kind": kind, "value": value, "at": at }));
+        // One write per line, so lines from parallel MCP calls never interleave.
         if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
-            let _ = writeln!(file, "{line}");
+            let _ = file.write_all(format!("{line}\n").as_bytes());
         }
     }
 

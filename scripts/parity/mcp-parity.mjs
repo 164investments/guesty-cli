@@ -7,6 +7,10 @@
 //   cargo build --features test-hooks
 //   node scripts/parity/mcp-parity.mjs [--node <a 1.6 build of PR #18: dist/cli.js>] [--rust <binary>] [--only <name>] [--quiet]
 //
+// Golden mode, for CI once no Node build is around: --record runs only the
+// Node server and saves its results in scripts/parity/cases/mcp-golden.json.gz;
+// --golden compares the Rust server with that file instead of running Node.
+//
 // Nothing reaches Guesty: both servers send every request to the mock, and
 // HOME is a fresh temporary directory configured with a fake token service.
 import { spawn } from "node:child_process";
@@ -15,6 +19,7 @@ import { mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const argv = process.argv.slice(2);
@@ -24,6 +29,8 @@ for (let i = 0; i < argv.length; i++) {
   else if (argv[i] === "--node") opts.node = resolve(argv[++i]);
   else if (argv[i] === "--only") opts.only = argv[++i];
   else if (argv[i] === "--quiet") opts.quiet = true;
+  else if (argv[i] === "--record") opts.record = true;
+  else if (argv[i] === "--golden") opts.golden = true;
   else throw new Error(`Unknown option ${argv[i]}`);
 }
 
@@ -31,7 +38,11 @@ for (let i = 0; i < argv.length; i++) {
 
 const IGNORED_HEADERS = new Set(["host", "user-agent", "accept-encoding", "accept-language", "sec-fetch-mode", "connection",
   "content-length", "transfer-encoding", "x-guesty-test-origin"]);
-const now = Date.now();
+// A fixed expiry keeps every run's output identical.
+const EXPIRES_AT = 4_102_444_800_000;
+const GOLDEN_FILE = join(root, "scripts/parity/cases/mcp-golden.json.gz");
+const golden = opts.golden ? JSON.parse(gunzipSync(readFileSync(GOLDEN_FILE)).toString("utf8")) : {};
+const recording = {};
 let state;
 
 const server = createServer((req, res) => {
@@ -51,7 +62,7 @@ const server = createServer((req, res) => {
     const path = new URL(url).pathname;
     if (origin === "https://tokens.invalid" && path === "/v1/token") {
       const type = body ? JSON.parse(body).token_type : "openapi";
-      return send(200, { token_type: type, access_token: `parity-fake-${type}-token`, expires_at: now + 36_000_000 });
+      return send(200, { token_type: type, access_token: `parity-fake-${type}-token`, expires_at: EXPIRES_AT });
     }
     if (origin === "https://tokens.invalid") {
       const r = state.c.tokenService?.[`${req.method} ${path}`] ?? { status: 404, json: { error: "not_found", message: "Not found." } };
@@ -387,8 +398,13 @@ for (const c of cases) {
   if (opts.only && !c.name.includes(opts.only)) continue;
   total++;
   state = { c, requests: [], replyIndex: 0 };
-  const node = await run(nodeCommand, c);
-  const nodeRequests = state.requests;
+  const node = opts.golden ? golden[c.name] : await run(nodeCommand, c);
+  if (!node) throw new Error(`No golden result for ${c.name}; record with --record`);
+  const nodeRequests = opts.golden ? node.requests : state.requests;
+  if (opts.record) {
+    recording[c.name] = { ...node, requests: nodeRequests };
+    continue;
+  }
   state = { c, requests: [], replyIndex: 0 };
   const rust = await run([opts.rust], c);
   const rustRequests = state.requests;
@@ -428,7 +444,12 @@ for (const extra of [[], ["--read-only"]]) {
   if (opts.only && !"install --print".includes(opts.only)) break;
   total++;
   state = { c: {}, requests: [], replyIndex: 0 };
-  const node = await printed(nodeCommand, ["mcp", "install", "--print", ...extra]);
+  const key = `install --print ${extra.join(" ")}`;
+  const node = opts.golden ? golden[key] : await printed(nodeCommand, ["mcp", "install", "--print", ...extra]);
+  if (opts.record) {
+    recording[key] = node;
+    continue;
+  }
   const rust = await printed([opts.rust], ["mcp", "install", "--print", ...extra]);
   const n = node.json?.mcpServers?.["guesty-cli"];
   const r = rust.json?.mcpServers?.["guesty-cli"];
@@ -448,5 +469,10 @@ for (const extra of [[], ["--read-only"]]) {
 }
 
 server.close();
+if (opts.record) {
+  writeFileSync(GOLDEN_FILE, gzipSync(JSON.stringify(recording, null, 1) + "\n", { level: 9 }));
+  console.log(`Recorded ${Object.keys(recording).length} cases in ${GOLDEN_FILE}`);
+  process.exit(0);
+}
 console.log(`${total - failures}/${total} cases match`);
 process.exit(failures ? 1 : 0);
