@@ -1068,3 +1068,71 @@ test("wrangler config: invocation logs and traces off, hosted bindings present",
   assert.match(hosted, /account_id = "52211577e087a1619838cda534d59d7b"/);
   for (const name of ["REGISTER_LIMITER", "AUTHORIZE_LIMITER", "TOKEN_LIMITER", "TOOL_LIMITER"]) assert.match(hosted, new RegExp(`name = "${name}"`));
 });
+
+// The official MCP TypeScript SDK client, end to end: it discovers the server, registers, sends
+// the person to the sign-in page (approved here with an invite), exchanges the code with PKCE,
+// uses the tools, and refreshes on its own when its access token stops working.
+test("the official MCP SDK client signs in with an invite, uses the tools and refreshes", async () => {
+  const sdk = createRequire(join(crate, "..", "..", "package.json"));
+  const { Client } = await import(sdk.resolve("@modelcontextprotocol/sdk/client/index.js"));
+  const { StreamableHTTPClientTransport } = await import(sdk.resolve("@modelcontextprotocol/sdk/client/streamableHttp.js"));
+  const { UnauthorizedError } = await import(sdk.resolve("@modelcontextprotocol/sdk/client/auth.js"));
+  const invited = await invite("SDK User");
+  const saved = {};
+  let opened;
+  const provider = {
+    get redirectUrl() { return REDIRECT; },
+    get clientMetadata() {
+      return { client_name: "SDK test", redirect_uris: [REGISTERED_REDIRECT], grant_types: ["authorization_code", "refresh_token"], response_types: ["code"], token_endpoint_auth_method: "none" };
+    },
+    clientInformation: () => saved.client,
+    saveClientInformation: (info) => { saved.client = info; },
+    tokens: () => saved.tokens,
+    saveTokens: (tokens) => { saved.tokens = tokens; remember(tokens.access_token, tokens.refresh_token); },
+    redirectToAuthorization: (url) => { opened = url; },
+    saveCodeVerifier: (verifier) => { saved.verifier = verifier; },
+    codeVerifier: () => saved.verifier,
+  };
+  const fetchFn = (url, init = {}) => {
+    const headers = new Headers(init.headers);
+    headers.set("CF-Connecting-IP", freshIp());
+    return mf.dispatchFetch(String(url), { ...init, headers, redirect: "manual" });
+  };
+  const connect = async () => {
+    const client = new Client({ name: "sdk-test", version: "1.0.0" });
+    const transport = new StreamableHTTPClientTransport(new URL(RESOURCE), { authProvider: provider, fetch: fetchFn });
+    await client.connect(transport);
+    return { client, transport };
+  };
+
+  // No tokens yet: the SDK registers and opens the sign-in page.
+  const first = new StreamableHTTPClientTransport(new URL(RESOURCE), { authProvider: provider, fetch: fetchFn });
+  await assert.rejects(new Client({ name: "sdk-test", version: "1.0.0" }).connect(first), UnauthorizedError);
+  assert.ok(saved.client?.client_id, "the SDK registered a client");
+  assert.equal(opened.origin, PUBLIC);
+  assert.equal(opened.searchParams.get("resource"), RESOURCE);
+  const page = await call(`${opened.pathname}${opened.search}`);
+  const field = /name="request" value="([^"]*)"/.exec(await page.text())?.[1];
+  assert.ok(field, "the sign-in page has its signed request");
+  const approved = await submit(field, { credential: invited.code });
+  assert.equal(approved.status, 303);
+  const back = new URL(approved.headers.get("location"));
+  assert.equal(back.searchParams.get("iss"), PUBLIC);
+  await first.finishAuth(back.searchParams.get("code"));
+  assert.ok(saved.tokens?.access_token && saved.tokens?.refresh_token);
+
+  const { client } = await connect();
+  const { tools } = await client.listTools();
+  assert.deepEqual(tools.map((t) => t.name), ["search_operations", "describe_operation", "call_operation", "team_status", "invite_teammate"]);
+  const found = await client.callTool({ name: "search_operations", arguments: { query: "list reservations" } });
+  assert.notEqual(found.isError, true);
+  assert.match(found.content[0].text, /reservations/i);
+
+  // The access token stops working: the SDK refreshes (rotating the refresh token) and retries.
+  const before = saved.tokens.refresh_token;
+  await mcpDb.prepare("UPDATE access_tokens SET expires_at = 0").run();
+  const described = await client.callTool({ name: "describe_operation", arguments: { operation: "GET /v1/listings" } });
+  assert.notEqual(described.isError, true);
+  assert.notEqual(saved.tokens.refresh_token, before, "the refresh token rotated");
+  await client.close();
+});
