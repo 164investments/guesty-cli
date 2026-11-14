@@ -209,6 +209,8 @@ pub struct Arg {
     pub description: String,
     pub required: bool,
     pub variadic: bool,
+    /// Declared in the command's name string rather than with `.argument()`.
+    pub inline: bool,
 }
 
 impl Arg {
@@ -221,6 +223,7 @@ impl Arg {
             description: description.to_string(),
             required,
             variadic,
+            inline: false,
         }
     }
 
@@ -266,7 +269,7 @@ impl Command {
     pub fn new(name_and_args: &str) -> Command {
         let mut parts = name_and_args.split_whitespace();
         let name = parts.next().unwrap_or("").to_string();
-        let args = parts.map(|token| Arg::parse(token, "")).collect();
+        let args = parts.map(|token| Arg { inline: true, ..Arg::parse(token, "") }).collect();
         let at = Location::caller();
         Command {
             name,
@@ -1168,13 +1171,14 @@ pub fn contract(cmd: &Command, ancestors: &[&str]) -> Json {
     json::json!({
         "name": cmd.name,
         "path": full.join(" "),
-        "syntax": std::iter::once(cmd.name.clone()).chain(cmd.args.iter().map(Arg::human)).collect::<Vec<_>>().join(" "),
+        "syntax": std::iter::once(cmd.name.clone()).chain(cmd.args.iter().filter(|a| a.inline).map(Arg::human)).collect::<Vec<_>>().join(" "),
         "description": cmd.description,
         "aliases": cmd.aliases,
         "hasAction": cmd.action.is_some(),
         "hidden": cmd.hidden,
         "arguments": cmd.args.iter().map(|a| json::json!({
-            "name": a.name, "required": a.required, "variadic": a.variadic, "description": a.description,
+            "name": a.name, "syntax": a.human(), "required": a.required, "variadic": a.variadic,
+            "description": a.description, "inline": a.inline,
         })).collect::<Vec<_>>(),
         "options": cmd.options.iter().map(|o| json::json!({
             "flags": o.flags,
