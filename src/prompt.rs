@@ -143,8 +143,8 @@ pub fn required(reason: &str) -> Check {
 }
 
 /// Turns a parser that fails on bad input into a check that explains why.
-pub fn parses<T: 'static>(parse: fn(&str) -> Result<T>) -> Check {
-    Box::new(move |value| parse(value).err().map(|e| e.message()))
+pub fn parses<T: 'static, E: std::fmt::Display + 'static>(parse: fn(&str) -> std::result::Result<T, E>) -> Check {
+    Box::new(move |value| parse(value).err().map(|e| e.to_string()))
 }
 
 #[derive(Default)]

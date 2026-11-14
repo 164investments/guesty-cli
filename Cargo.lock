@@ -248,16 +248,26 @@ dependencies = [
 name = "guesty-cli"
 version = "2.0.0"
 dependencies = [
- "base64 0.22.1",
  "chrono",
  "chrono-tz",
  "cliclack",
+ "guesty-core",
  "libc",
+ "terminal_size",
+ "ureq",
+ "url",
+]
+
+[[package]]
+name = "guesty-core"
+version = "2.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "chrono-tz",
  "ryu",
  "serde",
  "serde_json",
- "terminal_size",
- "ureq",
  "url",
 ]
 

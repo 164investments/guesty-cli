@@ -17,27 +17,8 @@ pub struct Request<'a> {
     pub timeout_ms: u64,
 }
 
-pub struct Response {
-    pub status: u16,
-    /// Lowercase names.
-    pub headers: Vec<(String, String)>,
-    /// `Err` when the body couldn't be read after the status arrived.
-    pub body: Result<Vec<u8>, ()>,
-}
-
-impl Response {
-    pub fn header(&self, name: &str) -> Option<&str> {
-        self.headers.iter().find(|(k, _)| k == name).map(|(_, v)| v.as_str())
-    }
-
-    pub fn ok(&self) -> bool {
-        (200..300).contains(&self.status)
-    }
-
-    pub fn text(&self) -> Result<String, ()> {
-        self.body.as_ref().map(|b| String::from_utf8_lossy(b).into_owned()).map_err(|_| ())
-    }
-}
+/// A response: status, lowercase header names and the body (the shared core's type).
+pub use guesty_core::request::Response;
 
 fn agent() -> &'static ureq::Agent {
     static AGENT: OnceLock<ureq::Agent> = OnceLock::new();

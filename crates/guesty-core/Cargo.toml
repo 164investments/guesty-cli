@@ -1,0 +1,26 @@
+[package]
+name = "guesty-core"
+description = "The I/O-free core of the Guesty CLI's MCP server and API client: JavaScript-exact JSON, the operation catalog, the MCP tools over an async Backend, and the request, retry and pagination decisions"
+version = "2.0.0"
+edition = "2024"
+rust-version = "1.90"
+license = "MIT"
+repository = "https://github.com/164investments/guesty-cli"
+publish = false
+build = "build/main.rs"
+
+# No I/O here: no network, filesystem, environment, terminal or threads, so the
+# crate builds for wasm32-unknown-unknown (a Cloudflare Worker).
+[dependencies]
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+chrono-tz = { version = "0.10", default-features = false }
+serde = "1"
+url = "2"
+ryu = "1"
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
+
+[build-dependencies]
+serde = "1"
+ryu = "1"
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }

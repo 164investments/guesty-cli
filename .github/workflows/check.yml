@@ -18,8 +18,10 @@ jobs:
           cache: npm
       - name: Install Rust
         run: |
-          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
           rustup default stable
       - uses: Swatinem/rust-cache@v2
       - run: npm ci
       - run: npm run check
+      - name: Build the shared core for WebAssembly
+        run: cargo build -p guesty-core --target wasm32-unknown-unknown
