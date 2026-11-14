@@ -23,7 +23,6 @@ mod stdin;
 mod token_service;
 mod update;
 
-use std::io::IsTerminal;
 
 use error::CliError;
 
@@ -49,7 +48,7 @@ fn main() {
             let action = call.command.action.as_ref().expect("action");
             match action(&call) {
                 Ok(()) => {
-                    if std::io::stdout().is_terminal() && std::io::stderr().is_terminal() && !skip_update_check {
+                    if hooks::is_terminal(hooks::Stream::Stdout) && hooks::is_terminal(hooks::Stream::Stderr) && !skip_update_check {
                         update::check_for_update();
                     }
                     0

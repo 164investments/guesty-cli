@@ -97,7 +97,7 @@ if (args[0] === "install") {
   const pkg = path.join(scenario.globalRoot, "guesty-cli");
   fs.mkdirSync(pkg, { recursive: true });
   fs.writeFileSync(path.join(pkg, "package.json"), JSON.stringify({ name: "guesty-cli", version: scenario.installedVersion ?? "1.2.0" }));
-  if (scenario.installedMissingEntry) for (const entry of ["dist/guesty", "dist/cli.js"]) fs.rmSync(path.join(pkg, entry), { force: true });
+  if (scenario.installedMissingEntry) for (const entry of ["dist/bin.js", "dist/cli.js"]) fs.rmSync(path.join(pkg, entry), { force: true });
   process.exit(0);
 }
 process.stderr.write("external execution forbidden\\n");
@@ -154,7 +154,7 @@ async function multipartFields(contentType, body) {
  * - args, stdin
  * - env: variables to set (null removes one); GUESTY_*, SUPABASE_* and NODE_OPTIONS from this process are dropped
  * - home: files under HOME; cwd: files in the working directory
- * - packageFiles: files next to a copy of the binary in `<package>/dist/guesty` (e.g. `{ ".env": "..." }`);
+ * - packageFiles: files next to a copy of the binary in `<package>/dist/bin.js` (e.g. `{ ".env": "..." }`);
  *   `global: true` puts that package at `<global npm root>/guesty-cli`; `otherGlobal: true` installs a
  *   different copy there instead
  * - npm: the fake npm's scenario ({ installFails, installedVersion, installedMissingEntry })
@@ -185,13 +185,13 @@ export async function runCli(t, options = {}) {
   if (options.packageFiles || options.global) {
     packageRoot = options.global ? join(globalRoot, "guesty-cli") : join(directory, "package");
     mkdirSync(join(packageRoot, "dist"), { recursive: true });
-    executable = join(packageRoot, "dist", "guesty");
+    executable = join(packageRoot, "dist", "bin.js");
     try { linkSync(binary, executable); } catch { copyFileSync(binary, executable); chmodSync(executable, 0o755); }
     writeTree(packageRoot, options.packageFiles);
   }
   // Another copy of the CLI installed globally, so the running one isn't the global install.
   if (options.otherGlobal) {
-    writeTree(join(globalRoot, "guesty-cli"), { "package.json": JSON.stringify({ name: "guesty-cli", version: "1.0.0" }), "dist/guesty": "#!/bin/sh\nexit 1\n" });
+    writeTree(join(globalRoot, "guesty-cli"), { "package.json": JSON.stringify({ name: "guesty-cli", version: "1.0.0" }), "dist/bin.js": "#!/bin/sh\nexit 1\n" });
   }
 
   const requests = [];

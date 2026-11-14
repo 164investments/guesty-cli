@@ -118,7 +118,7 @@ export async function runIsolatedScenario(t, { args = [], scenario = {}, stdin, 
   if (scenario.inputPath) cwd["input.bin"] = Buffer.from(scenario.inputBase64, "base64");
   const mappedArgs = args.map((arg) => arg === scenario.outputPath ? "output.bin" : arg === scenario.inputPath ? "input.bin" : arg);
 
-  // Self-update runs from an installed package: <global npm root>/guesty-cli/dist/guesty,
+  // Self-update runs from an installed package: <global npm root>/guesty-cli/dist/bin.js,
   // or (globalMismatch) a separate package while the global root holds another copy.
   const selfUpdate = args[0] === "update";
   const packageFiles = {};

@@ -113,11 +113,8 @@ fn compare_versions(a: &str, b: &str) -> Ordering {
 }
 
 fn local_version() -> String {
-    #[cfg(feature = "test-hooks")]
-    if let Ok(version) = std::env::var("GUESTY_TEST_VERSION") {
-        return if parse_version(&version).is_some() { version } else { "0.0.0".to_string() };
-    }
-    env!("CARGO_PKG_VERSION").to_string()
+    let version = crate::hooks::version();
+    if parse_version(&version).is_some() { version } else { "0.0.0".to_string() }
 }
 
 struct CheckData {

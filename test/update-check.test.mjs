@@ -5,7 +5,7 @@ import { run, now } from "./harness/isolated-runner.mjs";
 // Runs the CLI against test/harness: GitHub's release API is the mock, `npm`
 // is a fake that records its arguments, and the installed version is
 // GUESTY_TEST_VERSION (1.0.0 unless a scenario names one). `guesty update`
-// runs from a fake installed package: <npm global root>/guesty-cli/dist/guesty,
+// runs from a fake installed package: <npm global root>/guesty-cli/dist/bin.js,
 // with a .git directory unless sourceCheckout is false, or (globalMismatch) a
 // separate package while another copy is installed globally.
 //

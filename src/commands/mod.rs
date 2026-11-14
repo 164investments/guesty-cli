@@ -106,6 +106,22 @@ pub fn program() -> Command {
                 .action(|_| crate::update::run_self_update()),
         )
         .command(contract_command())
+        .command(test_update_check_command())
+}
+
+/// `guesty __test-update-check [count]` (test-hooks builds only): runs the
+/// after-command update check `count` times, as tests of it need.
+fn test_update_check_command() -> Command {
+    let command = Command::new("__test-update-check [count]").hidden();
+    #[cfg(feature = "test-hooks")]
+    let command = command.action(|c| {
+        let count = c.arg_opt(0).and_then(|n| n.parse::<u32>().ok()).unwrap_or(1);
+        for _ in 0..count {
+            crate::update::check_for_update();
+        }
+        Ok(())
+    });
+    command
 }
 
 /// `guesty __contract`: the command tree as JSON, for `guesty-cli-spec.json`.

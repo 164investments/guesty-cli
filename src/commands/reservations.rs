@@ -1,6 +1,5 @@
 //! Port of src/commands/reservations.ts.
 
-use std::io::IsTerminal;
 
 use crate::bail;
 use crate::cli::{Call, Command, Opt};
@@ -398,7 +397,7 @@ pub fn command() -> Command {
                     let data = c.opts.str("data");
                     let input = match data {
                         Some(d) => d.to_string(),
-                        None if std::io::stdin().is_terminal() => String::new(),
+                        None if crate::hooks::is_terminal(crate::hooks::Stream::Stdin) => String::new(),
                         None => stdin::read()?,
                     };
                     let body = if data.is_some() || !js_trim(&input).is_empty() {

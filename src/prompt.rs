@@ -5,14 +5,14 @@
 //! stderr, so stdout stays clean for results. Keep both paths asking the same
 //! questions in the same order.
 
-use std::io::{BufRead, IsTerminal};
+use std::io::BufRead;
 use std::sync::Mutex;
 
 use crate::error::{CliError, Result};
 use crate::output::write_err;
 
 pub fn interactive() -> bool {
-    std::io::stdin().is_terminal()
+    crate::hooks::is_terminal(crate::hooks::Stream::Stdin)
 }
 
 static FRAMED: Mutex<bool> = Mutex::new(false);

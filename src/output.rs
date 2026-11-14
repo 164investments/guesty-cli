@@ -62,6 +62,7 @@ pub fn flush_out() {
 /// Writes to stderr, after flushing stdout so the two interleave as written.
 pub fn write_err(text: &str) {
     flush_out();
+    crate::hooks::trace("stderr", crate::json::Json::from(text));
     let _ = std::io::stderr().write_all(text.as_bytes());
 }
 

@@ -1,7 +1,6 @@
 //! Port of src/commands/team.ts: `guesty team`, and the team setup and join
 //! steps `setup` and `join` share.
 
-use std::io::IsTerminal;
 
 use crate::cli::Command;
 use crate::config::save_settings;
@@ -580,7 +579,7 @@ pub fn command() -> Command {
                 .action(|_| {
                     let service = current_service()?;
                     let status = call(&service.url, "GET", "/v1/team", Some(&service.key), None)?;
-                    if !interactive() || !std::io::stdout().is_terminal() {
+                    if !interactive() || !crate::hooks::is_terminal(crate::hooks::Stream::Stdout) {
                         print_reply(status);
                         return Ok(());
                     }
