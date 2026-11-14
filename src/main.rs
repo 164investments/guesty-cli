@@ -16,6 +16,7 @@ mod error;
 mod hooks;
 mod http;
 mod json;
+mod mcp;
 mod output;
 mod prompt;
 mod stdin;
