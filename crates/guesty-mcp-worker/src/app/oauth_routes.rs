@@ -13,8 +13,8 @@ use crate::crypto::nonce;
 use crate::html;
 use crate::oauth::{
     CIMD_MAX_BYTES, CIMD_TIMEOUT_MS, ClientInfo, Credential, MAX_STATE_LENGTH, PENDING_TTL_MS, Pending, check_pkce,
-    cimd_url, find_redirect, form_value, is_url_client_id, parse_credential, parse_form, parse_registration,
-    redirect_host, redirect_origin, redirect_with, resource_ok, validate_cimd,
+    cimd_url, find_redirect, form_action_source, form_value, is_url_client_id, parse_credential, parse_form,
+    parse_registration, redirect_host, redirect_with, resource_ok, validate_cimd,
 };
 use crate::store::{self, CodeBinding, CodeExchange, NewGrant, Role, TokenError};
 use crate::token_service::parse_join;
@@ -73,7 +73,8 @@ async fn resolve_client(app: &App, client_id: &str) -> std::result::Result<Clien
     if let Some(url) = cimd_url(client_id) {
         let request = OutboundRequest::get(url.as_str()).header("Accept", "application/json");
         let deadline = Deadline::after(now_ms(), CIMD_TIMEOUT_MS);
-        let limits = FetchLimits { timeout_ms: CIMD_TIMEOUT_MS, max_body_bytes: CIMD_MAX_BYTES };
+        let limits =
+            FetchLimits { timeout_ms: CIMD_TIMEOUT_MS, max_body_bytes: CIMD_MAX_BYTES, redirect_as_response: false };
         let response = fetch(&Target::Internet, &request, deadline, limits).await.map_err(|error| {
             log_error(match error {
                 TransportError::Redirect { .. } => "cimd_redirect",
@@ -132,7 +133,7 @@ fn consent_page(pending: &Pending, field: &str, error: Option<&str>, status: u16
         request_field: field,
         error,
     };
-    html_response(status, &html::consent(&view, &nonce), &nonce, redirect_origin(&pending.redirect_uri).as_deref())
+    html_response(status, &html::consent(&view, &nonce), &nonce, form_action_source(&pending.redirect_uri).as_deref())
 }
 
 pub(crate) async fn authorize_get(req: Request, app: &App) -> Result<Response> {

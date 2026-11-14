@@ -14,7 +14,6 @@ use crate::oauth::*;
 use crate::sql;
 use crate::store::{self, CodeBinding, CodeExchange, NewGrant, Role, TokenError};
 use crate::token_service::{client_network, parse_join, parse_token, service_message, team_path_allowed};
-use crate::transport::{FetchLimits, OutboundRequest, OutboundResponse, TransportError};
 
 const CLAUDE_CODE: &str = include_str!("../test/fixtures/claude-code-client-metadata.json");
 const CHATGPT: &str = include_str!("../test/fixtures/chatgpt-client.json");
@@ -65,7 +64,8 @@ fn registered_redirect_uris_are_https_or_loopback_http() {
         "http://[::1]/cb",
         "https://example.com/cb?x=1",
     ] {
-        assert!(validate_redirect_uri(ok).is_ok(), "{ok}");
+        assert!(validate_redirect_uri(ok, false).is_ok(), "{ok}");
+        assert!(validate_redirect_uri(ok, true).is_ok(), "{ok}");
     }
     for bad in [
         "http://example.com/cb",
@@ -77,8 +77,74 @@ fn registered_redirect_uris_are_https_or_loopback_http() {
         "/relative",
         "",
     ] {
-        assert!(validate_redirect_uri(bad).is_err(), "{bad}");
+        assert!(validate_redirect_uri(bad, false).is_err(), "{bad}");
     }
+}
+
+#[test]
+fn desktop_apps_may_register_their_own_scheme() {
+    // RFC 8252 §7.1: Cursor's redirect, and the reverse-domain form.
+    for ok in [
+        "cursor://anysphere.cursor-mcp/oauth/callback",
+        "cursor://anysphere.cursor-retrieval/oauth/callback",
+        "com.example.app:/oauth2redirect/example-provider",
+        "vscode://vscode.github-authentication/did-authenticate?x=1",
+    ] {
+        assert!(validate_redirect_uri(ok, true).is_ok(), "{ok}");
+        // Metadata documents (Claude's, ChatGPT's) don't need them.
+        assert!(validate_redirect_uri(ok, false).is_err(), "{ok}");
+    }
+    for bad in [
+        "javascript://example.com/%0Aalert(1)",
+        "JavaScript://x/y",
+        "data://text/html,hi",
+        "file:///etc/passwd",
+        "blob://x/y",
+        "vbscript://x/y",
+        "about://blank/x",
+        "view-source://x/y",
+        "filesystem://x/y",
+        "http://evil.example/cb",
+        "cursor://anysphere.cursor-mcp/cb#frag",
+        "cursor://user:pass@anysphere.cursor-mcp/cb",
+        "myapp:opaque",
+        "mailto:a@b.example",
+    ] {
+        assert!(validate_redirect_uri(bad, true).is_err(), "{bad}");
+    }
+    let (_, uris) = parse_registration(&json!({ "redirect_uris": ["cursor://anysphere.cursor-mcp/oauth/callback"] }))
+        .expect("Cursor registers");
+    assert_eq!(uris, vec!["cursor://anysphere.cursor-mcp/oauth/callback"]);
+    assert_eq!(
+        parse_registration(&json!({ "redirect_uris": ["javascript://x/%0Aalert(1)"] })).unwrap_err().code,
+        "invalid_redirect_uri"
+    );
+    // Matching stays exact for them.
+    let registered = vec!["cursor://anysphere.cursor-mcp/oauth/callback".to_string()];
+    assert!(find_redirect(&registered, "cursor://anysphere.cursor-mcp/oauth/callback").is_some());
+    assert!(find_redirect(&registered, "cursor://anysphere.cursor-mcp/oauth/callback2").is_none());
+    assert!(find_redirect(&registered, "cursor://other/oauth/callback").is_none());
+    // The sign-in page names the scheme, not a host any app could claim.
+    assert_eq!(redirect_host("cursor://anysphere.cursor-mcp/oauth/callback"), "a desktop app (cursor://…)");
+    assert_eq!(redirect_host("com.example.app:/oauth2redirect"), "a desktop app (com.example.app:…)");
+}
+
+#[test]
+fn the_sign_in_pages_form_action_allows_exactly_where_the_redirect_lands() {
+    let header = |uri: &str| html::csp("n0nce", form_action_source(uri).as_deref());
+    // Browsers apply form-action to the 303 after the post, so a cursor:// redirect needs cursor:.
+    assert_eq!(
+        header("cursor://anysphere.cursor-mcp/oauth/callback"),
+        "default-src 'none'; style-src 'nonce-n0nce'; img-src 'none'; form-action 'self' cursor:; frame-ancestors 'none'; base-uri 'none'"
+    );
+    assert!(header("CURSOR://anysphere.cursor-mcp/cb").contains("form-action 'self' cursor:;"));
+    assert!(header("com.example.app:/cb").contains("form-action 'self' com.example.app:;"));
+    assert!(header("http://127.0.0.1:43123/callback").contains("form-action 'self' http://127.0.0.1:43123;"));
+    assert!(header("https://claude.ai/api/mcp/auth_callback?x=1").contains("form-action 'self' https://claude.ai;"));
+    // Never a wildcard, a whole scheme of the web, or something unparseable.
+    assert!(header("not a url").contains("form-action 'self';"));
+    assert_eq!(form_action_source("javascript:alert(1)"), None);
+    assert_eq!(form_action_source("data:text/html,x"), None);
 }
 
 #[test]
@@ -130,7 +196,7 @@ fn authorization_responses_keep_the_redirects_query() {
         redirect_with("http://127.0.0.1:5000/cb", &[("error", "access_denied")]),
         "http://127.0.0.1:5000/cb?error=access_denied"
     );
-    assert_eq!(redirect_origin("http://127.0.0.1:5000/cb").as_deref(), Some("http://127.0.0.1:5000"));
+    assert_eq!(form_action_source("http://127.0.0.1:5000/cb").as_deref(), Some("http://127.0.0.1:5000"));
     assert_eq!(redirect_host("http://127.0.0.1:5000/cb"), "127.0.0.1:5000");
 }
 
@@ -667,68 +733,33 @@ fn messages_are_classified() {
     assert!(header_version_ok(None));
     assert!(header_version_ok(Some("2025-11-25")));
     assert!(header_version_ok(Some("2025-06-18")));
-    assert!(!header_version_ok(Some("2024-11-05")));
-    assert_eq!(negotiate_version(Some("2025-06-18")), "2025-06-18");
-    assert_eq!(negotiate_version(Some("1999-01-01")), "2025-11-25");
-}
-
-struct FakeBackend {
-    grant: GrantInfo,
-    answer: fn() -> Result<TeamToken, BackendError>,
-}
-
-impl HostedBackend for FakeBackend {
-    fn grant(&self) -> &GrantInfo {
-        &self.grant
-    }
-    fn deadline(&self) -> Deadline {
-        Deadline::after(0, CALL_BUDGET_MS)
-    }
-    async fn guesty_token(&self, _: TokenType) -> Result<TeamToken, BackendError> {
-        (self.answer)()
-    }
-    async fn team_service(&self, _: &str, _: &str, _: Option<&Value>) -> Result<(u16, Value), BackendError> {
-        Err(BackendError::NotAllowed)
-    }
-    async fn http(&self, _: OutboundRequest, _: FetchLimits) -> Result<OutboundResponse, TransportError> {
-        Err(TransportError::Network)
-    }
+    // The core's versions, so the header and initialize agree.
+    assert!(header_version_ok(Some("2024-11-05")));
+    assert!(!header_version_ok(Some("2024-01-01")));
 }
 
 #[test]
-fn the_stub_handler_answers_and_a_revoked_key_is_unauthorized() {
-    let grant = GrantInfo {
-        grant_id: "g".into(),
-        client_id: "c".into(),
-        team_name: None,
-        key_label: None,
-        role: Role::Member,
-        read_only: true,
-    };
-    let ok = FakeBackend { grant: grant.clone(), answer: || Ok(TeamToken { access_token: "t".into(), expires_at: 0 }) };
-    let request = |method: &str, params: Value| JsonRpcRequest { id: json!(7), method: method.into(), params };
-    let McpOutcome::Response(init) =
-        block_on(StubHandler.handle(&ok, &request("initialize", json!({ "protocolVersion": "2025-06-18" }))))
-    else {
-        panic!()
-    };
-    assert_eq!(init["result"]["protocolVersion"], "2025-06-18");
-    assert_eq!(init["id"], 7);
-    let McpOutcome::Response(call) =
-        block_on(StubHandler.handle(&ok, &request("tools/call", json!({ "name": "key_check" }))))
-    else {
-        panic!()
-    };
-    assert_eq!(call["result"]["structuredContent"]["read_only"], true);
-    let revoked = FakeBackend { grant, answer: || Err(BackendError::Revoked) };
-    assert_eq!(
-        block_on(StubHandler.handle(&revoked, &request("tools/call", json!({ "name": "key_check" })))),
-        McpOutcome::Unauthorized
+fn a_megabyte_of_nesting_is_refused_without_parsing() {
+    // guesty-core turns on serde_json's unbounded_depth, so classify checks depth itself.
+    let deep = vec![b'['; MAX_REQUEST_BYTES];
+    match classify(&deep) {
+        Message::Invalid(e) => {
+            assert_eq!(e["error"]["code"], -32700);
+            assert!(e["error"]["message"].as_str().unwrap().contains("128 levels"), "{e}");
+        }
+        other => panic!("{other:?}"),
+    }
+    let mixed = format!("{}{}", "{\"a\":".repeat(129), "1".to_string() + &"}".repeat(129));
+    assert!(matches!(classify(mixed.as_bytes()), Message::Invalid(_)));
+    // 128 levels are fine, and brackets inside strings don't count.
+    let ok = format!(
+        "{{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"params\":{{\"x\":\"{}\",\"y\":{}{}}}}}",
+        "[".repeat(5000),
+        "[".repeat(126),
+        "]".repeat(126)
     );
-    let McpOutcome::Response(missing) = block_on(StubHandler.handle(&ok, &request("nope", Value::Null))) else {
-        panic!()
-    };
-    assert_eq!(missing["error"]["code"], -32601);
+    assert!(matches!(classify(ok.as_bytes()), Message::Request(_)));
+    assert!(matches!(classify(&[0xff, 0xfe]), Message::Invalid(_)));
 }
 
 #[test]

@@ -1,18 +1,17 @@
 //! The boundary between this Worker and the MCP tool logic.
 //!
 //! The Worker authenticates the request, parses one JSON-RPC message and hands requests to an
-//! [`McpHandler`] with a [`HostedBackend`] for that request. The shared core (`guesty-core`) plugs
-//! in here: its async `Backend` trait is implemented by the Worker's backend (see
-//! `app::backend::WorkerBackend`, which implements [`HostedBackend`]), and its tool dispatcher
-//! becomes the `McpHandler` that replaces [`StubHandler`] in `app::mcp_route`.
+//! [`McpHandler`] with a [`HostedBackend`] for that request. The handler is the shared core's MCP
+//! server (`crate::hosted::CoreHandler`), whose `Backend` runs over the [`HostedBackend`]
+//! (`app::backend::WorkerBackend` in the Worker).
 
 use std::fmt;
 use std::future::Future;
 
+use guesty_core::mcp::PROTOCOL_VERSIONS;
 use serde_json::{Value, json};
 
 use crate::clock::Deadline;
-use crate::config::PROTOCOL_VERSIONS;
 use crate::store::Role;
 use crate::transport::{FetchLimits, OutboundRequest, OutboundResponse, TransportError};
 
@@ -20,6 +19,8 @@ use crate::transport::{FetchLimits, OutboundRequest, OutboundResponse, Transport
 pub const CALL_BUDGET_MS: i64 = 50_000;
 /// `/mcp` request bodies (S7).
 pub const MAX_REQUEST_BYTES: usize = 1024 * 1024;
+/// JSON nested deeper than this is refused before it's parsed (S7).
+pub const MAX_JSON_DEPTH: usize = 128;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TokenType {
@@ -83,18 +84,29 @@ pub trait HostedBackend {
     fn grant(&self) -> &GrantInfo;
     fn deadline(&self) -> Deadline;
 
+    /// The grant's member access key, only so it can be redacted from error text.
+    fn member_key(&self) -> &str;
+
+    /// Milliseconds since the epoch.
+    fn now_ms(&self) -> i64 {
+        crate::clock::now_ms()
+    }
+
+    /// Waits before a retry. The core has already checked that the wait fits the deadline.
+    fn sleep(&self, ms: i64) -> impl Future<Output = ()>;
+
     /// S2: the team's token of a type, from the token service with the grant's member key, on
     /// every call (no cache), so a revoked key stops working at once.
     fn guesty_token(&self, token_type: TokenType) -> impl Future<Output = Result<TeamToken, BackendError>>;
 
     /// A team endpoint of the token service (`/v1/team`, `/v1/team/…`) with the member key.
-    /// Returns the status and JSON body; a 401 revokes the grant and returns `Revoked`.
+    /// Returns the status and body; a 401 revokes the grant and returns `Revoked`.
     fn team_service(
         &self,
         method: &str,
         path: &str,
         body: Option<&Value>,
-    ) -> impl Future<Output = Result<(u16, Value), BackendError>>;
+    ) -> impl Future<Output = Result<(u16, Vec<u8>), BackendError>>;
 
     /// One outbound request (Guesty), with manual redirects, the deadline and a size cap.
     fn http(
@@ -106,8 +118,9 @@ pub trait HostedBackend {
 
 #[derive(Debug, PartialEq)]
 pub enum McpOutcome {
-    /// A JSON-RPC response object.
-    Response(Value),
+    /// A JSON-RPC response, as the core wrote it (text: a cut tool result may end in an escaped
+    /// lone surrogate, which a `Value` can't hold).
+    Response(String),
     /// Answer 401 `invalid_token` (the grant was revoked during the call).
     Unauthorized,
 }
@@ -140,12 +153,24 @@ pub fn rpc_error(id: &Value, code: i64, message: &str) -> Value {
     json!({ "jsonrpc": "2.0", "id": id, "error": { "code": code, "message": message } })
 }
 
-/// Parses one JSON-RPC message. Batches aren't supported (one tool call per request, S7); JSON
-/// nested deeper than 128 levels is refused by serde_json's recursion limit.
+/// Parses one JSON-RPC message. Batches aren't supported (one tool call per request, S7). JSON
+/// nested deeper than 128 levels is refused before parsing: guesty-core turns on serde_json's
+/// `unbounded_depth`, so its recursion limit isn't relied on.
 pub fn classify(body: &[u8]) -> Message {
-    let value: Value = match serde_json::from_slice(body) {
-        Ok(value) => value,
-        Err(_) => return Message::Invalid(rpc_error(&Value::Null, -32700, "The request body isn't valid JSON.")),
+    let not_json = || Message::Invalid(rpc_error(&Value::Null, -32700, "The request body isn't valid JSON."));
+    let Ok(text) = std::str::from_utf8(body) else {
+        return not_json();
+    };
+    if guesty_core::json::nests_deeper_than(text, MAX_JSON_DEPTH) {
+        return Message::Invalid(rpc_error(
+            &Value::Null,
+            -32700,
+            &format!("The request body is JSON nested more than {MAX_JSON_DEPTH} levels deep."),
+        ));
+    }
+    // Parsed without serde_json's own limit (127 levels), so the limit is exactly 128.
+    let Ok(value) = guesty_core::json::parse(text) else {
+        return not_json();
     };
     let Value::Object(object) = value else {
         if value.is_array() {
@@ -174,57 +199,9 @@ pub fn classify(body: &[u8]) -> Message {
     }
 }
 
-/// The version to answer `initialize` with: the client's, if supported, otherwise the newest.
-pub fn negotiate_version(requested: Option<&str>) -> &'static str {
-    requested.and_then(|r| PROTOCOL_VERSIONS.iter().copied().find(|v| *v == r)).unwrap_or(PROTOCOL_VERSIONS[0])
-}
-
 /// The `MCP-Protocol-Version` header: absent (taken as 2025-03-26) or a supported version.
 pub fn header_version_ok(header: Option<&str>) -> bool {
     header.is_none_or(|h| PROTOCOL_VERSIONS.contains(&h.trim()))
-}
-
-/// Answers `initialize`, `ping` and `tools/list` minimally, and one `key_check` tool that runs the
-/// per-request member-key check. Replaced by the core's dispatcher when it joins.
-pub struct StubHandler;
-
-impl McpHandler for StubHandler {
-    async fn handle<B: HostedBackend>(&self, backend: &B, request: &JsonRpcRequest) -> McpOutcome {
-        let id = &request.id;
-        let result = match request.method.as_str() {
-            "initialize" => json!({
-                "protocolVersion": negotiate_version(request.params.get("protocolVersion").and_then(Value::as_str)),
-                "capabilities": { "tools": { "listChanged": false } },
-                "serverInfo": { "name": "guesty", "version": env!("CARGO_PKG_VERSION") },
-                "instructions": "Guesty tools for your team's account. If a call says the sign-in ended, reconnect this server to sign in again.",
-            }),
-            "ping" => json!({}),
-            "tools/list" => json!({ "tools": [{
-                "name": "key_check",
-                "description": "Checks that this sign-in's team access key still works. (Placeholder until the Guesty tools are joined.)",
-                "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-            }] }),
-            "tools/call" => {
-                if request.params.get("name").and_then(Value::as_str) != Some("key_check") {
-                    return McpOutcome::Response(rpc_error(id, -32602, "Unknown tool."));
-                }
-                let grant = backend.grant();
-                match backend.guesty_token(TokenType::OpenApi).await {
-                    Err(BackendError::Revoked) => return McpOutcome::Unauthorized,
-                    Ok(_) => json!({
-                        "content": [{ "type": "text", "text": "This sign-in's team access key works." }],
-                        "structuredContent": { "ok": true, "read_only": grant.read_only, "role": grant.role.as_str(), "team": grant.team_name },
-                    }),
-                    Err(error) => json!({
-                        "content": [{ "type": "text", "text": backend_error_text(&error) }],
-                        "isError": true,
-                    }),
-                }
-            }
-            _ => return McpOutcome::Response(rpc_error(id, -32601, "Method not found.")),
-        };
-        McpOutcome::Response(rpc_result(id, result))
-    }
 }
 
 /// Plain text for a backend failure, safe to show the agent.

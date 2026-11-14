@@ -18,11 +18,12 @@ pub fn escape(value: &str) -> String {
 }
 
 /// The Content-Security-Policy for a page: nothing loads but its own nonce'd style, it can't be
-/// framed, and its form may post only to this Worker and, for the sign-in page, the app's
-/// redirect origin (browsers apply form-action to the redirect after the post).
-pub fn csp(nonce: &str, redirect_origin: Option<&str>) -> String {
-    let form_action = match redirect_origin {
-        Some(origin) => format!("'self' {origin}"),
+/// framed, and its form may post only to this Worker and, for the sign-in page, where the app's
+/// redirect lands (browsers apply form-action to the redirect after the post): its origin, or
+/// its private-use scheme (`cursor:`), from [`crate::oauth::form_action_source`].
+pub fn csp(nonce: &str, redirect_source: Option<&str>) -> String {
+    let form_action = match redirect_source {
+        Some(source) => format!("'self' {source}"),
         None => "'self'".to_string(),
     };
     format!(

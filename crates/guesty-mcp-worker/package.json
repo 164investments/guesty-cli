@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "test:unit": "cargo test",
-    "test": "node scripts/build.mjs && npm --prefix ../../server run build && node --test test/worker.test.mjs"
+    "test:unit": "cargo test -p guesty-mcp-worker",
+    "test": "node scripts/build.mjs && npm --prefix ../../server run build && cargo build --manifest-path ../../Cargo.toml --bin guesty && node --test test/worker.test.mjs"
   },
   "license": "MIT"
 }

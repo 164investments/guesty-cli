@@ -19,36 +19,66 @@ marked `S1`–`S13` in the code.
 | `POST /revoke` | RFC 7009; either token revokes the grant. |
 | `GET /` | Landing page. |
 
-## Where the shared core plugs in
+## The tools
 
-`src/mcp.rs` is the boundary. The Worker authenticates, parses one JSON-RPC message and calls
-`McpHandler::handle(&backend, &request)`, which returns `McpOutcome::Response(json)` or
-`McpOutcome::Unauthorized` (answered 401 `invalid_token`). `StubHandler` answers `initialize`,
-`ping`, `tools/list` and a `key_check` tool until the core's dispatcher replaces it (the `HANDLER`
-constant in `src/app/mcp_route.rs`).
+`/mcp` runs the shared core's MCP server (`guesty_core::mcp::Server`), so the five tools, their
+input schemas and their answers are the local `guesty mcp`'s, byte for byte (the Miniflare suite
+compares them). `serverInfo` is `guesty-cli` with the title "Guesty"; the instructions are the
+CLI's except that a lost sign-in is fixed by reconnecting the server in the app. Read-only sign-ins
+refuse writes and invites.
 
-The handler gets a `HostedBackend` (`src/app/backend.rs`, `WorkerBackend`):
+`src/mcp.rs` is the boundary: the Worker authenticates, parses one JSON-RPC message (nesting is
+checked before parsing, at most 128 levels) and calls `McpHandler::handle(&backend, &request)`,
+which returns the core's reply text or `McpOutcome::Unauthorized` (401 `invalid_token`).
+`src/hosted.rs` is the handler (`CoreHandler`) and the core's `Backend` (`Hosted`) over the
+request's `HostedBackend` (`src/app/backend.rs`, `WorkerBackend`). Each Guesty request runs the
+core's own decisions (`prepare_*`, `Attempts`), as the CLI's client does:
 
-- `guesty_token(TokenType)`: the team's token from the token service with the grant's member key,
-  on every call (S2). A 401 revokes the grant and returns `BackendError::Revoked`.
-- `team_service(method, path, body)`: `/v1/team…` endpoints with the member key; 401 as above.
-- `http(OutboundRequest, FetchLimits)`: one outbound request (`src/transport.rs`).
-- `grant()` (team, role, `read_only`) and `deadline()` (50 s per call, S8).
+- every attempt gets the team's token from the token service with the member key (S2, no cache);
+- manual redirects: a Guesty 3xx comes back as a response and the core says redirects aren't
+  followed (the token service and metadata documents treat a redirect as an error);
+- the timeout is the smaller of the request's 60 s and what's left of the call's 50 s (S8); reads
+  retry network errors, timeouts, 408 and 5xx, any request retries a 429 after Retry-After, and
+  only when the wait fits; a write that times out says its outcome is unknown;
+- a 401 re-reads the token once; the same token again fails with what an admin can do;
+- response bodies over 16 MB are refused (S7), error bodies lose the tokens sent and the member key;
+- one tool call makes at most 50 requests, token lookups included (S7); `all_pages` stops past
+  2,000 results or 32 MB, or when the deadline would pass, with no partial result;
+- a revoked member key anywhere in a call answers the whole request 401 `invalid_token`.
 
-`impl guesty_core::Backend for WorkerBackend` goes in `src/app/backend.rs`.
+`team_status` and `invite_teammate` go to the token service's `/v1/team…` endpoints; invite links
+it returns must point at its public URL (the first of `TOKEN_SERVICE_ORIGINS`), not the binding's
+placeholder host.
+
+## Sign-in redirects
+
+Apps that register (RFC 7591) may use https, http on a loopback host (any port, RFC 8252 §8.4), or
+their own URI scheme (RFC 8252 §7.1), such as Cursor's
+`cursor://anysphere.cursor-mcp/oauth/callback`. Schemes a browser handles itself (`javascript`,
+`data`, `file`, `blob`, `vbscript`, `about`, `view-source`, `filesystem`) are refused. The sign-in
+page names such an app "a desktop app (cursor://…)", and its CSP `form-action` allows exactly that
+scheme (`cursor:`), since browsers check form-action on the redirect after the post.
 
 ## Tests
 
 ```sh
-cargo test                      # unit tests: OAuth rules, crypto, the store on SQLite, the MCP boundary
-npm ci --prefix ../../server    # once: Miniflare and wrangler for the token service
-npm test                        # worker-build, build the token service, Miniflare integration suite
+cargo test -p guesty-mcp-worker   # unit tests: OAuth rules, crypto, the store on SQLite, the request loop
+npm ci --prefix ../../server      # once: Miniflare and wrangler for the token service
+npm test                          # worker-build, the token service, the CLI, then the Miniflare suite
 ```
 
-`npm test` needs `worker-build` (`cargo install worker-build --version 0.8.7 --locked`) and the
-`wasm32-unknown-unknown` target. The suite runs this Worker with the real token service from
-`server/` and mocks of Guesty's token endpoint and of the client-metadata hosts; any other outbound
-request fails it.
+`npm test` needs `worker-build` (`cargo install worker-build --version 0.8.7 --locked`), the
+`wasm32-unknown-unknown` target and Node 22 or later. The suite runs this Worker with the real
+token service from `server/`, mocks of Guesty's token endpoint, of `open-api.guesty.com` and
+`booking.guesty.com`, and of the client-metadata hosts; any other outbound request fails it. A
+second copy of the Worker on the same database sets `CALL_BUDGET_MS` (8 s) and `GUESTY_TIMEOUT_MS`
+(1 s) so timeout and deadline cases take seconds; both variables only lower a limit and are unset
+in production. The suite also runs `target/debug/guesty mcp` and checks that `tools/list`, dozens
+of searches and a sample of describes answer byte for byte as they do here.
+
+The Worker is a member of the repository's Cargo workspace (not a default member). The root
+release profile applies to its wasm, except `strip`, which would remove what wasm-bindgen needs.
+The bundle is about 7.7 MB of wasm, 1.0 MB gzipped (most of it the embedded API documents).
 
 ## Deploy
 

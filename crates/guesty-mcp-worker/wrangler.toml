@@ -7,6 +7,8 @@
 #   npx wrangler deploy --env hosted
 #
 # MCP_KEY seals stored member keys and keys every stored hash; changing it signs everyone out.
+# CALL_BUDGET_MS and GUESTY_TIMEOUT_MS only lower the 50 s call budget and Guesty's timeout for
+# tests; leave them unset here.
 # The top level is a local configuration (wrangler dev); only env.hosted is deployed.
 
 name = "guesty-mcp"
