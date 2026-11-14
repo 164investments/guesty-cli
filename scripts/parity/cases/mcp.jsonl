@@ -1,0 +1,27 @@
+{"args":["mcp","--help"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","-h"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["help","mcp"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--help"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","help"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","help","install"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["help","mcp","install"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","--bogus"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--bogus"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","extra"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client","chatgpt"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client",""],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client"," , "],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client","chatgpt, cursor,nope"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--all"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--all","--read-only"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client","cursor"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client","cursor,claude-desktop,cursor","--read-only"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","--read-only","install","--client","claude-desktop"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client","codex"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client","cursor","--all"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home"}}
+{"args":["mcp","install","--client","cursor"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home","GUESTY_TOKEN_SERVICE_URL":"","GUESTY_TOKEN_SERVICE_KEY":""}}
+{"args":["mcp","install","--client","cursor"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home","GUESTY_TOKEN_SERVICE_URL":"","GUESTY_TOKEN_SERVICE_KEY":"","SUPABASE_URL":"https://x.invalid"}}
+{"args":["mcp","install","--client","cursor"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"codex-home","GUESTY_TOKEN_SERVICE_URL":"http://bad.example"}}
+{"args":["mcp","install","--all"],"env":{"PATH":"/nonexistent","XDG_CONFIG_HOME":"xdg","CODEX_HOME":"."}}
