@@ -8,7 +8,7 @@ Command-line access to the [Guesty](https://guesty.com) Open API and Booking Eng
 npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz && guesty setup
 ```
 
-That one line installs the CLI and starts setup. The CLI is a native program for macOS and Linux (Apple silicon or arm64, and x64) and Windows (x64), so it starts in about a millisecond; npm (Node.js 18 or later) is only used to install it. `--allow-remote=all` is for npm 12, which otherwise refuses to install from a web address; npm 10 and 11 accept it.
+That one line installs the CLI and starts setup. The CLI is a native program for macOS and Linux (Apple silicon or arm64, and x64) and Windows (x64), so it starts in about a millisecond; npm (Node.js 22 or later) is only used to install it. `--allow-remote=all` is for npm 12, which otherwise refuses to install from a web address; npm 10 and 11 accept it.
 
 `guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use StayKit's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
 
