@@ -12,6 +12,7 @@ on:
       - Cargo.lock
       - build.rs
       - src/**
+      - crates/**
       - npm/**
       - package.json
       - scripts/pack.mjs

@@ -9,6 +9,14 @@ license = "MIT"
 repository = "https://github.com/164investments/guesty-cli"
 publish = false
 
+# The CLI stays the root package; the workspace adds its I/O-free core and the
+# hosted MCP server (a Cloudflare Worker) that shares it. The Worker isn't a
+# default member: plain `cargo build`/`cargo test` stay the CLI's, and the
+# Worker builds with `cargo test -p guesty-mcp-worker` or worker-build.
+[workspace]
+members = [".", "crates/guesty-core", "crates/guesty-mcp-worker"]
+default-members = [".", "crates/guesty-core"]
+
 [[bin]]
 name = "guesty"
 path = "src/main.rs"
@@ -20,15 +28,12 @@ path = "src/main.rs"
 test-hooks = []
 
 [dependencies]
-base64 = "0.22"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 chrono-tz = { version = "0.10", default-features = false }
 cliclack = "0.3"
+guesty-core = { path = "crates/guesty-core" }
 libc = "0.2"
-serde = "1"
 url = "2"
-ryu = "1"
-serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
 terminal_size = "0.4"
 ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
 
@@ -38,3 +43,8 @@ codegen-units = 1
 strip = true
 panic = "abort"
 opt-level = 3
+
+# The Worker's wasm goes through wasm-bindgen (worker-build), which needs the
+# custom sections `strip` removes; lto and panic = "abort" still apply to it.
+[profile.release.package.guesty-mcp-worker]
+strip = false

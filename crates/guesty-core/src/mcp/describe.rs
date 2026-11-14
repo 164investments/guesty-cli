@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use super::catalog::{Doc, Operation};
 use super::js;
-use crate::error::{CliError, Result};
+use crate::error::{Error, Result};
 use crate::json::{self, Json, Map, json};
 
 /// `value[key]` for a value that may be anything: only objects have fields.
@@ -209,7 +209,7 @@ fn compact_schema(schema: Option<&Json>, document: &'static Doc) -> Result<Json>
     for max_depth in [6, 4, 2] {
         let Some(result) = compact(schema, document, 0, max_depth, &HashSet::new()) else {
             // JSON.stringify(undefined).length
-            return Err(CliError::new("Cannot read properties of undefined (reading 'length')"));
+            return Err(Error::new("Cannot read properties of undefined (reading 'length')"));
         };
         if json::js_len(&json::compact(&result)) <= 20_000 {
             return Ok(result);
@@ -364,7 +364,7 @@ pub fn describe_operation(op: &Operation) -> Result<Json> {
         }
     }
     let mut example = Map::new();
-    example.insert("operation".into(), Json::String(op.id.clone()));
+    example.insert("operation".into(), Json::String(op.id.to_string()));
     let placeholder_map = |place: &str, required_only: bool| {
         let mut map = Map::new();
         for p in params.iter().filter(|p| p["in"] == place && (!required_only || p["required"] == true)) {
@@ -453,7 +453,7 @@ fn first_sentence(text: &str) -> &str {
 }
 
 pub fn listing(op: &Operation) -> Json {
-    let first = op.description.as_deref().map(|d| Json::String(first_sentence(d).to_string()));
+    let first = op.description().map(|d| Json::String(first_sentence(d).to_string()));
     let summary = trim(first.as_ref(), 200);
     let mut out = Map::new();
     out.insert("id".into(), json!(op.id));

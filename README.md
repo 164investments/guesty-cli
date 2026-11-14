@@ -145,6 +145,23 @@ Invite codes from your service include its address, so teammates run `guesty joi
 
 ## Use Guesty from AI agents (MCP)
 
+### In Claude.ai, ChatGPT and other apps: the hosted server
+
+Add this address as a custom connector or MCP server in your AI app:
+
+```
+https://guesty-mcp.staykit.ai/mcp
+```
+
+The app opens a sign-in page. Paste the invite your team's admin sent you (`guesty team invite`; a code like `ABCD-EFGH-JKLM` or the whole link), or, if you already use the CLI, your access key from `~/.guesty-cli/.env`. Tick "read-only" to refuse every change. There's nothing to install, and it works for every team on StayKit's hosted token service.
+
+- **Clients:** Claude Code (`claude mcp add --transport http guesty https://guesty-mcp.staykit.ai/mcp`) is tested. Claude.ai, ChatGPT and Cursor use the same sign-in and are expected to work; tell us if one doesn't.
+- **Pass-through only:** Guesty data passes through StayKit's server on its way to your app and is never stored or logged. The server keeps your sign-in (the team key, sealed) and the app's registration, nothing else.
+- **Same tools and safeguards** as `guesty mcp` below, with hosted limits: each tool call has 50 seconds, `all_pages` stops at 2,000 results, and a Guesty response over 8 MB (or 300,000 JSON values) is refused.
+- **Sign-out:** remove the server from the app. An admin can end a sign-in with `guesty team revoke <name>`; the app then asks you to sign in again.
+
+### On your computer: `guesty mcp`
+
 `guesty mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server, so Claude Code, Codex, Cursor, Claude Desktop and other agents can work in Guesty for you. It uses your team's shared token, so agents never use up Guesty's five tokens a day, and it reaches every Open API and Booking Engine API operation, for reads and changes.
 
 Add it to the AI apps on your computer:

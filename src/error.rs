@@ -48,6 +48,12 @@ macro_rules! bail {
     };
 }
 
+impl From<guesty_core::Error> for CliError {
+    fn from(e: guesty_core::Error) -> Self {
+        CliError::Message(e.into_message())
+    }
+}
+
 impl From<std::io::Error> for CliError {
     fn from(e: std::io::Error) -> Self {
         CliError::Message(e.to_string())

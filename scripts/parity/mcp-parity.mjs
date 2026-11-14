@@ -125,6 +125,8 @@ function run(command, c) {
       waiter = () => { if (lines.length >= count) { clearTimeout(timer); waiter = undefined; done(); } };
       waiter();
     });
+    // A server that exits before reading all input closes the pipe; that is not a failure.
+    child.stdin.on("error", () => {});
     child.on("close", (code) => {
       rmSync(home, { recursive: true, force: true });
       const clean = (s) => s.replaceAll(home, "$HOME");

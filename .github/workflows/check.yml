@@ -18,8 +18,43 @@ jobs:
           cache: npm
       - name: Install Rust
         run: |
-          rustup toolchain install stable --profile minimal --component rustfmt,clippy
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
           rustup default stable
       - uses: Swatinem/rust-cache@v2
       - run: npm ci
       - run: npm run check
+      - name: Build the shared core for WebAssembly
+        run: cargo build -p guesty-core --target wasm32-unknown-unknown
+
+  # The hosted MCP Worker (crates/guesty-mcp-worker) and the token service it
+  # signs in through (server/). Miniflare and wrangler need Node 22 or later.
+  worker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --target wasm32-unknown-unknown
+          rustup default stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install worker-build (pinned to workers-rs 0.8.7)
+        run: cargo install worker-build --version 0.8.7 --locked
+      - run: npm ci
+      - run: npm ci --prefix server
+      - name: Worker unit tests
+        run: cargo test -p guesty-mcp-worker
+      - name: Clippy (wasm32 and tests)
+        run: |
+          cargo clippy -p guesty-mcp-worker --no-deps --target wasm32-unknown-unknown -- -D warnings
+          cargo clippy -p guesty-mcp-worker --no-deps --tests -- -D warnings
+      - name: Build the Worker and run its Miniflare suite
+        run: npm --prefix crates/guesty-mcp-worker test
+      - name: Token service and CLI setup
+        run: npm run check:server
