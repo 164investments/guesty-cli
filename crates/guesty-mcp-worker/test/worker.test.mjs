@@ -1,12 +1,17 @@
 // Runs the built MCP Worker (worker-build) in Miniflare together with the real token service
 // from server/ (built with `npm --prefix server run build`). The token service's only outbound
-// requests go to a mock of Guesty's token endpoint, and the MCP Worker's go to a mock host for
-// client ID metadata documents. Nothing here contacts Guesty or the real token service; any other
-// outbound request fails the run.
+// requests go to a mock of Guesty's token endpoint; the MCP Worker's go to a mock of Guesty's APIs
+// (open-api.guesty.com, booking.guesty.com) and a mock host for client ID metadata documents.
+// Nothing here contacts Guesty or the real token service; any other outbound request fails the
+// run. A second copy of the Worker ("short") shares the same database with an 8 s call budget and
+// a 1 s Guesty timeout, so timeouts and deadlines take seconds. The local `guesty mcp`
+// (target/debug/guesty) is run to check the hosted tools answer byte for byte as it does.
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test, { after, before } from "node:test";
@@ -23,6 +28,9 @@ const REDIRECT = "http://127.0.0.1:43123/callback";
 const SYNTHETIC = "SYNTHETICSECRET7f3a9c51";
 const CLAUDE_CODE_ID = "https://claude.ai/oauth/claude-code-client-metadata";
 const CHATGPT_ID = "https://chatgpt.com/oauth/client.json";
+const SHORT_BUDGET_MS = 8000;
+const GUESTY_HOSTS = ["open-api.guesty.com", "booking.guesty.com"];
+const CLI = process.env.GUESTY_BIN ?? join(crate, "..", "..", "target", "debug", process.platform === "win32" ? "guesty.exe" : "guesty");
 
 // Everything secret the run sees; none of it may appear in any log.
 const secrets = new Set([SYNTHETIC]);
@@ -31,7 +39,10 @@ const captured = [];
 const unexpected = [];
 const cimd = { requests: [], docs: new Map() };
 let guestyTokens = 0;
+// The Guesty API mock: every request it saw, and an optional per-test answer.
+const api = { requests: [], handler: null, total: 250 };
 let mf;
+let shortWorker;
 let tokenService;
 let mcpDb;
 let admin;
@@ -49,6 +60,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function mcpOutbound(request) {
   const url = new URL(request.url);
+  // The MCP Worker never asks Guesty for a token; the core refuses OAuth paths.
+  if (GUESTY_HOSTS.includes(url.hostname) && !/oauth/i.test(url.pathname)) return guestyApi(request, url);
   const doc = cimd.docs.get(url.href);
   if (!doc) {
     unexpected.push(url.origin);
@@ -62,13 +75,47 @@ async function mcpOutbound(request) {
 
 async function guestyOutbound(request) {
   const url = new URL(request.url);
-  if (url.pathname !== "/oauth2/token" || !["open-api.guesty.com", "booking.guesty.com"].includes(url.hostname)) {
+  if (url.pathname !== "/oauth2/token" || !GUESTY_HOSTS.includes(url.hostname)) {
     unexpected.push(url.origin);
     return new Response("unexpected", { status: 599 });
   }
   guestyTokens += 1;
-  remember(`mock-open-token-${guestyTokens}`);
-  return Response.json({ token_type: "Bearer", access_token: `mock-open-token-${guestyTokens}`, expires_in: 86400, scope: "open-api" });
+  const kind = url.hostname === "booking.guesty.com" ? "be" : "open";
+  const token = `mock-${kind}-token-${guestyTokens}`;
+  remember(token);
+  return Response.json({ token_type: "Bearer", access_token: token, expires_in: 86400, scope: kind === "be" ? "booking_engine:api" : "open-api" });
+}
+
+function defaultGuesty(entry, url) {
+  if (entry.host === "booking.guesty.com") return Response.json({ results: [{ _id: "be-1", title: "Booking engine listing" }] });
+  if (entry.method === "GET" && entry.path === "/v1/listings") {
+    if (!url.searchParams.has("skip")) return Response.json({ results: [{ _id: "l1", title: "Beach house" }], count: 1 });
+    const skip = Number(url.searchParams.get("skip"));
+    const limit = Number(url.searchParams.get("limit"));
+    const results = Array.from({ length: Math.max(0, Math.min(limit, api.total - skip)) }, (_, i) => ({ _id: `l${skip + i}` }));
+    return Response.json({ results, count: api.total, skip, limit });
+  }
+  return Response.json({ ok: true, method: entry.method, path: entry.path }, { status: entry.method === "POST" ? 201 : 200 });
+}
+
+async function guestyApi(request, url) {
+  const body = ["GET", "HEAD"].includes(request.method) ? null : await request.text();
+  const entry = { method: request.method, host: url.hostname, path: url.pathname, search: url.search, authorization: request.headers.get("authorization"), body, redirect: request.redirect };
+  api.requests.push(entry);
+  const answer = api.handler ? await api.handler(entry, url) : undefined;
+  return answer ?? defaultGuesty(entry, url);
+}
+
+// Runs `fn` with a per-test Guesty answer and returns the requests Guesty saw.
+async function withGuesty(handler, fn) {
+  const start = api.requests.length;
+  api.handler = handler;
+  try {
+    const result = await fn();
+    return { result, requests: api.requests.slice(start) };
+  } finally {
+    api.handler = null;
+  }
 }
 
 function serviceKey() {
@@ -180,8 +227,8 @@ async function signIn(client, credential, options = {}) {
 
 const refresh = (client, refreshToken, ip) => tokenRequest({ grant_type: "refresh_token", refresh_token: refreshToken, client_id: client, resource: RESOURCE }, ip);
 
-async function mcp(token, message, { headers = {}, ip } = {}) {
-  const res = await call("/mcp", {
+async function mcp(token, message, { headers = {}, ip, worker } = {}) {
+  const init = {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -192,14 +239,53 @@ async function mcp(token, message, { headers = {}, ip } = {}) {
     },
     body: typeof message === "string" ? message : JSON.stringify(message),
     ip,
-  });
+  };
+  const res = worker
+    ? await worker.fetch(`${PUBLIC}/mcp`, { method: init.method, headers: { "CF-Connecting-IP": ip ?? freshIp(), ...init.headers }, body: init.body, redirect: "manual" })
+    : await call("/mcp", init);
   const text = await res.text();
-  return { status: res.status, headers: res.headers, body: text ? JSON.parse(text) : null };
+  return { status: res.status, headers: res.headers, text, body: text ? JSON.parse(text) : null };
 }
 
-const keyCheck = (token, options) => mcp(token, { jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "key_check", arguments: {} } }, options);
+let nextId = 100;
+const tool = (token, name, args = {}, options) => mcp(token, { jsonrpc: "2.0", id: nextId++, method: "tools/call", params: { name, arguments: args } }, options);
+const textOf = (res) => {
+  assert.ok(res.body?.result, JSON.stringify(res.body));
+  return res.body.result.content.map((part) => part.text).join("\n");
+};
+const failed = (res) => res.body?.result?.isError === true;
+
+// A tool call that reaches the token service and Guesty: 200 while the sign-in works, 401 once
+// it's revoked.
+const keyCheck = (token, options) => tool(token, "call_operation", { operation: "propertieslistinglist" }, options);
+const instructionsOf = async (token) => (await mcp(token, { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-11-25" } })).body.result.instructions;
+const isReadOnly = async (token) => (await instructionsOf(token)).includes("This server is read-only");
 
 before(async () => {
+  const mcpKey = serviceKey();
+  const mcpWorker = (name, bindings, ns) => ({
+    name,
+    modules: true,
+    scriptPath: join(crate, "build/index.js"),
+    modulesRoot: join(crate, "build"),
+    modulesRules: [
+      { type: "ESModule", include: ["**/*.js"] },
+      { type: "CompiledWasm", include: ["**/*.wasm"] },
+    ],
+    compatibilityDate: "2026-08-01",
+    // Both copies share one database, so a sign-in on one works on the other.
+    d1Databases: { DB: "guesty-mcp-test" },
+    serviceBindings: { TOKENS: "guesty-token-service" },
+    bindings: { PUBLIC_URL: PUBLIC, TOKEN_SERVICE_ORIGINS: TOKENS_ORIGIN, MCP_KEY: mcpKey, ...bindings },
+    // The production limits (wrangler.toml).
+    ratelimits: {
+      REGISTER_LIMITER: { namespace_id: `${ns}1`, simple: { limit: 10, period: 60 } },
+      AUTHORIZE_LIMITER: { namespace_id: `${ns}2`, simple: { limit: 30, period: 60 } },
+      TOKEN_LIMITER: { namespace_id: `${ns}3`, simple: { limit: 60, period: 60 } },
+      TOOL_LIMITER: { namespace_id: `${ns}4`, simple: { limit: 100, period: 60 } },
+    },
+    outboundService: mcpOutbound,
+  });
   mf = new Miniflare({
     log: new CaptureLog(),
     handleRuntimeStdio(stdout, stderr) {
@@ -207,28 +293,9 @@ before(async () => {
       stderr.on("data", (data) => captured.push(String(data)));
     },
     workers: [
-      {
-        name: "guesty-mcp",
-        modules: true,
-        scriptPath: join(crate, "build/index.js"),
-        modulesRoot: join(crate, "build"),
-        modulesRules: [
-          { type: "ESModule", include: ["**/*.js"] },
-          { type: "CompiledWasm", include: ["**/*.wasm"] },
-        ],
-        compatibilityDate: "2026-08-01",
-        d1Databases: { DB: "guesty-mcp-test" },
-        serviceBindings: { TOKENS: "guesty-token-service" },
-        bindings: { PUBLIC_URL: PUBLIC, TOKEN_SERVICE_ORIGINS: TOKENS_ORIGIN, MCP_KEY: serviceKey() },
-        // The production limits (wrangler.toml).
-        ratelimits: {
-          REGISTER_LIMITER: { namespace_id: "1", simple: { limit: 10, period: 60 } },
-          AUTHORIZE_LIMITER: { namespace_id: "2", simple: { limit: 30, period: 60 } },
-          TOKEN_LIMITER: { namespace_id: "3", simple: { limit: 60, period: 60 } },
-          TOOL_LIMITER: { namespace_id: "4", simple: { limit: 100, period: 60 } },
-        },
-        outboundService: mcpOutbound,
-      },
+      mcpWorker("guesty-mcp", {}, "1"),
+      // The token service's first origin is somewhere else here, so its invite links don't match.
+      mcpWorker("guesty-mcp-short", { CALL_BUDGET_MS: String(SHORT_BUDGET_MS), GUESTY_TIMEOUT_MS: "1000", TOKEN_SERVICE_ORIGINS: "https://other-tokens.example" }, "2"),
       {
         name: "guesty-token-service",
         modules: true,
@@ -243,13 +310,15 @@ before(async () => {
   });
   await mf.ready;
   tokenService = await mf.getWorker("guesty-token-service");
+  shortWorker = await mf.getWorker("guesty-mcp-short");
   mcpDb = await mf.getD1Database("DB", "guesty-mcp");
   await migrate(mcpDb, join(crate, "migrations"));
   await migrate(await mf.getD1Database("DB", "guesty-token-service"), join(server, "migrations"));
-  const team = await service("POST", "/v1/teams", { body: { name: "Acme", admin_label: "Dana", credentials: { openapi: { client_id: "acme-id", client_secret: "acme-secret" } } } });
-  assert.equal(team.status, 201);
+  const credentials = { openapi: { client_id: "acme-id", client_secret: "acme-secret" }, beapi: { client_id: "acme-be-id", client_secret: "acme-be-secret" } };
+  const team = await service("POST", "/v1/teams", { body: { name: "Acme", admin_label: "Dana", credentials } });
+  assert.equal(team.status, 201, JSON.stringify(team.body));
   admin = team.body.admin_key;
-  remember(admin, "acme-secret");
+  remember(admin, "acme-secret", "acme-be-secret");
 });
 
 after(() => mf?.dispose());
@@ -353,11 +422,14 @@ test("sign-in with an invite: consent page, code, token, MCP, every authorizatio
   assert.equal(init.status, 200);
   assert.equal(init.body.result.protocolVersion, "2025-06-18");
   assert.equal((await mcp(sam.access_token, { jsonrpc: "2.0", method: "notifications/initialized" })).status, 202);
+  assert.deepEqual(init.body.result.serverInfo, { name: "guesty-cli", title: "Guesty", version: "2.0.0" });
+  assert.match(init.body.result.instructions, /If a call says the sign-in ended, ask the user to reconnect this server in their app\./);
+  assert.doesNotMatch(init.body.result.instructions, /guesty setup|read-only/);
   const list = await mcp(sam.access_token, { jsonrpc: "2.0", id: 2, method: "tools/list" });
-  assert.equal(list.body.result.tools[0].name, "key_check");
+  assert.deepEqual(list.body.result.tools.map((t) => t.name), ["search_operations", "describe_operation", "call_operation", "team_status", "invite_teammate"]);
   const check = await keyCheck(sam.access_token);
   assert.equal(check.status, 200);
-  assert.deepEqual(check.body.result.structuredContent, { ok: true, read_only: false, role: "member", team: "Acme" });
+  assert.equal(failed(check), false, textOf(check));
   assert.equal((await mcp(sam.access_token, { jsonrpc: "2.0", id: 3, method: "ping" }, { headers: { "mcp-protocol-version": "2024-01-01" } })).status, 400);
 
   // Deny and error redirects carry iss and state too.
@@ -418,12 +490,13 @@ test("concurrent refreshes with one token: at most one wins and the grant ends r
 
 test("read-only is stored on the grant and survives refresh", async () => {
   const signedIn = await signIn(client, (await invite("Reader")).code, { readOnly: true });
-  assert.equal((await keyCheck(signedIn.access_token)).body.result.structuredContent.read_only, true);
+  assert.equal(await isReadOnly(signedIn.access_token), true);
   const refreshed = await refresh(client, signedIn.refresh_token);
   assert.equal(refreshed.status, 200);
-  assert.equal((await keyCheck(refreshed.body.access_token)).body.result.structuredContent.read_only, true);
+  assert.equal(await isReadOnly(refreshed.body.access_token), true);
   const again = await refresh(client, refreshed.body.refresh_token);
-  assert.equal((await keyCheck(again.body.access_token)).body.result.structuredContent.read_only, true);
+  assert.equal(await isReadOnly(again.body.access_token), true);
+  assert.equal(await isReadOnly(sam.access_token), false);
 });
 
 test("a revoked member key answers 401 invalid_token on the next call; another member keeps working", async () => {
@@ -443,12 +516,14 @@ test("a revoked member key answers 401 invalid_token on the next call; another m
 
 test("an existing access key signs in: admin keys as admin, member keys as member", async () => {
   const signedIn = await signIn(client, admin);
-  const check = await keyCheck(signedIn.access_token);
-  assert.deepEqual(check.body.result.structuredContent, { ok: true, read_only: false, role: "admin", team: "Acme" });
+  const status = await tool(signedIn.access_token, "team_status");
+  assert.equal(failed(status), false, textOf(status));
+  assert.match(textOf(status), /Acme/);
   const memberKey = (await service("POST", "/v1/team/keys", { key: admin, body: { label: "Cli user" } })).body.key;
   remember(memberKey);
   const member = await signIn(client, memberKey);
-  assert.equal((await keyCheck(member.access_token)).body.result.structuredContent.role, "member");
+  assert.equal((await keyCheck(member.access_token)).status, 200);
+  assert.equal(textOf(await tool(member.access_token, "team_status")), "This needs one of the team's admin keys.");
   const { challenge } = pkce();
   const page = await openSignIn({ client_id: client, redirect_uri: REDIRECT, code_challenge: challenge });
   const bad = await submit(page.field, { credential: `gts_${"A".repeat(43)}` });
@@ -679,6 +754,287 @@ test("rate limits: registration, authorization, token and tool calls", async () 
   assert.equal(limited.status, 429);
   assert.equal(limited.body.error.code, -32000);
   assert.equal((await keyCheck(sam.access_token)).status, 200, "another sign-in has its own limit");
+});
+
+// ─── The Guesty tools over /mcp ───────────────────────────────────────────────
+
+const WRITE = "reservationsopenapicontroller_createreservation";
+const BE_LISTINGS = "getapplicationlistingslist";
+
+test("search_operations and describe_operation answer by id, operationId and METHOD /path", async () => {
+  const user = await signIn(client, (await invite("Searcher")).code);
+  const before = api.requests.length;
+  const found = await tool(user.access_token, "search_operations", { query: "list listings", limit: 3 });
+  assert.equal(failed(found), false);
+  assert.ok(JSON.parse(textOf(found)).results.some((r) => r.id === "propertieslistinglist"), textOf(found));
+  for (const reference of ["propertieslistinglist", "GET /v1/listings"]) {
+    const described = JSON.parse(textOf(await tool(user.access_token, "describe_operation", { operation: reference })));
+    assert.equal(described.id, "propertieslistinglist", reference);
+    assert.equal(described.path, "/v1/listings");
+  }
+  const byOperationId = JSON.parse(textOf(await tool(user.access_token, "describe_operation", { operation: "ReservationsOpenApiController_createReservation" })));
+  assert.equal(byOperationId.id, WRITE);
+  assert.equal(byOperationId.changes_data, true);
+  const unknown = await tool(user.access_token, "describe_operation", { operation: "frobnicate the listings" });
+  assert.equal(failed(unknown), true);
+  assert.match(textOf(unknown), /^No Guesty operation "frobnicate the listings"\./);
+  assert.equal(api.requests.length, before, "search and describe never reach Guesty");
+});
+
+test("call_operation reads with the team's Open API token, and all_pages follows every page", async () => {
+  const user = await signIn(client, (await invite("Reader of listings")).code);
+  const { result: read, requests } = await withGuesty(null, () => tool(user.access_token, "call_operation", { operation: "propertieslistinglist", query: { fields: "title" } }));
+  assert.equal(failed(read), false, textOf(read));
+  assert.deepEqual(JSON.parse(textOf(read)), { results: [{ _id: "l1", title: "Beach house" }], count: 1 });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].host, "open-api.guesty.com");
+  assert.equal(requests[0].search, "?fields=title");
+  assert.match(requests[0].authorization, /^Bearer mock-open-token-\d+$/);
+
+  api.total = 250;
+  const { result: all, requests: pages } = await withGuesty(null, () => tool(user.access_token, "call_operation", { operation: "propertieslistinglist", all_pages: true }));
+  const body = JSON.parse(textOf(all));
+  assert.equal(body.count, 250);
+  assert.equal(new Set(body.results.map((r) => r._id)).size, 250);
+  assert.deepEqual(pages.map((r) => r.search), ["?limit=100&skip=0", "?limit=100&skip=100", "?limit=100&skip=200"]);
+});
+
+test("a write previews with Not sent. and is sent only with confirm", async () => {
+  const user = await signIn(client, (await invite("Writer")).code);
+  const args = { operation: WRITE, body: { listingId: "l1", checkInDateLocalized: "2026-12-01" } };
+  const { result: preview, requests: none } = await withGuesty(null, () => tool(user.access_token, "call_operation", args));
+  assert.match(textOf(preview), /^Not sent\. "Create a reservation/);
+  assert.match(textOf(preview), /confirm: true/);
+  assert.equal(none.length, 0);
+  const { result: done, requests } = await withGuesty(null, () => tool(user.access_token, "call_operation", { ...args, confirm: true }));
+  assert.match(textOf(done), /^Done: POST \/v1\//);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].method, "POST");
+  assert.deepEqual(JSON.parse(requests[0].body), args.body);
+});
+
+test("a read-only sign-in refuses writes and invites without sending anything", async () => {
+  const reader = await signIn(client, admin, { readOnly: true });
+  const { result, requests } = await withGuesty(null, async () => [
+    await tool(reader.access_token, "call_operation", { operation: WRITE, body: {}, confirm: true }),
+    await tool(reader.access_token, "invite_teammate", { name: "Pat", confirm: true }),
+  ]);
+  assert.match(textOf(result[0]), /^This server is read-only, so it won't run POST /);
+  assert.equal(textOf(result[1]), "This server is read-only, so it won't create invites.");
+  assert.ok(result.every(failed));
+  assert.equal(requests.length, 0);
+  // Reads still work.
+  assert.equal(failed(await keyCheck(reader.access_token)), false);
+});
+
+test("Booking Engine operations go to booking.guesty.com with the team's beapi token", async () => {
+  const user = await signIn(client, (await invite("Booker")).code);
+  const { result, requests } = await withGuesty(null, () => tool(user.access_token, "call_operation", { operation: BE_LISTINGS, query: { minOccupancy: 2 } }));
+  assert.equal(failed(result), false, textOf(result));
+  assert.deepEqual(JSON.parse(textOf(result)), { results: [{ _id: "be-1", title: "Booking engine listing" }] });
+  assert.equal(requests.length, 1);
+  assert.equal(`${requests[0].host}${requests[0].path}${requests[0].search}`, "booking.guesty.com/api/listings?minOccupancy=2");
+  assert.match(requests[0].authorization, /^Bearer mock-be-token-\d+$/);
+});
+
+test("team_status: admins see the team, members get the token service's 403 message", async () => {
+  const adminSession = await signIn(client, admin);
+  const status = await tool(adminSession.access_token, "team_status");
+  assert.equal(failed(status), false, textOf(status));
+  const team = JSON.parse(textOf(status));
+  assert.equal(team.team?.name ?? team.name, "Acme", textOf(status));
+  const member = await signIn(client, (await invite("Plain member")).code);
+  const refused = await tool(member.access_token, "team_status");
+  assert.equal(failed(refused), true);
+  assert.equal(textOf(refused), "This needs one of the team's admin keys.");
+});
+
+test("invite_teammate: preview, confirm with a link checked against the public token-service URL, refusals", async () => {
+  const adminSession = await signIn(client, admin);
+  const preview = await tool(adminSession.access_token, "invite_teammate", { name: "Pat", email: "pat@example.com" });
+  assert.equal(textOf(preview).split("\n")[0], "Not sent. This would invite Pat (pat@example.com) to the team as a member, giving them the team's Guesty access, and email them the invite.");
+  const done = await tool(adminSession.access_token, "invite_teammate", { name: "Pat", confirm: true });
+  assert.equal(failed(done), false, textOf(done));
+  const lines = textOf(done).split("\n");
+  assert.equal(lines[0], "Created Pat's invite.");
+  const link = /^Link: (https:\/\/guesty-tokens\.staykit\.ai\/join\/([0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}))$/.exec(lines[1]);
+  assert.ok(link, lines[1]);
+  remember(link[2], link[2].replace(/-/g, ""));
+  assert.equal(lines[2], `They join by installing the Guesty CLI and running: guesty join ${link[2]}`);
+  assert.match(lines[3], /^It works once and expires /);
+  // The invite works with the token service.
+  const joined = await tokenService.fetch(`${TOKENS_ORIGIN}/v1/join`, { method: "POST", headers: { "content-type": "application/json", "CF-Connecting-IP": freshIp() }, body: JSON.stringify({ code: link[2] }) });
+  assert.equal(joined.status, 201);
+  remember((await joined.json()).key);
+
+  assert.match(textOf(await tool(adminSession.access_token, "invite_teammate", { name: "Boss", admin: true, confirm: true })), /^Admin invites can't be made here/);
+  assert.equal(textOf(await tool(adminSession.access_token, "invite_teammate", { name: "Pat", email: "not-an-email", confirm: true })), "That email address doesn't look right.");
+  const member = await signIn(client, (await invite("Inviter")).code);
+  assert.equal(textOf(await tool(member.access_token, "invite_teammate", { name: "Friend", confirm: true })), "This needs one of the team's admin keys.");
+  // A Worker whose token service is elsewhere refuses the link the service returned.
+  const elsewhere = await tool(adminSession.access_token, "invite_teammate", { name: "Lou", confirm: true }, { worker: shortWorker });
+  assert.equal(textOf(elsewhere), "The token service returned an invite link for a different service.");
+});
+
+// ─── Transport (S10) ──────────────────────────────────────────────────────────
+
+let transportUser;
+const listings = (options) => tool(transportUser.access_token, "call_operation", { operation: "propertieslistinglist" }, options);
+const createReservation = (options) => tool(transportUser.access_token, "call_operation", { operation: WRITE, body: { listingId: "l1" }, confirm: true }, options);
+
+test("a Guesty redirect gets the core's message and its Location is never followed", async () => {
+  transportUser = await signIn(client, admin);
+  const { result, requests } = await withGuesty(() => new Response(null, { status: 302, headers: { location: "https://evil.example/steal" } }), () => listings());
+  assert.equal(textOf(result), "Guesty API GET /v1/listings failed: HTTP 302. Redirects are not followed; use the documented resource path.");
+  assert.equal(requests.length, 1);
+  assert.deepEqual(unexpected, [], "evil.example was never fetched");
+});
+
+test("5xx: a read is retried, a write isn't and its outcome is unknown", async () => {
+  let first = true;
+  const { result: read, requests: reads } = await withGuesty(() => {
+    if (!first) return undefined;
+    first = false;
+    return new Response("down", { status: 503 });
+  }, () => listings());
+  assert.equal(failed(read), false, textOf(read));
+  assert.equal(reads.length, 2);
+  const { result: write, requests: writes } = await withGuesty(() => Response.json({ message: "boom" }, { status: 500 }), () => createReservation());
+  assert.match(textOf(write), /^Guesty API POST \/v1\/\S+ failed: HTTP 500\. Its outcome is unknown; check Guesty before trying again\./);
+  assert.equal(writes.length, 1);
+});
+
+test("a 429 with Retry-After is waited out and retried", async () => {
+  let first = true;
+  const started = Date.now();
+  const { result, requests } = await withGuesty(() => {
+    if (!first) return undefined;
+    first = false;
+    return new Response("slow down", { status: 429, headers: { "retry-after": "1" } });
+  }, () => listings());
+  assert.equal(failed(result), false, textOf(result));
+  assert.equal(requests.length, 2);
+  assert.ok(Date.now() - started >= 900, "it waited");
+});
+
+test("a 401 from Guesty re-reads the team's token once, then fails with what an admin can do", async () => {
+  const { result, requests } = await withGuesty(() => new Response("no", { status: 401 }), () => listings());
+  assert.equal(
+    textOf(result),
+    "Guesty rejected the cached Open API token (401); the CLI cannot refresh it. The team's shared token was rejected. A team admin can check it with `guesty team status` and renew it with `guesty team refresh`.",
+  );
+  // The token service gave the same token again, so it wasn't sent twice.
+  assert.equal(requests.length, 1);
+  assert.equal(guestyTokens > 0, true);
+});
+
+test("Guesty error bodies are shown without the token sent or the member key", async () => {
+  const { result } = await withGuesty((entry) => Response.json({ message: `bad request for ${entry.authorization} and ${admin}` }, { status: 400 }), () => listings());
+  const text = textOf(result);
+  assert.match(text, /^Guesty API GET \/v1\/listings failed: HTTP 400\n/);
+  assert.match(text, /bad request for Bearer \[redacted\] and \[redacted\]/);
+  assert.doesNotMatch(text, /mock-open-token|gts_/);
+});
+
+test("a Guesty response over 16 MB is refused, streamed or declared", async () => {
+  const chunk = new TextEncoder().encode("x".repeat(1024 * 1024));
+  const streamed = () => {
+    let sent = 0;
+    return new Response(new ReadableStream({ pull(c) { if (sent++ >= 17) return c.close(); c.enqueue(chunk); } }), { headers: { "content-type": "application/json" } });
+  };
+  for (const answer of [streamed, () => new Response("x".repeat(17 * 1024 * 1024), { headers: { "content-type": "application/json" } })]) {
+    const { result, requests } = await withGuesty(answer, () => listings());
+    assert.equal(textOf(result), "Guesty API GET /v1/listings returned more than 16 MB, the most this server reads. Ask for less with query parameters such as fields, limit or filters.");
+    assert.equal(requests.length, 1);
+  }
+});
+
+test("timeouts (short Worker): a read is retried then fails, a write isn't retried and its outcome is unknown", async () => {
+  const hang = () => sleep(3000).then(() => Response.json({ late: true }));
+  const { result: read, requests: reads } = await withGuesty(hang, () => listings({ worker: shortWorker }));
+  assert.equal(textOf(read), "Guesty API GET /v1/listings could not complete (network error or 60s timeout).");
+  assert.equal(reads.length, 3);
+  const { result: write, requests: writes } = await withGuesty(hang, () => createReservation({ worker: shortWorker }));
+  assert.match(textOf(write), /^Guesty API POST \/v1\/\S+ could not complete \(network error or 60s timeout\)\. Its outcome is unknown; check Guesty before trying again\.$/);
+  assert.equal(writes.length, 1);
+});
+
+test("deadline (short Worker): pagination that can't finish in time fails with no partial result", async () => {
+  api.total = 2000;
+  const started = Date.now();
+  const { result, requests } = await withGuesty(
+    (entry, url) => (url.searchParams.has("skip") ? sleep(600).then(() => undefined) : undefined),
+    () => tool(transportUser.access_token, "call_operation", { operation: "propertieslistinglist", all_pages: true }, { worker: shortWorker }),
+  );
+  api.total = 250;
+  assert.equal(failed(result), true);
+  assert.match(textOf(result), /^(Pagination stopped: every page didn't arrive within this tool call's 8s limit|This tool call ran out of time: it has 8s)/);
+  assert.doesNotMatch(textOf(result), /"results"/);
+  assert.ok(requests.length < 20, `${requests.length} pages`);
+  assert.ok(Date.now() - started < SHORT_BUDGET_MS + 3000);
+});
+
+// ─── The same answers as the local `guesty mcp` ───────────────────────────────
+
+function localMcp(messages) {
+  return new Promise((resolve, reject) => {
+    const home = mkdtempSync(join(tmpdir(), "guesty-mcp-parity-"));
+    const child = spawn(CLI, ["mcp"], { env: { PATH: process.env.PATH, HOME: home, USERPROFILE: home }, stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => (stdout += d));
+    child.stderr.on("data", (d) => (stderr += d));
+    child.on("error", reject);
+    child.on("close", (status) => {
+      rmSync(home, { recursive: true, force: true });
+      if (status !== 0) return reject(new Error(`guesty mcp exited ${status}: ${stderr}`));
+      const lines = new Map();
+      for (const line of stdout.split("\n").filter(Boolean)) lines.set(JSON.parse(line).id, line);
+      resolve(lines);
+    });
+    child.stdin.end(messages.map((m) => JSON.stringify(m)).join("\n") + "\n");
+  });
+}
+
+test("wasm vs native: tools/list, searches and describes equal the local guesty mcp byte for byte", { skip: !existsSync(CLI) && `build the CLI first (${CLI})` }, async () => {
+  const user = await signIn(client, (await invite("Parity")).code);
+  const queries = [
+    "list reservations", "get a reservation", "cancel a reservation", "listing calendar availability", "send a guest message",
+    "create a reservation", "update listing price", "guest", "payment", "refund a payment", "owner statement", "tasks",
+    "cleaning", "reviews", "webhooks", "custom fields", "/v1/reservations", "/v1/listings/{id}", "quote", "coupon",
+    "booking engine listings", "inquiries", "conversations", "invoice items", "accounting", "photos", "amenities",
+    "house rules", "taxes", "channel", "airbnb", "saved replies", "zzzzqqq nothing", "  ",
+  ];
+  const messages = [{ jsonrpc: "2.0", id: 1, method: "tools/list" }];
+  let id = 2;
+  for (const query of queries) messages.push({ jsonrpc: "2.0", id: id++, method: "tools/call", params: { name: "search_operations", arguments: { query, limit: 25 } } });
+  messages.push({ jsonrpc: "2.0", id: id++, method: "tools/call", params: { name: "search_operations", arguments: { query: "listing", api: "booking-engine", include_deprecated: true } } });
+  messages.push({ jsonrpc: "2.0", id: id++, method: "tools/call", params: { name: "search_operations", arguments: { query: "reservation", api: "open-api", limit: 5 } } });
+  // Describe a sample of what the searches found, plus the other ways to name an operation.
+  const firstRound = new Map();
+  for (const m of messages) firstRound.set(m.id, (await mcp(user.access_token, m)).text);
+  const ids = new Set();
+  for (const text of firstRound.values()) {
+    const reply = JSON.parse(text);
+    if (reply.result?.content && !reply.result.isError) {
+      try {
+        for (const r of JSON.parse(reply.result.content[0].text).results ?? []) ids.add(r.id);
+      } catch {}
+    }
+  }
+  const sample = [...ids].filter((_, i) => i % 3 === 0).slice(0, 40);
+  assert.ok(sample.length >= 30, `${sample.length} operations sampled`);
+  const describes = [...sample, "GET /v1/listings", "post /v1/reservations-v3", "ReservationsOpenApiController_createReservation", "frobnicate", ""];
+  const second = [];
+  for (const operation of describes) second.push({ jsonrpc: "2.0", id: id++, method: "tools/call", params: { name: "describe_operation", arguments: { operation } } });
+  const local = await localMcp([...messages, ...second]);
+  let compared = 0;
+  for (const m of [...messages, ...second]) {
+    const hosted = firstRound.get(m.id) ?? (await mcp(user.access_token, m)).text;
+    assert.equal(hosted, local.get(m.id), `${m.method} ${JSON.stringify(m.params ?? {})}`);
+    compared += 1;
+  }
+  assert.ok(compared >= 70, `${compared} compared`);
 });
 
 test("logs never contain query strings, tokens, keys or codes", async () => {

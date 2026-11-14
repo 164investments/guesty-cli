@@ -1,10 +1,8 @@
 //! The token service through the `TOKENS` service binding, and the [`HostedBackend`] one `/mcp`
-//! request runs with.
-//!
-//! When the shared core lands, `impl guesty_core::Backend for WorkerBackend<'_>` goes here: its
-//! `guesty`/`booking`/`paginate` call [`HostedBackend::guesty_token`] then [`HostedBackend::http`]
-//! in the core's retry loop (sleeping with `worker::Delay` only when [`Deadline::fits`]), and
-//! `team_service` maps to [`HostedBackend::team_service`].
+//! request runs with. The core's `Backend` runs over it (`crate::hosted::Hosted`): Guesty
+//! requests in the core's retry loop, retry waits with `worker::Delay`.
+
+use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -73,6 +71,16 @@ impl HostedBackend for WorkerBackend<'_> {
         self.deadline
     }
 
+    fn member_key(&self) -> &str {
+        &self.member_key
+    }
+
+    async fn sleep(&self, ms: i64) {
+        if ms > 0 {
+            worker::Delay::from(Duration::from_millis(ms as u64)).await;
+        }
+    }
+
     async fn guesty_token(&self, token_type: TokenType) -> Result<TeamToken, BackendError> {
         let body = json!({ "token_type": token_type.as_str() });
         let response =
@@ -93,7 +101,12 @@ impl HostedBackend for WorkerBackend<'_> {
         }
     }
 
-    async fn team_service(&self, method: &str, path: &str, body: Option<&Value>) -> Result<(u16, Value), BackendError> {
+    async fn team_service(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<&Value>,
+    ) -> Result<(u16, Vec<u8>), BackendError> {
         if !team_path_allowed(path) {
             return Err(BackendError::NotAllowed);
         }
@@ -103,7 +116,7 @@ impl HostedBackend for WorkerBackend<'_> {
         if response.status == 401 {
             return Err(self.revoked().await);
         }
-        Ok((response.status, serde_json::from_slice(&response.body).unwrap_or(Value::Null)))
+        Ok((response.status, response.body))
     }
 
     async fn http(&self, request: OutboundRequest, limits: FetchLimits) -> Result<OutboundResponse, TransportError> {

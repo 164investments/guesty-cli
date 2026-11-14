@@ -50,7 +50,11 @@ async fn fetch(req: Request, env: Env, _ctx: worker::Context) -> Result<Response
 fn app(env: Env) -> std::result::Result<App, &'static str> {
     let public_url = env.var("PUBLIC_URL").map(|v| v.to_string()).map_err(|_| "config_public_url")?;
     let origins = env.var("TOKEN_SERVICE_ORIGINS").map(|v| v.to_string()).unwrap_or_default();
-    let config = Config::new(&public_url, &origins).ok_or("config_public_url")?;
+    // Unset in production; tests lower them so timeouts and deadlines take seconds.
+    let test_var = |name: &str| env.var(name).ok().map(|v| v.to_string());
+    let config = Config::new(&public_url, &origins)
+        .ok_or("config_public_url")?
+        .with_test_limits(test_var("CALL_BUDGET_MS").as_deref(), test_var("GUESTY_TIMEOUT_MS").as_deref());
     let secret = env.secret("MCP_KEY").map(|v| v.to_string()).map_err(|_| "config_mcp_key")?;
     let keys = Keys::from_secret(&secret).map_err(|_| "config_mcp_key")?;
     let db = D1Db(env.d1("DB").map_err(|_| "config_db")?);
@@ -129,6 +133,14 @@ pub(crate) fn json_response(status: u16, value: &Value) -> Result<Response> {
     Ok(Response::from_bytes(value.to_string().into_bytes())?.with_status(status).with_headers(headers))
 }
 
+/// A JSON body already written as text (the core's JSON-RPC replies).
+pub(crate) fn json_text_response(status: u16, text: String) -> Result<Response> {
+    let headers = Headers::new();
+    headers.set("content-type", "application/json")?;
+    headers.set("cache-control", "no-store")?;
+    Ok(Response::from_bytes(text.into_bytes())?.with_status(status).with_headers(headers))
+}
+
 pub(crate) fn empty_response(status: u16) -> Result<Response> {
     let headers = Headers::new();
     headers.set("cache-control", "no-store")?;
@@ -137,11 +149,11 @@ pub(crate) fn empty_response(status: u16) -> Result<Response> {
 
 /// A page with a strict CSP: no scripts, no framing, and a form that may post only here (and, for
 /// the sign-in page, redirect to the app).
-pub(crate) fn html_response(status: u16, body: &str, nonce: &str, redirect_origin: Option<&str>) -> Result<Response> {
+pub(crate) fn html_response(status: u16, body: &str, nonce: &str, redirect_source: Option<&str>) -> Result<Response> {
     let headers = Headers::new();
     headers.set("content-type", "text/html; charset=utf-8")?;
     headers.set("cache-control", "no-store")?;
-    headers.set("content-security-policy", &html::csp(nonce, redirect_origin))?;
+    headers.set("content-security-policy", &html::csp(nonce, redirect_source))?;
     headers.set("x-frame-options", "DENY")?;
     Ok(Response::from_html(body)?.with_status(status).with_headers(headers))
 }

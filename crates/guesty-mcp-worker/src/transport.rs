@@ -1,5 +1,6 @@
-//! Outbound HTTP for the Worker (S8, S10): manual redirects (a redirect is an error, as in the
-//! CLI), a timeout taken from the call's deadline, and a streamed cap on the response body.
+//! Outbound HTTP for the Worker (S8, S10): manual redirects (never followed: an error for the
+//! token service and metadata documents, a response the core turns into its own message for
+//! Guesty), a timeout taken from the call's deadline, and a streamed cap on the response body.
 //!
 //! The same [`fetch`] serves Guesty (the internet), the token service (a service binding) and
 //! client metadata documents. It never logs; errors carry no URL or body.
@@ -71,13 +72,19 @@ pub struct FetchLimits {
     pub timeout_ms: i64,
     /// The most response-body bytes read; past it the fetch fails.
     pub max_body_bytes: usize,
+    /// Return a redirect (3xx) as a response with no body, so the caller words the error (Guesty
+    /// requests: the core says redirects aren't followed). Otherwise a redirect is
+    /// [`TransportError::Redirect`]. It is never followed either way.
+    pub redirect_as_response: bool,
 }
 
 impl FetchLimits {
     /// Guesty responses: 16 MB (S7); the timeout is whatever is left of the call.
-    pub const GUESTY: FetchLimits = FetchLimits { timeout_ms: i64::MAX, max_body_bytes: 16 * 1024 * 1024 };
+    pub const GUESTY: FetchLimits =
+        FetchLimits { timeout_ms: i64::MAX, max_body_bytes: 16 * 1024 * 1024, redirect_as_response: true };
     /// Token-service answers are small.
-    pub const TOKEN_SERVICE: FetchLimits = FetchLimits { timeout_ms: 10_000, max_body_bytes: 64 * 1024 };
+    pub const TOKEN_SERVICE: FetchLimits =
+        FetchLimits { timeout_ms: 10_000, max_body_bytes: 64 * 1024, redirect_as_response: false };
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -171,12 +178,15 @@ mod wasm {
             }
         };
         let status = response.status_code();
-        if is_redirect(status) {
-            controller.abort();
-            return Err(TransportError::Redirect { status });
-        }
         let headers: Vec<(String, String)> =
             response.headers().entries().map(|(n, v)| (n.to_ascii_lowercase(), v)).collect();
+        if is_redirect(status) {
+            controller.abort();
+            if limits.redirect_as_response {
+                return Ok(OutboundResponse { status, headers, body: Vec::new() });
+            }
+            return Err(TransportError::Redirect { status });
+        }
         let declared = headers.iter().find(|(n, _)| n == "content-length").and_then(|(_, v)| v.parse::<usize>().ok());
         if declared.is_some_and(|n| n > limits.max_body_bytes) {
             controller.abort();

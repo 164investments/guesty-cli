@@ -27,9 +27,22 @@ fn is_loopback_host(host: &str) -> bool {
     matches!(host, "localhost" | "127.0.0.1" | "[::1]")
 }
 
-/// Whether `uri` may be registered as a redirect URI: https anywhere, or http on a loopback host
-/// (RFC 8252 §7.3). No fragment and no user info.
-pub fn validate_redirect_uri(uri: &str) -> Result<(), &'static str> {
+/// Schemes a private-use redirect URI can't have: ones a browser runs, reads or shows itself.
+/// http and https keep their own rules.
+const UNSAFE_SCHEMES: &[&str] =
+    &["javascript", "data", "file", "blob", "vbscript", "about", "view-source", "filesystem", "http", "https"];
+
+/// Whether `scheme` (as the URL parser lowercased it) is a private-use scheme a desktop app can
+/// claim, such as `cursor` (RFC 8252 §7.1).
+pub fn is_private_use_scheme(scheme: &str) -> bool {
+    !scheme.is_empty() && !UNSAFE_SCHEMES.contains(&scheme)
+}
+
+/// Whether `uri` may be registered as a redirect URI: https anywhere, http on a loopback host
+/// (RFC 8252 §7.3), and, when `private_schemes` is on (dynamic registration), a private-use
+/// scheme such as `cursor://anysphere.cursor-mcp/oauth/callback` (RFC 8252 §7.1). No fragment and
+/// no user info.
+pub fn validate_redirect_uri(uri: &str, private_schemes: bool) -> Result<(), &'static str> {
     if uri.len() > MAX_URI_LENGTH {
         return Err("A redirect URI is too long.");
     }
@@ -45,6 +58,16 @@ pub fn validate_redirect_uri(uri: &str) -> Result<(), &'static str> {
         "https" if !host.is_empty() => Ok(()),
         "http" if is_loopback_host(host) => Ok(()),
         "http" => Err("An http redirect URI must use localhost, 127.0.0.1 or [::1]; anything else must use https."),
+        scheme if private_schemes && is_private_use_scheme(scheme) => {
+            // `app:/path` or `app://host/path`; not an opaque `app:anything`.
+            if parsed.cannot_be_a_base() {
+                return Err("A desktop app's redirect URI needs a path, such as myapp://callback or myapp:/callback.");
+            }
+            Ok(())
+        }
+        _ if private_schemes => {
+            Err("Redirect URIs must use https, http on localhost, 127.0.0.1 or [::1], or a desktop app's own scheme.")
+        }
         _ => Err("Redirect URIs must use https, or http on localhost, 127.0.0.1 or [::1]."),
     }
 }
@@ -80,22 +103,35 @@ pub fn find_redirect<'a>(registered: &'a [String], requested: &str) -> Option<&'
     registered.iter().map(String::as_str).find(|r| redirect_matches(r, requested))
 }
 
-/// The host (with any port) a redirect URI goes back to, as the sign-in page shows it.
+/// Where a redirect URI goes back to, as the sign-in page shows it: the host (with any port), or
+/// for a private-use scheme, which any installed app can claim, "a desktop app (cursor://…)".
 pub fn redirect_host(uri: &str) -> String {
-    Url::parse(uri)
-        .ok()
-        .and_then(|u| {
-            u.host_str().map(|h| match u.port() {
-                Some(port) => format!("{h}:{port}"),
-                None => h.to_string(),
-            })
+    let Ok(parsed) = Url::parse(uri) else {
+        return String::new();
+    };
+    if !matches!(parsed.scheme(), "http" | "https") {
+        let separator = if uri[parsed.scheme().len()..].starts_with("://") { "://" } else { ":" };
+        return format!("a desktop app ({}{separator}…)", parsed.scheme());
+    }
+    parsed
+        .host_str()
+        .map(|h| match parsed.port() {
+            Some(port) => format!("{h}:{port}"),
+            None => h.to_string(),
         })
         .unwrap_or_default()
 }
 
-/// The origin a redirect lands on, for the page's `form-action` source list.
-pub fn redirect_origin(uri: &str) -> Option<String> {
+/// The sign-in page's `form-action` source for where its redirect lands (browsers apply
+/// form-action to the redirect that follows the post): the origin of an http(s) URI, or exactly
+/// the scheme (`cursor:`) of a private-use one.
+pub fn form_action_source(uri: &str) -> Option<String> {
     let parsed = Url::parse(uri).ok()?;
+    if is_private_use_scheme(parsed.scheme()) {
+        // The parser allows only ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ), so it can't break out
+        // of the header.
+        return Some(format!("{}:", parsed.scheme()));
+    }
     let origin = parsed.origin();
     origin.is_tuple().then(|| origin.ascii_serialization())
 }
@@ -201,7 +237,7 @@ fn string_list<'a>(value: Option<&'a Value>, field: &str) -> Result<Option<Vec<&
     }
 }
 
-fn redirect_list(doc: &Value) -> Result<Vec<String>, RegistrationError> {
+fn redirect_list(doc: &Value, private_schemes: bool) -> Result<Vec<String>, RegistrationError> {
     let uris = string_list(doc.get("redirect_uris"), "redirect_uris")?.unwrap_or_default();
     if uris.is_empty() {
         return Err(reg_error("invalid_redirect_uri", "redirect_uris needs at least one URI."));
@@ -213,7 +249,7 @@ fn redirect_list(doc: &Value) -> Result<Vec<String>, RegistrationError> {
         ));
     }
     for uri in &uris {
-        validate_redirect_uri(uri).map_err(|message| reg_error("invalid_redirect_uri", message))?;
+        validate_redirect_uri(uri, private_schemes).map_err(|message| reg_error("invalid_redirect_uri", message))?;
     }
     Ok(uris.into_iter().map(str::to_string).collect())
 }
@@ -222,12 +258,13 @@ fn client_name(doc: &Value) -> Option<String> {
     doc.get("client_name").and_then(Value::as_str).map(|n| clean_text(n, 100)).filter(|n| !n.is_empty())
 }
 
-/// A dynamic client registration request (RFC 7591): public clients only.
+/// A dynamic client registration request (RFC 7591): public clients only. Desktop apps may use
+/// their own URI scheme for redirects (Cursor's is `cursor://`).
 pub fn parse_registration(doc: &Value) -> Result<(Option<String>, Vec<String>), RegistrationError> {
     if !doc.is_object() {
         return Err(reg_error("invalid_client_metadata", "The registration request must be a JSON object."));
     }
-    let redirect_uris = redirect_list(doc)?;
+    let redirect_uris = redirect_list(doc, true)?;
     match doc.get("token_endpoint_auth_method") {
         None | Some(Value::Null) => {}
         Some(Value::String(method)) if method == "none" => {}
@@ -308,7 +345,7 @@ pub fn validate_cimd(client_id: &str, doc: &Value) -> Result<ClientInfo, &'stati
         return Err("The app's client metadata doesn't allow the none token endpoint auth method.");
     }
     let redirect_uris =
-        redirect_list(doc).map_err(|_| "The app's client metadata has missing or invalid redirect URIs.")?;
+        redirect_list(doc, false).map_err(|_| "The app's client metadata has missing or invalid redirect URIs.")?;
     if let Some(Value::Array(grants)) = doc.get("grant_types")
         && !grants.iter().any(|g| g.as_str() == Some("authorization_code"))
     {

@@ -7,10 +7,6 @@ rust-version = "1.90"
 license = "MIT"
 publish = false
 
-# Standalone for now, so it doesn't join the guesty-cli package; it joins the
-# repository's workspace when the shared core lands.
-[workspace]
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -18,10 +14,12 @@ crate-type = ["cdylib", "rlib"]
 # Only the cipher: nonces come from getrandom below.
 aes-gcm = { version = "0.10.3", default-features = false, features = ["aes", "alloc"] }
 base64 = "0.22"
+guesty-core = { path = "../guesty-core" }
 hkdf = "0.12"
 hmac = "0.12"
 serde = { version = "1", features = ["derive"] }
-# Default features keep serde_json's recursion limit of 128 (the hosted depth limit).
+# guesty-core turns on `unbounded_depth` (and `preserve_order`) for the whole build, so JSON
+# from a request is checked for depth before it's parsed (`mcp::classify`).
 serde_json = "1"
 sha2 = "0.10"
 url = "2"
@@ -40,9 +38,3 @@ getrandom = "0.2"
 
 [dev-dependencies]
 rusqlite = { version = "0.41", features = ["bundled"] }
-
-[profile.release]
-lto = true
-codegen-units = 1
-opt-level = "z"
-panic = "abort"

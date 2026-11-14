@@ -8,17 +8,14 @@ use serde_json::{Value, json};
 use worker::{Headers, Method, Request, Response, Result};
 
 use super::backend::WorkerBackend;
-use super::{App, BodyError, empty_response, json_response, limited, log_error, read_body};
+use super::{App, BodyError, empty_response, json_response, json_text_response, limited, log_error, read_body};
 use crate::clock::{Deadline, now_ms};
+use crate::hosted::CoreHandler;
 use crate::mcp::{
-    CALL_BUDGET_MS, GrantInfo, MAX_REQUEST_BYTES, McpHandler, McpOutcome, Message, StubHandler, classify,
-    header_version_ok, rpc_error,
+    GrantInfo, MAX_REQUEST_BYTES, McpHandler, McpOutcome, Message, classify, header_version_ok, rpc_error,
 };
 use crate::oauth::origin_allowed;
 use crate::store;
-
-/// The handler `/mcp` requests go to. The shared core's dispatcher replaces this.
-const HANDLER: StubHandler = StubHandler;
 
 fn with_cors(response: Response, origin: Option<&str>) -> Result<Response> {
     let Some(origin) = origin else {
@@ -91,7 +88,7 @@ pub(crate) async fn handle(mut req: Request, app: &App) -> Result<Response> {
 }
 
 async fn post(req: &mut Request, app: &App) -> Result<Response> {
-    let deadline = Deadline::after(now_ms(), CALL_BUDGET_MS);
+    let deadline = Deadline::after(now_ms(), app.config.call_budget_ms);
     let declared = req.headers().get("content-length")?.and_then(|v| v.trim().parse::<u64>().ok());
     if declared.is_some_and(|n| n > MAX_REQUEST_BYTES as u64) {
         return rpc_status(413, &rpc_error(&Value::Null, -32600, "The request body is larger than 1 MB."));
@@ -166,8 +163,9 @@ async fn post(req: &mut Request, app: &App) -> Result<Response> {
         read_only: grant.read_only,
     };
     let backend = WorkerBackend { app, grant: info, member_key, deadline };
-    match HANDLER.handle(&backend, &request).await {
-        McpOutcome::Response(value) => json_response(200, &value),
+    let handler = CoreHandler { settings: app.config.hosted_settings() };
+    match handler.handle(&backend, &request).await {
+        McpOutcome::Response(text) => json_text_response(200, text),
         McpOutcome::Unauthorized => unauthorized(app, true),
     }
 }

@@ -1,9 +1,9 @@
 //! The Worker's public address and the URLs and metadata documents derived from it.
 
+use guesty_core::token_service::{HOSTED_TOKEN_SERVICE_URL, service_url};
 use serde_json::{Value, json};
 
-/// Supported MCP protocol versions, newest first.
-pub const PROTOCOL_VERSIONS: &[&str] = &["2025-11-25", "2025-06-18", "2025-03-26"];
+use crate::mcp::CALL_BUDGET_MS;
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -12,6 +12,14 @@ pub struct Config {
     pub public_url: String,
     /// Origins whose `/join/<code>` links are invites for the token service this Worker is bound to.
     pub token_service_origins: Vec<String>,
+    /// The token service's public URL: the first of `token_service_origins` (the binding's own
+    /// host is a placeholder). Invite links the service returns must point here.
+    pub token_service_url: String,
+    /// Each tool call's time (S8): 50 s, or less when `CALL_BUDGET_MS` lowers it (tests).
+    pub call_budget_ms: i64,
+    /// A lower cap on each Guesty request's timeout, from `GUESTY_TIMEOUT_MS` (tests). Unset in
+    /// production, where a request has its own 60 s or what's left of the call.
+    pub guesty_timeout_ms: Option<u64>,
 }
 
 impl Config {
@@ -27,12 +35,43 @@ impl Config {
         {
             return None;
         }
-        let origins = token_service_origins
+        let origins: Vec<String> = token_service_origins
             .split(',')
             .map(|o| o.trim().trim_end_matches('/').to_string())
             .filter(|o| !o.is_empty())
             .collect();
-        Some(Config { public_url: parsed.origin().ascii_serialization(), token_service_origins: origins })
+        let token_service_url = match origins.first() {
+            Some(first) => service_url(first).ok()?,
+            None => HOSTED_TOKEN_SERVICE_URL.to_string(),
+        };
+        Some(Config {
+            public_url: parsed.origin().ascii_serialization(),
+            token_service_origins: origins,
+            token_service_url,
+            call_budget_ms: CALL_BUDGET_MS,
+            guesty_timeout_ms: None,
+        })
+    }
+
+    /// Lowers the call budget and the Guesty timeout for tests. Values that aren't positive
+    /// integers, or that would raise a limit, are ignored.
+    pub fn with_test_limits(mut self, call_budget_ms: Option<&str>, guesty_timeout_ms: Option<&str>) -> Config {
+        let lower = |value: Option<&str>, max: u64| {
+            value.and_then(|v| v.trim().parse::<u64>().ok()).filter(|v| (1..=max).contains(v))
+        };
+        if let Some(budget) = lower(call_budget_ms, CALL_BUDGET_MS as u64) {
+            self.call_budget_ms = budget as i64;
+        }
+        self.guesty_timeout_ms = lower(guesty_timeout_ms, guesty_core::request::REQUEST_TIMEOUT_MS);
+        self
+    }
+
+    /// What each tool call may use.
+    pub fn hosted_settings(&self) -> crate::hosted::HostedSettings {
+        let mut settings = crate::hosted::HostedSettings::new(self.token_service_url.clone());
+        settings.limits.call_deadline_ms = Some(self.call_budget_ms as u64);
+        settings.guesty_timeout_ms = self.guesty_timeout_ms;
+        settings
     }
 
     pub fn issuer(&self) -> &str {

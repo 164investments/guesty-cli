@@ -18,6 +18,9 @@ pub mod mcp;
 pub mod request;
 pub mod token_service;
 
+/// The core's version, which is the CLI's (`serverInfo.version`).
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub use data::Data;
 pub use error::{Error, Result};
 pub use limits::Limits;
