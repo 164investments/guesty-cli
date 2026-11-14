@@ -260,3 +260,78 @@ pub fn get_cached_token(token_type: TokenType) -> Result<CachedToken> {
 pub fn get_token() -> Result<String> {
     Ok(get_cached_token(TokenType::OpenApi)?.access_token)
 }
+
+/// Unit tests share one process; each starts with an empty process cache.
+#[cfg(test)]
+pub(crate) fn reset_for_tests() {
+    *STATE.lock().unwrap_or_else(|e| e.into_inner()) = None;
+}
+
+/// Ports of the script-driven tests in test/auth.test.mjs and
+/// test/client.test.mjs that called `getToken`, `getCachedToken` and
+/// `invalidateToken` in one Node process. Every cache is fake.
+#[cfg(all(test, feature = "test-hooks"))]
+mod offline_tests {
+    use super::*;
+    use crate::hooks::testing::{NOW, Recorded, Reply, Session};
+
+    fn token(kind: &str, value: &str) -> Json {
+        json!({ "token_type": kind, "access_token": value, "expires_at": NOW + 3_600_000.0 })
+    }
+
+    /// Answers shared-cache reads with `rows` in turn (the last repeats).
+    fn shared_cache(session: &Session, rows: Vec<Json>) {
+        session.shared_cache();
+        let mut index = 0;
+        session.answer(move |r: &Recorded| {
+            if r.host() != "cache.invalid" || r.method != "GET" {
+                return Reply::Drop;
+            }
+            let reply = rows[index.min(rows.len() - 1)].clone();
+            index += 1;
+            Reply::ok(reply)
+        });
+    }
+
+    #[test]
+    fn in_memory_cache_keeps_api_scopes_separate_and_caller_mutation_cannot_corrupt_it() {
+        let session = Session::new();
+        session.disk_token(Json::Null);
+        shared_cache(
+            &session,
+            vec![json!([token("openapi", "fake-openapi-token")]), json!([token("beapi", "fake-beapi-token")])],
+        );
+        let mut first = get_cached_token(TokenType::OpenApi).unwrap();
+        first.access_token = "caller-mutated-token".into();
+        assert_eq!(get_token().unwrap(), "fake-openapi-token");
+        assert_eq!(get_cached_token(TokenType::Beapi).unwrap().access_token, "fake-beapi-token");
+        assert_eq!(get_token().unwrap(), "fake-openapi-token");
+        assert_eq!(session.requests().len(), 2);
+    }
+
+    #[test]
+    fn invalidating_an_older_rejected_token_preserves_a_newer_process_cache() {
+        let session = Session::new();
+        session.disk_token(json!({ "token_type": "openapi", "access_token": "fake-isolated-openapi-token", "expires_at": NOW + 36_000_000.0 }));
+        shared_cache(&session, vec![json!([token("openapi", "fake-new-scoped-token")])]);
+        let old = get_token().unwrap();
+        invalidate_token(Some(&old));
+        let replacement = get_token().unwrap();
+        assert_ne!(old, replacement);
+        invalidate_token(Some(&old));
+        assert_eq!(get_token().unwrap(), replacement);
+        assert_eq!(session.requests().len(), 1);
+        // Was `requests[0].redirect === "error"` (a fetch option): a redirect from the
+        // shared cache fails the read and is never followed.
+        drop(session);
+        let session = Session::new();
+        session.shared_cache();
+        session.answer(|_| Reply::status(302).header("location", "https://other.invalid/rest/v1/guesty_tokens"));
+        let error = get_token().err().expect("a redirect is refused").message();
+        assert!(error.contains("the shared-cache request could not complete"), "{error}");
+        assert_eq!(session.requests().len(), 1);
+    }
+
+    // "runtime token type validation rejects unknown scopes" has no Rust form:
+    // TokenType is an enum, so an unknown scope can't reach get_cached_token.
+}
