@@ -172,3 +172,54 @@ mod tests {
         );
     }
 }
+
+/// Port of "environment files fill missing keys in order and preserve
+/// explicitly empty process variables" (test/io.test.mjs), which called
+/// loadEnv() with fake home, package and working-directory files.
+#[cfg(all(test, feature = "test-hooks"))]
+mod load_tests {
+    use crate::hooks::testing::Session;
+
+    const KEYS: [&str; 7] = [
+        "GUESTY_TEST_FIRST",
+        "GUESTY_TEST_SECOND",
+        "GUESTY_TEST_THIRD",
+        "GUESTY_TEST_EMPTY",
+        "GUESTY_TEST_PROCESS",
+        "GUESTY_TEST_HASH",
+        "invalid-key",
+    ];
+
+    #[test]
+    fn environment_files_fill_missing_keys_in_order_and_preserve_explicitly_empty_process_variables() {
+        let session = Session::new();
+        for key in KEYS {
+            session.env(key, None);
+        }
+        session.env("GUESTY_TEST_EMPTY", Some(""));
+        session.env("GUESTY_TEST_PROCESS", Some("process"));
+        std::fs::write(
+            session.home.join(".guesty-cli/.env"),
+            "export GUESTY_TEST_FIRST=home # comment\nGUESTY_TEST_EMPTY=override\nGUESTY_TEST_PROCESS=override\nGUESTY_TEST_HASH='a#b' # comment\ninvalid-key=bad",
+        )
+        .unwrap();
+        // The package's .env: `<dir of the executable>/../.env`, as for the CLI binary in dist/.
+        let script = super::script_env_path().expect("script .env path");
+        assert!(!script.exists(), "{} must not exist before the test", script.display());
+        std::fs::write(&script, "GUESTY_TEST_FIRST=source\nGUESTY_TEST_SECOND=source").unwrap();
+        let cwd = session.root.join("cwd");
+        std::fs::create_dir_all(&cwd).unwrap();
+        std::fs::write(cwd.join(".env"), "GUESTY_TEST_SECOND=cwd\nGUESTY_TEST_THIRD=cwd").unwrap();
+        let previous = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&cwd).unwrap();
+        super::load(false);
+        std::env::set_current_dir(previous).unwrap();
+        let _ = std::fs::remove_file(&script);
+        let got: Vec<Option<String>> = KEYS.iter().map(|k| std::env::var(k).ok()).collect();
+        for key in KEYS {
+            session.env(key, None);
+        }
+        let expected = [Some("home"), Some("source"), Some("cwd"), Some(""), Some("process"), Some("a#b"), None];
+        assert_eq!(got, expected.map(|v| v.map(str::to_string)));
+    }
+}

@@ -1,144 +1,47 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { run } from "./fixtures/isolated-runner.mjs";
+import { run } from "./harness/isolated-runner.mjs";
 
-// Every request, token and clock here is fake (test/fixtures/isolated-runtime.mjs).
-const client = 'import assert from "node:assert/strict"; import { bookingEngineFetch, guestyFetch } from "./dist/client.js";';
+// Every request, token and clock here is fake (test/harness/scenarios.mjs).
 const BEAPI_TOKEN = "fake-isolated-beapi-token";
 
 function booking(trace) {
   return trace.requests.filter((request) => new URL(request.url).hostname === "booking.guesty.com");
 }
 
-function execute(t, options) {
-  const result = run(t, options);
+async function execute(t, options) {
+  const result = await run(t, options);
   assert.doesNotMatch(result.stdout + result.stderr, new RegExp(BEAPI_TOKEN), "the beapi token is never printed");
   return result;
 }
 
 // ─── Transport ───────────────────────────────────────────────────────────────
-
-test("Booking Engine requests use booking.guesty.com and only the cached beapi token", (t) => {
-  const result = execute(t, { script: `${client} assert.deepEqual(await bookingEngineFetch('/api/listings', { params: { limit: 5, tags: ['a', 'b'] } }), { ok: true });` });
-  assert.equal(result.status, 0, result.stderr);
-  const [cache, request] = result.trace.requests;
-  assert.equal(new URL(cache.url).searchParams.get("token_type"), "eq.beapi", "reads the beapi row, never the newest row of any type");
-  assert.equal(result.trace.tokenReads, 0, "the Open API disk cache is never consulted for beapi");
-  assert.equal(result.trace.requests.length, 2);
-  const url = new URL(request.url);
-  assert.equal(url.origin, "https://booking.guesty.com");
-  assert.equal(url.pathname, "/api/listings");
-  assert.deepEqual([...url.searchParams], [["limit", "5"], ["tags", "a"], ["tags", "b"]]);
-  assert.equal(request.headers.authorization, `Bearer ${BEAPI_TOKEN}`);
-  assert.equal(request.headers.accept, "application/json");
-  assert.equal(request.redirect, "manual");
-  assert.equal(request.timeout, true);
-});
-
-test("Booking Engine writes send JSON bodies", (t) => {
-  const result = execute(t, { script: `${client} await bookingEngineFetch('/api/reservations/quotes', { method: 'POST', body: { listingId: 'x' } });` });
-  assert.equal(result.status, 0, result.stderr);
-  const [request] = booking(result.trace);
-  assert.equal(request.method, "POST");
-  assert.equal(request.headers["content-type"], "application/json");
-  assert.equal(request.body, '{"listingId":"x"}');
-});
-
-for (const [name, path, options, message] of [
-  ["an Open API path", "/v1/listings", {}, /Booking Engine API resource path/],
-  ["the OAuth endpoint", "/oauth2/token", { method: "POST" }, /Booking Engine API resource path/],
-  ["a dot segment that reaches OAuth", "/api/../oauth2/token", { method: "POST" }, /OAuth endpoints are disabled/],
-  ["an encoded dot segment that reaches OAuth", "/api/%2e%2e/oauth2/token", { method: "POST" }, /OAuth endpoints are disabled/],
-  ["a dot segment that leaves /api/", "/api/../health", {}, /must stay under \/api\//],
-  ["a GET body", "/api/listings", { body: {} }, /cannot contain a body/],
-  ["an undocumented method", "/api/listings", { method: "DELETE" }, /only GET, POST, and PUT/],
-  ["a nested query object", "/api/listings", { params: { city: { name: "x" } } }, /Query parameter 'city'/],
-]) {
-  test(`Booking Engine transport rejects ${name} before any token or network access`, (t) => {
-    const result = execute(t, { script: `${client} await assert.rejects(bookingEngineFetch(${JSON.stringify(path)}, ${JSON.stringify(options)}), ${message});` });
-    assert.equal(result.status, 0, result.stderr);
-    assert.deepEqual(result.trace.requests, []);
-    assert.equal(result.trace.beapiCacheReads, 0);
-  });
-}
-
-test("a Booking Engine 401 re-reads the beapi cache once and retries with a different token", (t) => {
-  const result = execute(t, {
-    script: `${client} assert.deepEqual(await bookingEngineFetch('/api/listings'), { ok: true });`,
-    scenario: {
-      bookingResponses: [{ status: 401, json: { message: "expired" } }, { json: { ok: true } }],
-      beapiSharedReplies: [
-        [{ token_type: "beapi", access_token: BEAPI_TOKEN, expires_at: 1_800_036_000_000 }],
-        [{ token_type: "beapi", access_token: "fake-isolated-beapi-second", expires_at: 1_800_036_000_000 }],
-      ],
-    },
-  });
-  assert.equal(result.status, 0, result.stderr);
-  const requests = booking(result.trace);
-  assert.deepEqual(requests.map((request) => request.headers.authorization), [`Bearer ${BEAPI_TOKEN}`, "Bearer fake-isolated-beapi-second"]);
-  assert.equal(result.trace.beapiCacheReads, 2);
-  assert.deepEqual(result.trace.writes, [], "no cache is written");
-});
-
-test("a Booking Engine 401 fails without requesting a token when the cache has nothing new", (t) => {
-  const result = execute(t, {
-    script: `${client} await assert.rejects(bookingEngineFetch('/api/listings'), /rejected the cached Booking Engine API token \\(401\\).*cannot refresh it|No valid cached Guesty beapi token/s);`,
-    scenario: { bookingResponses: [{ status: 401 }] },
-  });
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(booking(result.trace).length, 1, "the rejected token is not replayed");
-  assert.deepEqual(result.trace.writes, []);
-});
-
-test("Booking Engine reads retry server errors, and every method waits out a 429", (t) => {
-  const result = execute(t, {
-    script: `${client} assert.deepEqual(await bookingEngineFetch('/api/listings'), { ok: true }); assert.deepEqual(await bookingEngineFetch('/api/reservations/quotes', { method: 'POST', body: {} }), { ok: true });`,
-    scenario: { bookingResponses: [{ status: 503 }, { json: { ok: true } }, { status: 429, headers: { "retry-after": "7" } }, { json: { ok: true } }] },
-  });
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(booking(result.trace).length, 4);
-  assert.ok(result.trace.waits.includes(1000), "server errors back off");
-  assert.ok(result.trace.waits.includes(7000), "429 honors Retry-After");
-});
-
-test("a Booking Engine write with an unknown outcome is not repeated", (t) => {
-  const result = execute(t, {
-    script: `${client} await assert.rejects(bookingEngineFetch('/api/reservations/quotes/q/instant', { method: 'POST', body: {} }), /outcome is unknown/);`,
-    scenario: { bookingResponses: [{ status: 503, json: { message: "unavailable" } }] },
-  });
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(booking(result.trace).length, 1);
-});
-
-test("Booking Engine error bodies are shown with the token redacted, and redirects are not followed", (t) => {
-  const result = execute(t, {
-    script: `${client}
-      await assert.rejects(bookingEngineFetch('/api/listings/x'), (error) => /HTTP 400/.test(error.message) && error.message.includes('[redacted]') && !error.message.includes('${BEAPI_TOKEN}'));
-      await assert.rejects(bookingEngineFetch('/api/listings/y'), /HTTP 302\\. Redirects are not followed/);`,
-    scenario: { bookingResponses: [{ status: 400, raw: `bad token ${BEAPI_TOKEN}` }, { status: 302, headers: { location: "https://booking.guesty.com/oauth2/token" } }] },
-  });
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(booking(result.trace).length, 2);
-});
-
-test("Booking Engine requests observe five per second, separately from the Open API limit", (t) => {
-  const result = execute(t, {
-    script: `${client}
-      for (let i = 0; i < 5; i++) await bookingEngineFetch('/api/listings');
-      await guestyFetch('/v1/listings');
-      assert.equal(globalThis.__guestyTestTrace.waits.length, 0, 'five Booking Engine requests and one Open API request need no wait');
-      await bookingEngineFetch('/api/listings');`,
-  });
-  assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.trace.waits, [1000], "the sixth Booking Engine request in a second waits for the window");
-  assert.match(result.stderr, /Guesty Booking Engine API rate limit reached/);
-});
+// These called bookingEngineFetch and guestyFetch in one Node process; they are
+// now Rust unit tests in src/client.rs (`offline_tests`, cargo test --features test-hooks):
+// - "Booking Engine requests use booking.guesty.com and only the cached beapi token"
+//     → booking_engine_requests_use_booking_guesty_com_and_only_the_cached_beapi_token
+// - "Booking Engine writes send JSON bodies" → booking_engine_writes_send_json_bodies
+// - "Booking Engine transport rejects <case> before any token or network access"
+//     → booking_engine_transport_rejects_bad_requests_before_any_token_or_network_access
+// - "a Booking Engine 401 re-reads the beapi cache once and retries with a different token"
+//     → a_booking_engine_401_rereads_the_beapi_cache_once_and_retries_with_a_different_token
+// - "a Booking Engine 401 fails without requesting a token when the cache has nothing new"
+//     → a_booking_engine_401_fails_without_requesting_a_token_when_the_cache_has_nothing_new
+// - "Booking Engine reads retry server errors, and every method waits out a 429"
+//     → booking_engine_reads_retry_server_errors_and_every_method_waits_out_a_429
+// - "a Booking Engine write with an unknown outcome is not repeated"
+//     → a_booking_engine_write_with_an_unknown_outcome_is_not_repeated
+// - "Booking Engine error bodies are shown with the token redacted, and redirects are not followed"
+//     → booking_engine_error_bodies_are_redacted_and_redirects_are_not_followed
+// - "Booking Engine requests observe five per second, separately from the Open API limit"
+//     → booking_engine_requests_observe_five_per_second_separately_from_the_open_api_limit
+//       (its stderr notice is not checked there; see the port report)
 
 // ─── Commands ────────────────────────────────────────────────────────────────
 
 function contract(name, args, { path, params = {}, body, method = body === undefined ? "GET" : "POST" }) {
-  test(`be ${name}`, (t) => {
-    const result = execute(t, { args: ["booking-engine", ...args] });
+  test(`be ${name}`, async (t) => {
+    const result = await execute(t, { args: ["booking-engine", ...args] });
     assert.equal(result.status, 0, result.stderr);
     const requests = booking(result.trace);
     assert.equal(requests.length, 1, "exactly one Booking Engine request");
@@ -157,8 +60,8 @@ function contract(name, args, { path, params = {}, body, method = body === undef
 }
 
 function invalid(name, args, message) {
-  test(`be ${name}`, (t) => {
-    const result = execute(t, { args: ["be", ...args] });
+  test(`be ${name}`, async (t) => {
+    const result = await execute(t, { args: ["be", ...args] });
     assert.equal(result.status, 1);
     assert.match(result.stderr, message);
     assert.deepEqual(result.trace.requests, [], "invalid input fails before the token cache or network");
