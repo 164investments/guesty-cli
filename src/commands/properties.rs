@@ -322,7 +322,7 @@ pub fn command() -> Command {
                         _ => "application/octet-stream",
                     };
                     let data =
-                        std::fs::read(file).map_err(|e| CliError::new(super::raw::node_fs_error(&e, "open", file)))?;
+                        std::fs::read(file).map_err(|e| CliError::new(super::raw::node_fs_error(&e, "read", file)))?;
                     let mut parts = vec![Part::File {
                         name: "file".into(),
                         filename: basename(file).into(),

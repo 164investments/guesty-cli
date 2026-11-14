@@ -89,7 +89,7 @@ pub fn command() -> Command {
             } else if let Some(text) = o.str("text") {
                 Some(Body::Text(text.to_string()))
             } else if let Some(file) = o.str("dataFile") {
-                Some(Body::Bytes(std::fs::read(file).map_err(|e| CliError::new(node_fs_error(&e, "open", file)))?))
+                Some(Body::Bytes(std::fs::read(file).map_err(|e| CliError::new(node_fs_error(&e, "read", file)))?))
             } else if o.flag("stdin") {
                 Some(Body::Text(stdin::read()?))
             } else {
@@ -160,9 +160,10 @@ pub fn node_fs_error(e: &std::io::Error, syscall: &str, path: &str) -> String {
         std::io::ErrorKind::NotADirectory => ("ENOTDIR", "not a directory"),
         _ => return format!("{e}, {syscall} '{path}'"),
     };
-    let syscall = if code == "EISDIR" { "read" } else { syscall };
-    if code == "EISDIR" {
-        return format!("{code}: {text}, {syscall}");
+    // `syscall` "read" means readFileSync: its open succeeds on a directory and
+    // the read fails, so Node names no path. Everything else failed at open.
+    if code == "EISDIR" && syscall == "read" {
+        return format!("{code}: {text}, read");
     }
-    format!("{code}: {text}, {syscall} '{path}'")
+    format!("{code}: {text}, open '{path}'")
 }

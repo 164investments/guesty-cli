@@ -275,13 +275,15 @@ mod tests {
 
     #[test]
     fn invites() {
-        assert_eq!(invite_code("abcd-efgh-jklm").unwrap(), "ABCDEFGHJKLM");
+        assert_eq!(invite_code("abcd-efgh-jkmn").unwrap(), "ABCDEFGHJKMN");
+        // Crockford: I and L read as 1, O as 0.
+        assert_eq!(invite_code("abcd-efgh-jklm").unwrap(), "ABCDEFGHJK1M");
         assert_eq!(invite_code("oil0-0000-0000").unwrap(), "011000000000");
         assert!(invite_code("ABCD").is_err());
         match parse_invite("https://svc.example/join/ABCD-EFGH-JKLM").unwrap() {
             Invite::Code { url, code } => {
                 assert_eq!(url, "https://svc.example");
-                assert_eq!(code, "ABCDEFGHJKLM");
+                assert_eq!(code, "ABCDEFGHJK1M");
             }
             _ => panic!(),
         }

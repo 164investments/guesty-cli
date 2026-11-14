@@ -566,6 +566,13 @@ pub fn guesty_fetch(path: &str, options: Fetch) -> Result<Data> {
     }
     let body: Option<Vec<u8>> = match &options.body {
         None => None,
+        // serializeBody passes a string through unencoded, as text/plain.
+        Some(Body::Json(Json::String(text))) => {
+            if !has(&headers, "content-type") {
+                headers.push(("content-type".into(), "text/plain;charset=UTF-8".into()));
+            }
+            Some(text.clone().into_bytes())
+        }
         Some(Body::Json(value)) => {
             if !has(&headers, "content-type") {
                 headers.push(("content-type".into(), "application/json".into()));

@@ -229,7 +229,7 @@ pub fn command() -> Command {
                     }
                     date_range_named(start, end, "--start-date", "--end-date")?;
                     let file = o.str("dataFile").unwrap_or("");
-                    let bytes = std::fs::read(file).map_err(|e| CliError::new(node_fs_error(&e, "open", file)))?;
+                    let bytes = std::fs::read(file).map_err(|e| CliError::new(node_fs_error(&e, "read", file)))?;
                     if bytes.len() > 5 * 1024 * 1024 {
                         bail!("Owner documents must not exceed 5 MB.");
                     }
