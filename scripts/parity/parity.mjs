@@ -7,7 +7,8 @@
 //   node scripts/parity/parity.mjs -- reservations list-v3 --limit 5
 //   node scripts/parity/parity.mjs --cases cases.jsonl   # one JSON argv array (or {args, stdin, reply}) per line
 //
-// A case may give "replies": [reply, ...] to answer API requests in turn.
+// A case may give "replies": [reply, ...] to answer API requests in turn, and
+// "github": reply to answer GitHub's latest-release request (404 otherwise).
 // Options: --stdin <text> (piped to both), --reply <json> (the mock's reply to
 // API requests: {status, json|raw, headers}), --rust <path>, --node <path>,
 // --env KEY=VALUE (repeatable), --quiet (print only failures).
@@ -47,6 +48,7 @@ let requests = [];
 let reply = undefined;
 let replies = undefined;
 let replyIndex = 0;
+let github = undefined;
 
 async function normalizeBody(req, body) {
   const type = req.headers["content-type"] ?? "";
@@ -84,7 +86,10 @@ const server = createServer((req, res) => {
       return send(200, { token_type: type, access_token: `parity-fake-${type}-token`, expires_at: now + 36_000_000 });
     }
     if (origin === "https://tokens.invalid") return send(200, { ok: true });
-    if (origin === "https://api.github.com") return send(404, {});
+    if (origin === "https://api.github.com") {
+      if (!github) return send(404, {});
+      return send(github.status ?? 200, github.raw ?? github.json ?? {}, github.headers ?? {});
+    }
     // "replies" answers API requests in turn (the last one repeats); "reply" answers all of them.
     const r = (replies ? replies[Math.min(replyIndex++, replies.length - 1)] : reply) ?? { status: 200, json: { ok: true } };
     if (r.raw !== undefined) return send(r.status ?? 200, r.raw, r.headers ?? {});
@@ -119,6 +124,7 @@ for (const c of cases) {
   const stdin = c.stdin ?? opts.stdin;
   reply = c.reply ?? opts.reply;
   replies = c.replies;
+  github = c.github;
   const env = { ...opts.env, ...(c.env ?? {}) };
   requests = [];
   replyIndex = 0;
