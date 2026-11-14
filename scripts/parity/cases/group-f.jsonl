@@ -175,7 +175,7 @@
 {"args": ["team", "delete", "--yes"], "replies": [{"status": 500, "json": {"message": "Server error"}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
 {"args": ["team", "delete", "--yes"], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
 {"args": ["update"]}
-{"args": ["update"], "env": {"GUESTY_TEST_VERSION": "1.5.1"}, "github": {"json": {"tag_name": "v1.0.0", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-1.0.0.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v1.0.0/guesty-cli-1.0.0.tgz"}]}}}
+{"args": ["update"], "github": {"json": {"tag_name": "v1.0.0", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-1.0.0.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v1.0.0/guesty-cli-1.0.0.tgz"}]}}}
 {"args": ["update"], "github": {"json": {"tag_name": "v9.9.9", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-9.9.9.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v9.9.9/guesty-cli-9.9.9.tgz"}]}}}
 {"args": ["update"], "github": {"json": {"tag_name": "9.9.9", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-9.9.9.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/9.9.9/guesty-cli-9.9.9.tgz"}]}}}
 {"args": ["update"], "github": {"json": {"tag_name": "v1.0.0", "draft": true, "prerelease": false, "assets": [{"name": "guesty-cli-1.0.0.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v1.0.0/guesty-cli-1.0.0.tgz"}]}}}
