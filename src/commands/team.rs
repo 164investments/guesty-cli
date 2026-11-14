@@ -439,7 +439,7 @@ fn status_view(status: &Json) -> Result<()> {
                     format!(
                         "{}{}, {}",
                         shown(maybe(Some(last), "outcome"))?,
-                        http.map_or(String::new(), |h| format!(" (HTTP {})", json::js_string(h))),
+                        http.map_or(String::new(), |h| format!(" (HTTP {})", printable(&json::js_string(h)))),
                         pacific(maybe(Some(last), "requested_at"))
                     )
                 }
@@ -460,7 +460,7 @@ fn status_view(status: &Json) -> Result<()> {
                         "Requests",
                         format!(
                             "{} of Guesty's 5 in the last 24 hours",
-                            js_string(maybe(Some(item), "requests_last_24h"))
+                            printable(&js_string(maybe(Some(item), "requests_last_24h")))
                         ),
                     ),
                     row("Last request", last_text),
@@ -504,7 +504,7 @@ fn status_view(status: &Json) -> Result<()> {
         }
         done(&format!(
             "The team may make {} token requests a day. Change it with {}.",
-            js_string(maybe(team, "max_requests_per_day")),
+            printable(&js_string(maybe(team, "max_requests_per_day"))),
             highlight("guesty team limit <1-5>")
         ));
         Ok(())
