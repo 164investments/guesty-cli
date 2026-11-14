@@ -729,11 +729,17 @@ pub fn rejected_notice(api: Api) -> &'static str {
 
 /// The error for a 401 that can't be retried; `guidance` says how to fix the cache.
 pub fn rejected_error(api: Api, guidance: &str) -> Error {
+    rejected_error_from(api, "the CLI", guidance)
+}
+
+/// `rejected_error`, naming what can't refresh the token (the hosted server
+/// says "this server").
+pub fn rejected_error_from(api: Api, refresher: &str, guidance: &str) -> Error {
     let name = match api {
         Api::OpenApi => "Open API",
         Api::BookingEngine => "Booking Engine API",
     };
-    Error::new(format!("Guesty rejected the cached {name} token (401); the CLI cannot refresh it. {guidance}"))
+    Error::new(format!("Guesty rejected the cached {name} token (401); {refresher} cannot refresh it. {guidance}"))
 }
 
 /// One request's attempts: counts them and decides each outcome.

@@ -244,7 +244,7 @@ fn a_401_rereads_the_token_once_and_the_same_token_fails_with_hosted_guidance() 
     let fake = Fake::new(vec![response(401, &[], "")]);
     assert_eq!(
         message(get(&fake, "/v1/listings")),
-        format!("Guesty rejected the cached Open API token (401); the CLI cannot refresh it. {REJECTED_GUIDANCE}")
+        format!("Guesty rejected the cached Open API token (401); this server cannot refresh it. {REJECTED_GUIDANCE}")
     );
     assert_eq!(fake.sent_count(), 1, "the rejected token isn't sent again");
     assert_eq!(fake.token_reads.borrow().len(), 2);
@@ -260,7 +260,9 @@ fn a_401_rereads_the_token_once_and_the_same_token_fails_with_hosted_guidance() 
     // A second 401 with a new token is final.
     let fake = Fake::new(vec![response(401, &[], ""), response(401, &[], "")])
         .tokens(vec![token("open-token-1"), token("open-token-2")]);
-    assert!(message(get(&fake, "/v1/listings")).contains("(401); the CLI cannot refresh it. The team's shared token"));
+    assert!(
+        message(get(&fake, "/v1/listings")).contains("(401); this server cannot refresh it. The team's shared token")
+    );
     assert_eq!(fake.sent_count(), 2);
 }
 

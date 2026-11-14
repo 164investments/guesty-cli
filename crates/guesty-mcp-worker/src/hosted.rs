@@ -23,7 +23,7 @@ use guesty_core::limits::{self, Limits};
 use guesty_core::mcp::{Backend, Call, Instructions, Options, Server, failure, hosted_instructions};
 use guesty_core::request::{
     Api, Attempts, BookingFetch, Fetch, Prepared, Response, Step, prepare_booking_engine, prepare_open_api,
-    rejected_error,
+    rejected_error_from,
 };
 use guesty_core::{Data, Error, Result, token_service};
 
@@ -135,7 +135,7 @@ impl<'a, B: HostedBackend> Hosted<'a, B> {
             };
             // A 401 re-reads the token; the same token again can't succeed.
             if rejected.contains(&token) {
-                return Err(rejected_error(prepared.api, REJECTED_GUIDANCE));
+                return Err(rejected_error_from(prepared.api, "this server", REJECTED_GUIDANCE));
             }
             if !sent.contains(&token) {
                 sent.push(token.clone());
@@ -193,7 +193,7 @@ impl<'a, B: HostedBackend> Hosted<'a, B> {
                 Step::Rejected { retry } => {
                     rejected.push(token);
                     if !retry {
-                        return Err(rejected_error(prepared.api, REJECTED_GUIDANCE));
+                        return Err(rejected_error_from(prepared.api, "this server", REJECTED_GUIDANCE));
                     }
                 }
                 Step::Fail(error) => return Err(error),

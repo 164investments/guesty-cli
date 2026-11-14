@@ -921,7 +921,7 @@ test("a 401 from Guesty re-reads the team's token once, then fails with what an 
   const { result, requests } = await withGuesty(() => new Response("no", { status: 401 }), () => listings());
   assert.equal(
     textOf(result),
-    "Guesty rejected the cached Open API token (401); the CLI cannot refresh it. The team's shared token was rejected. A team admin can check it with `guesty team status` and renew it with `guesty team refresh`.",
+    "Guesty rejected the cached Open API token (401); this server cannot refresh it. The team's shared token was rejected. A team admin can check it with `guesty team status` and renew it with `guesty team refresh`.",
   );
   // The token service gave the same token again, so it wasn't sent twice.
   assert.equal(requests.length, 1);
