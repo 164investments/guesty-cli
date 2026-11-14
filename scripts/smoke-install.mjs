@@ -7,8 +7,8 @@
 //   and runs with no `node` on PATH;
 // - in a read-only install the launcher keeps working.
 //   node scripts/smoke-install.mjs release/guesty-cli-2.0.0.tgz
-import { execFileSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, openSync, readFileSync, readSync, closeSync, realpathSync, rmSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, closeSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -61,6 +61,15 @@ try {
   } else {
     const out = execFileSync(bin, ["--version"], { encoding: "utf8", shell: true });
     check("runs through the launcher on Windows", out.trim() === expected);
+    // Settings live under the user profile; Windows shells usually have no HOME.
+    const profile = mkdtempSync(join(tmpdir(), "guesty-profile-"));
+    mkdirSync(join(profile, ".guesty-cli"));
+    writeFileSync(join(profile, ".guesty-cli", ".env"), `GUESTY_TOKEN_SERVICE_URL=http://tokens.example\nGUESTY_TOKEN_SERVICE_KEY=gts_${"S".repeat(43)}\n`);
+    const env = { ...process.env, USERPROFILE: profile };
+    delete env.HOME;
+    const token = spawnSync(bin, ["token"], { encoding: "utf8", shell: true, env });
+    check("reads ~/.guesty-cli/.env from USERPROFILE when HOME is unset", token.status === 1 && token.stderr.includes("must use https"));
+    rmSync(profile, { recursive: true, force: true });
   }
 } finally {
   rmSync(prefix, { recursive: true, force: true });

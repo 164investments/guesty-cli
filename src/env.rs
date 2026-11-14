@@ -6,8 +6,11 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+/// Node's `os.homedir()`: `HOME` (or the user's passwd entry) on macOS and
+/// Linux, `USERPROFILE` (or the profile folder) on Windows, where `HOME` is
+/// usually unset.
 pub fn home() -> PathBuf {
-    std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/"))
+    std::env::home_dir().filter(|p| !p.as_os_str().is_empty()).unwrap_or_else(|| PathBuf::from("/"))
 }
 
 pub fn config_dir() -> PathBuf {
