@@ -7,6 +7,7 @@
 //   node scripts/parity/parity.mjs -- reservations list-v3 --limit 5
 //   node scripts/parity/parity.mjs --cases cases.jsonl   # one JSON argv array (or {args, stdin, reply}) per line
 //
+// A case may give "replies": [reply, ...] to answer API requests in turn.
 // Options: --stdin <text> (piped to both), --reply <json> (the mock's reply to
 // API requests: {status, json|raw, headers}), --rust <path>, --node <path>,
 // --env KEY=VALUE (repeatable), --quiet (print only failures).
@@ -44,6 +45,8 @@ const IGNORED_HEADERS = new Set(["host", "user-agent", "accept-encoding", "accep
 const now = Date.now();
 let requests = [];
 let reply = undefined;
+let replies = undefined;
+let replyIndex = 0;
 
 async function normalizeBody(req, body) {
   const type = req.headers["content-type"] ?? "";
@@ -82,7 +85,8 @@ const server = createServer((req, res) => {
     }
     if (origin === "https://tokens.invalid") return send(200, { ok: true });
     if (origin === "https://api.github.com") return send(404, {});
-    const r = reply ?? { status: 200, json: { ok: true } };
+    // "replies" answers API requests in turn (the last one repeats); "reply" answers all of them.
+    const r = (replies ? replies[Math.min(replyIndex++, replies.length - 1)] : reply) ?? { status: 200, json: { ok: true } };
     if (r.raw !== undefined) return send(r.status ?? 200, r.raw, r.headers ?? {});
     return send(r.status ?? 200, r.json ?? {}, r.headers ?? {});
   });
@@ -114,11 +118,14 @@ let failures = 0;
 for (const c of cases) {
   const stdin = c.stdin ?? opts.stdin;
   reply = c.reply ?? opts.reply;
+  replies = c.replies;
   const env = { ...opts.env, ...(c.env ?? {}) };
   requests = [];
+  replyIndex = 0;
   const node = await run(nodeCommand, c.args, stdin, env);
   const nodeRequests = requests;
   requests = [];
+  replyIndex = 0;
   const rust = await run([opts.rust], c.args, stdin, env);
   const rustRequests = requests;
   // The versions differ by design.

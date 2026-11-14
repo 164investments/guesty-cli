@@ -1,0 +1,16 @@
+["token"]
+["token","--json"]
+["token","--beapi"]
+["raw","GET","/v1/listings","--params","{\"limit\":5,\"q\":\"a b\",\"ids\":[\"x\",\"y\"]}"]
+["raw","POST","/v1/x","--data","{\"a\":1.0,\"b\":[1e21]}"]
+["raw","DELETE","/v1/x","-H","X-Test: 1","--text","hello"]
+["raw","GET","/oauth2/token"]
+["raw","GET","/v1/%6fauth2/token"]
+["raw","GET","/v1/x","--response","text"]
+{"args":["raw","GET","/v1/x"],"reply":{"status":500,"json":{"error":"parity-fake-openapi-token leaked"}}}
+{"args":["raw","POST","/v1/x","--data","{}"],"reply":{"status":503,"raw":"down"}}
+{"args":["raw","GET","/v1/x"],"reply":{"status":200,"raw":"a,b\n1,2","headers":{"content-type":"text/csv"}}}
+{"args":["raw","PUT","/v1/x","--stdin"],"stdin":"piped body"}
+["raw","GET","/v1/x","--timeout","abc"]
+["raw","GET","/v1/x","--header","bad"]
+["raw","GET","/v1/x","-H","Authorization: x"]
