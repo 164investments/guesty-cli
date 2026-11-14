@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-// Runs the Node CLI (dist/cli.js, 1.x) and the Rust CLI (a test-hooks build)
+// Compares the Rust CLI (a test-hooks build) with the Node CLI it replaced:
+// against outputs recorded from 1.x ("expected" in scripts/parity/cases/*.jsonl,
+// `npm run check:parity`), or live against a 1.x build (--node <dist/cli.js>).
+// Runs the Node CLI and the Rust CLI
 // with the same arguments against the same local mock, and compares stdout,
 // stderr, the exit code and every HTTP request they make.
 //
@@ -23,7 +26,7 @@
 // is a fresh temporary directory configured with a fake token service.
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,6 +50,17 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--quiet") opts.quiet = true;
   else if (a === "--record") opts.record = true;
   else throw new Error(`Unknown option ${a}`);
+}
+
+// With no cases given, check every recorded case file.
+if (!cases.length) {
+  const dir = join(root, "scripts/parity/cases");
+  for (const name of readdirSync(dir).filter((f) => f.endsWith(".jsonl")).sort()) {
+    cases.push(...readFileSync(join(dir, name), "utf8").split("\n").filter((l) => l.trim() && !l.startsWith("#")).map((l) => JSON.parse(l)));
+  }
+}
+if (!existsSync(opts.node) && cases.some((c) => !c.expected)) {
+  throw new Error(`Cases without "expected" need a 1.x Node build to compare with: --node <dist/cli.js> (${opts.node} doesn't exist).`);
 }
 
 const IGNORED_HEADERS = new Set(["host", "user-agent", "accept-encoding", "accept-language", "sec-fetch-mode", "connection",

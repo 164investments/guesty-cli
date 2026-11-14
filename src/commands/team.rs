@@ -1,7 +1,6 @@
 //! Port of src/commands/team.ts: `guesty team`, and the team setup and join
 //! steps `setup` and `join` share.
 
-
 use crate::cli::Command;
 use crate::config::save_settings;
 use crate::error::{CliError, Result};

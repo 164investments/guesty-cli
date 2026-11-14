@@ -54,12 +54,15 @@ The CLI validates every key and invite link a service returns before saving or p
 
 ## Commands
 
-- Install: `npm ci`
-- Fast check, before you push: `npm run typecheck`, then `npm run build && node --test <test files>` for the tests your change touches (`test/auth.test.mjs` for authentication).
-- Full check, which GitHub Actions (`Check`) runs on Node 20 and 24: `npm run check`. It compiles strict TypeScript, runs the offline tests and checks the CLI contract. No separate formatter or linter is configured.
-- For changes to `server/` or to the CLI's setup, team or token-service code, also run `npm ci --prefix server` (once) and `npm run check:server`. CI doesn't run it. It type-checks with tsrs, drives setup in a pseudo-terminal, and runs the Worker in Miniflare against a mock of Guesty's token endpoint. Never test it against Guesty.
+- Install: `npm ci` (test and tooling dependencies only) and a Rust toolchain (`rustup`, stable).
+- Fast check, before you push: `cargo fmt --check`, `cargo test --features test-hooks -- --test-threads=1`, then `npm run build:test-hooks && node --test <test files>` for the tests your change touches (`test/auth.test.mjs` for authentication), and `npm run check:parity` for any change to output, errors or requests.
+- Full check, which GitHub Actions (`Check`) runs on Node 20 and 24: `npm run check`. It checks formatting, runs the Rust tests, runs the offline tests against a test-hooks build, checks the CLI contract, and replays the recorded 1.x cases in `scripts/parity/cases/` (and the MCP ones) against the binary. No linter is configured.
+- `scripts/parity/` holds those recorded cases: each line is an argv (with stdin and mock replies) and the 1.x CLI's exit code, stdout, stderr and requests. A change that should alter output updates the case's `expected` by hand, with the reason in the PR; never re-record over a difference you didn't intend.
+- For changes to `server/` or to the CLI's setup, team or token-service code, also run `npm ci --prefix server` (once) and `npm run check:server`. CI doesn't run it. It type-checks with tsrs, drives `guesty setup` (the binary) in a pseudo-terminal, and runs the Worker in Miniflare against a mock of Guesty's token endpoint. Never test it against Guesty.
+- Release builds of every platform, the package and its install are checked by `.github/workflows/release.yml` on pull requests that touch the build; `npm run pack` and `npm run smoke:install` run the same steps locally.
 
 ## Rules for this repository
 
 - Authentication tests must mock all network calls and private-cache reads, and prove zero OAuth requests or cache writes on failures. Never validate a change by retrieving a real token or contacting Guesty's OAuth endpoint.
-- The installed `guesty` may come from a different build than this worktree. Check its resolved path before you rely on it. Install a build on purpose (`npm run link` replaces the global one), and never overwrite another session's checkout or build output.
+- The installed `guesty` may come from a different build than this worktree. Check its resolved path before you rely on it. Install a build on purpose (`cargo install --path .` puts one in `~/.cargo/bin`), and never overwrite another session's checkout or build output.
+- The test hooks (`src/hooks.rs`, `--features test-hooks`) must never reach a release build: they redirect requests and fake the clock. Keep every hook behind that feature.

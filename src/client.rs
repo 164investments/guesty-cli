@@ -147,28 +147,13 @@ impl Params {
         self.0.iter().find(|(k, _)| k == key).map(|(_, v)| v)
     }
 
-    pub fn remove(&mut self, key: &str) {
-        self.0.retain(|(k, _)| k != key);
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// `{ ...this, ...other }`.
-    pub fn merged(&self, other: &Params) -> Params {
-        let mut out = self.clone();
-        for (k, v) in &other.0 {
-            out.set(k, v.clone());
-        }
-        out
-    }
-
     /// Params from a JSON value given by the user (`--params`), in
     /// `Object.entries` order. A non-object is an error.
     pub fn from_json(value: &Json) -> Result<Params> {
         let Some(map) = value.as_object() else {
-            return Err(CliError::new("Query params must be a JSON object of scalar values or arrays of scalar values."));
+            return Err(CliError::new(
+                "Query params must be a JSON object of scalar values or arrays of scalar values.",
+            ));
         };
         Ok(Params(json::entries(map).into_iter().map(|(k, v)| (k.clone(), Param::from_json(v))).collect()))
     }
@@ -195,7 +180,8 @@ pub fn decode_uri_component(value: &str) -> std::result::Result<String, ()> {
     while i < bytes.len() {
         if bytes[i] == b'%' {
             let hex = |b: u8| (b as char).to_digit(16);
-            let (Some(h), Some(l)) = (bytes.get(i + 1).and_then(|b| hex(*b)), bytes.get(i + 2).and_then(|b| hex(*b))) else {
+            let (Some(h), Some(l)) = (bytes.get(i + 1).and_then(|b| hex(*b)), bytes.get(i + 2).and_then(|b| hex(*b)))
+            else {
                 return Err(());
             };
             out.push((h * 16 + l) as u8);
@@ -285,7 +271,8 @@ pub fn resource_url(path: &str, params: Option<&Params>) -> Result<url::Url> {
     }
     if let Some(params) = params {
         validate_params(params)?;
-        let mut pairs: Vec<(String, String)> = url.query_pairs().map(|(k, v)| (k.into_owned(), v.into_owned())).collect();
+        let mut pairs: Vec<(String, String)> =
+            url.query_pairs().map(|(k, v)| (k.into_owned(), v.into_owned())).collect();
         let mut modified = false;
         for (key, value) in &params.0 {
             if matches!(value, Param::Null) {
@@ -512,8 +499,12 @@ fn multipart(parts: &[Part]) -> (String, Vec<u8>) {
         body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
         match part {
             Part::Text { name, value } => {
-                body.extend_from_slice(format!("Content-Disposition: form-data; name=\"{}\"\r\n\r\n", escape(name)).as_bytes());
-                body.extend_from_slice(value.replace("\r\n", "\n").replace('\r', "\n").replace('\n', "\r\n").as_bytes());
+                body.extend_from_slice(
+                    format!("Content-Disposition: form-data; name=\"{}\"\r\n\r\n", escape(name)).as_bytes(),
+                );
+                body.extend_from_slice(
+                    value.replace("\r\n", "\n").replace('\r', "\n").replace('\n', "\r\n").as_bytes(),
+                );
             }
             Part::File { name, filename, content_type, data } => {
                 body.extend_from_slice(
@@ -546,7 +537,9 @@ pub fn guesty_fetch(path: &str, options: Fetch) -> Result<Data> {
     }
     let timeout_ms = options.timeout_ms;
     if timeout_ms == 0 || timeout_ms > MAX_TIMER_MS {
-        return Err(CliError::new("Request timeout must be a positive integer number of milliseconds, at most 2147483647."));
+        return Err(CliError::new(
+            "Request timeout must be a positive integer number of milliseconds, at most 2147483647.",
+        ));
     }
     if (method == "GET" || method == "HEAD") && options.body.is_some() {
         return Err(CliError::new(format!(
@@ -648,7 +641,8 @@ pub fn guesty_fetch(path: &str, options: Fetch) -> Result<Data> {
             continue;
         }
 
-        if (res.status == 429 || (is_read && [408, 500, 502, 503, 504].contains(&res.status))) && attempt < MAX_ATTEMPTS {
+        if (res.status == 429 || (is_read && [408, 500, 502, 503, 504].contains(&res.status))) && attempt < MAX_ATTEMPTS
+        {
             let fallback = attempt as f64 * if res.status == 429 { 5000.0 } else { 1000.0 };
             let wait = retry_delay(res.header("retry-after"), fallback);
             write_err(&format!("Guesty returned HTTP {}. Retrying in {}s...\n", res.status, (wait / 1000.0).ceil()));
@@ -673,7 +667,11 @@ pub fn guesty_fetch(path: &str, options: Fetch) -> Result<Data> {
             return Err(CliError::new(format!(
                 "{label} failed: HTTP {}{}{}",
                 res.status,
-                if !is_read && res.status >= 500 { ". Its outcome is unknown; check Guesty before trying again." } else { "" },
+                if !is_read && res.status >= 500 {
+                    ". Its outcome is unknown; check Guesty before trying again."
+                } else {
+                    ""
+                },
                 if detail.is_empty() { String::new() } else { format!("\n{detail}") }
             )));
         }
@@ -762,11 +760,15 @@ pub fn paginate_all(path: &str, params: &Params, results_key: Option<&str>) -> R
         let res = get(path, page_params)?.into_json();
         let record = res.as_object();
         let key = results_key.map(str::to_string).or_else(|| {
-            ["results", "data", "items"].iter().find(|n| record.and_then(|r| r.get(**n)).is_some_and(Json::is_array)).map(|s| s.to_string())
+            ["results", "data", "items"]
+                .iter()
+                .find(|n| record.and_then(|r| r.get(**n)).is_some_and(Json::is_array))
+                .map(|s| s.to_string())
         });
         let items: Vec<Json> = if let Some(items) = res.as_array() {
             items.clone()
-        } else if let Some(items) = key.as_deref().and_then(|k| record.and_then(|r| r.get(k))).and_then(Json::as_array) {
+        } else if let Some(items) = key.as_deref().and_then(|k| record.and_then(|r| r.get(k))).and_then(Json::as_array)
+        {
             items.clone()
         } else {
             return Err(CliError::new(format!(
@@ -793,7 +795,8 @@ pub fn paginate_all(path: &str, params: &Params, results_key: Option<&str>) -> R
                 )));
             }
         }
-        let total = pagination_number(field("count").or_else(|| field("total")).or_else(|| field("totalCount")), "count")?;
+        let total =
+            pagination_number(field("count").or_else(|| field("total")).or_else(|| field("totalCount")), "count")?;
         let server_limit = pagination_number(field("limit"), "limit")?;
         let has_more = match metadata.and_then(|m| m.get("hasMore")) {
             None => None,
@@ -805,7 +808,9 @@ pub fn paginate_all(path: &str, params: &Params, results_key: Option<&str>) -> R
         }
         if items.is_empty() {
             if has_more == Some(true) || total.is_some_and(|t| skip < t) {
-                return Err(CliError::new(format!("Cannot paginate {path}: the API returned an empty page before completion.")));
+                return Err(CliError::new(format!(
+                    "Cannot paginate {path}: the API returned an empty page before completion."
+                )));
             }
             return Ok(all);
         }
@@ -892,7 +897,9 @@ pub fn booking_engine_fetch(path: &str, options: BookingFetch) -> Result<Data> {
     }
     let timeout_ms = options.timeout_ms;
     if timeout_ms == 0 || timeout_ms > MAX_TIMER_MS {
-        return Err(CliError::new("Request timeout must be a positive integer number of milliseconds, at most 2147483647."));
+        return Err(CliError::new(
+            "Request timeout must be a positive integer number of milliseconds, at most 2147483647.",
+        ));
     }
     if method == "GET" && options.body.is_some() {
         return Err(CliError::new("GET requests cannot contain a body. Use query params or a different HTTP method."));
@@ -951,7 +958,8 @@ pub fn booking_engine_fetch(path: &str, options: BookingFetch) -> Result<Data> {
             continue;
         }
 
-        if (res.status == 429 || (is_read && [408, 500, 502, 503, 504].contains(&res.status))) && attempt < MAX_ATTEMPTS {
+        if (res.status == 429 || (is_read && [408, 500, 502, 503, 504].contains(&res.status))) && attempt < MAX_ATTEMPTS
+        {
             let fallback = attempt as f64 * if res.status == 429 { 5000.0 } else { 1000.0 };
             let wait = retry_delay(res.header("retry-after"), fallback);
             write_err(&format!(
@@ -979,7 +987,11 @@ pub fn booking_engine_fetch(path: &str, options: BookingFetch) -> Result<Data> {
             return Err(CliError::new(format!(
                 "{label} failed: HTTP {}{}{}",
                 res.status,
-                if !is_read && res.status >= 500 { ". Its outcome is unknown; check Guesty before trying again." } else { "" },
+                if !is_read && res.status >= 500 {
+                    ". Its outcome is unknown; check Guesty before trying again."
+                } else {
+                    ""
+                },
                 if detail.is_empty() { String::new() } else { format!("\n{detail}") }
             )));
         }
@@ -987,11 +999,10 @@ pub fn booking_engine_fetch(path: &str, options: BookingFetch) -> Result<Data> {
         if res.status == 204 || res.status == 205 {
             return Ok(Data::None);
         }
-        let text = res
-            .body
-            .as_deref()
-            .map(decode_text)
-            .map_err(|_| CliError::new(format!("{label} response could not be read; the request was not retried.")))?;
+        let text =
+            res.body.as_deref().map(decode_text).map_err(|_| {
+                CliError::new(format!("{label} response could not be read; the request was not retried."))
+            })?;
         let content_type = res.header("content-type").unwrap_or("").to_ascii_lowercase();
         if !content_type.contains("json") {
             return Ok(Data::Text(text));
@@ -1007,7 +1018,7 @@ pub fn booking_engine_fetch(path: &str, options: BookingFetch) -> Result<Data> {
 }
 
 /// Unit tests share one process; each starts with no request history.
-#[cfg(test)]
+#[cfg(all(test, feature = "test-hooks"))]
 pub(crate) fn reset_rate_limits_for_tests() {
     OPEN_API_TIMES.lock().unwrap_or_else(|e| e.into_inner()).clear();
     BOOKING_TIMES.lock().unwrap_or_else(|e| e.into_inner()).clear();
@@ -1030,7 +1041,11 @@ mod tests {
 
     #[test]
     fn query_serialization_matches_url_search_params() {
-        let url = resource_url("/v1/x?a=b c", Some(&params! { "k" => "1 2", "n" => 25.0, "l" => vec!["a".to_string(), "b".to_string()] })).unwrap();
+        let url = resource_url(
+            "/v1/x?a=b c",
+            Some(&params! { "k" => "1 2", "n" => 25.0, "l" => vec!["a".to_string(), "b".to_string()] }),
+        )
+        .unwrap();
         assert_eq!(url.query(), Some("a=b+c&k=1+2&n=25&l=a&l=b"));
         let untouched = resource_url("/v1/x?a=b c", Some(&Params::new())).unwrap();
         assert_eq!(untouched.query(), Some("a=b%20c"));

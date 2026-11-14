@@ -5,7 +5,7 @@ use base64::Engine;
 
 use crate::error::{CliError, Result};
 use crate::http;
-use crate::json::{self, Json, json};
+use crate::json::{self, Json};
 use crate::output::printable;
 
 pub const HOSTED_TOKEN_SERVICE_URL: &str = "https://guesty-tokens.staykit.ai";
@@ -24,7 +24,6 @@ pub struct TokenServiceError {
     /// 0 when the service couldn't be reached.
     pub status: u16,
     pub code: Option<String>,
-    pub retry_at: Option<f64>,
 }
 
 impl From<TokenServiceError> for CliError {
@@ -68,20 +67,24 @@ pub fn is_access_key(value: &str) -> bool {
         && value[4..].chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
-pub fn encode_invite(settings: &ServiceSettings) -> String {
-    let body = json::compact(&json!({ "url": settings.url, "key": settings.key }));
+#[cfg(test)]
+fn encode_invite(settings: &ServiceSettings) -> String {
+    let body = json::compact(&crate::json::json!({ "url": settings.url, "key": settings.key }));
     format!("{INVITE_PREFIX}{}", base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(body))
 }
 
 pub fn decode_invite(code: &str) -> Result<ServiceSettings> {
     let trimmed = code.trim();
-    let not_invite = || CliError::new("This is not a Guesty CLI invite code. Ask your team's admin for one (guesty team invite).");
+    let not_invite =
+        || CliError::new("This is not a Guesty CLI invite code. Ask your team's admin for one (guesty team invite).");
     let rest = trimmed.strip_prefix(INVITE_PREFIX).ok_or_else(not_invite)?;
     // Node's base64url decoder ignores characters outside the alphabet and padding.
     let cleaned: String = rest.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_').collect();
     let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
         .decode(cleaned.trim_end_matches('='))
-        .or_else(|_| base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(&cleaned[..cleaned.len() - cleaned.len() % 4]))
+        .or_else(|_| {
+            base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(&cleaned[..cleaned.len() - cleaned.len() % 4])
+        })
         .map_err(|_| not_invite())?;
     let decoded = json::parse(&String::from_utf8_lossy(&bytes)).map_err(|_| not_invite())?;
     let incomplete = || CliError::new("This invite code is incomplete. Ask your team's admin for a new one.");
@@ -129,15 +132,20 @@ pub fn parse_invite(value: &str) -> Result<Invite> {
     }
     let lower = trimmed.to_ascii_lowercase();
     if lower.starts_with("http://") || lower.starts_with("https://") {
-        let url = parse_url(trimmed)
-            .ok_or_else(|| CliError::new("This invite link isn't a valid web address. Copy the whole link and try again."))?;
+        let url = parse_url(trimmed).ok_or_else(|| {
+            CliError::new("This invite link isn't a valid web address. Copy the whole link and try again.")
+        })?;
         let not_link = || CliError::new("This link isn't a Guesty CLI invite link. Those end in /join/ and a code.");
         // /^(.*)\/join\/([^/]+)\/?$/
         let pathname = url.path();
         // /^(.*)\/join\/([^/]+)\/?$/ on the pathname.
         let path = pathname.strip_suffix('/').unwrap_or(pathname);
         let (prefix, code) = path.rsplit_once("/join/").ok_or_else(not_link)?;
-        if code.is_empty() || code.contains('/') || url.query().is_some_and(|q| !q.is_empty()) || url.fragment().is_some_and(|f| !f.is_empty()) {
+        if code.is_empty()
+            || code.contains('/')
+            || url.query().is_some_and(|q| !q.is_empty())
+            || url.fragment().is_some_and(|f| !f.is_empty())
+        {
             return Err(not_link());
         }
         let origin = url.origin().ascii_serialization();
@@ -165,10 +173,8 @@ pub fn invited_link(service: &str, value: &Json) -> Result<(String, String)> {
         return Err(CliError::new("The token service returned an invite link for a different service."));
     }
     let link = format!("{url}/join/{}", display_code(&code));
-    let command = format!(
-        "guesty join {}",
-        if url == HOSTED_TOKEN_SERVICE_URL { display_code(&code) } else { link.clone() }
-    );
+    let command =
+        format!("guesty join {}", if url == HOSTED_TOKEN_SERVICE_URL { display_code(&code) } else { link.clone() });
     Ok((link, command))
 }
 
@@ -203,7 +209,6 @@ pub fn call(
             message: format!("The token service at {base} could not be reached."),
             status: 0,
             code: None,
-            retry_at: None,
         })
     };
     let target = format!("{base}{path}");
@@ -226,7 +231,6 @@ pub fn call(
             message: format!("The token service at {base} returned an unexpected response (HTTP {status})."),
             status,
             code: None,
-            retry_at: None,
         }));
     };
     if !response.ok() {
@@ -238,7 +242,6 @@ pub fn call(
             },
             status,
             code: field("error").and_then(Json::as_str).map(str::to_string),
-            retry_at: field("retry_at").and_then(Json::as_f64),
         }));
     }
     Ok(body)

@@ -18,13 +18,6 @@ pub enum Data {
 }
 
 impl Data {
-    pub fn json(&self) -> Option<&Json> {
-        match self {
-            Data::Json(j) => Some(j),
-            _ => None,
-        }
-    }
-
     /// The value as JSON, as `JSON.stringify` would see it (`undefined` is null).
     pub fn into_json(self) -> Json {
         match self {
@@ -105,34 +98,6 @@ pub fn print_json(value: &Json) {
     write_out(text.as_bytes());
 }
 
-/// `printTable(rows, columns)`.
-pub fn print_table(rows: &[json::Map<String, Json>], columns: Option<&[&str]>) {
-    if rows.is_empty() {
-        write_out(b"[]\n");
-        return;
-    }
-    let cols: Vec<String> = match columns {
-        Some(c) => c.iter().map(|s| s.to_string()).collect(),
-        None => rows[0].keys().cloned().collect(),
-    };
-    let cell = |row: &json::Map<String, Json>, col: &str| match row.get(col) {
-        None | Some(Json::Null) => String::new(),
-        Some(v) => json::js_string(v),
-    };
-    let widths: Vec<usize> = cols
-        .iter()
-        .map(|c| rows.iter().map(|r| json::js_len(&cell(r, c))).fold(json::js_len(c), usize::max))
-        .collect();
-    let pad = |s: &str, w: usize| format!("{s}{}", " ".repeat(w.saturating_sub(json::js_len(s))));
-    let header: Vec<String> = cols.iter().zip(&widths).map(|(c, w)| pad(c, *w)).collect();
-    let sep: Vec<String> = widths.iter().map(|w| "-".repeat(*w)).collect();
-    write_out(format!("{}\n{}\n", header.join("  "), sep.join("  ")).as_bytes());
-    for row in rows {
-        let line: Vec<String> = cols.iter().zip(&widths).map(|(c, w)| pad(&cell(row, c), *w)).collect();
-        write_out(format!("{}\n", line.join("  ")).as_bytes());
-    }
-}
-
 /// Commands that call an endpoint Guesty documents as deprecated keep working
 /// and print this notice on stderr, so stdout stays machine-readable.
 pub fn warn_deprecated(command: &str, replacements: &[&str]) {
@@ -147,5 +112,7 @@ pub fn warn_deprecated(command: &str, replacements: &[&str]) {
     } else {
         format!(" Use {use_text} instead.\n")
     };
-    write_err(&format!("\x1b[33m[deprecated]\x1b[0m \"guesty {command}\" calls an endpoint Guesty has deprecated.{tail}"));
+    write_err(&format!(
+        "\x1b[33m[deprecated]\x1b[0m \"guesty {command}\" calls an endpoint Guesty has deprecated.{tail}"
+    ));
 }

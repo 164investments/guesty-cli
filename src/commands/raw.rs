@@ -62,12 +62,6 @@ pub fn command() -> Command {
         .add_option(Opt::new("--response <mode>", "Response mode").choices(&["auto", "json", "text", "buffer"]).default("auto"))
         .option_default("--timeout <seconds>", "Per-request timeout in seconds", "60")
         .option("--output <path>", "Write the response body to a file")
-        .input("dataOption")
-        .input("textOption")
-        .input("dataFileOption")
-        .input("stdinFlag")
-        .input("readsTextFromStdin")
-        .input("writesToOutputFile")
         .action(|c| {
             let o = &c.opts;
             let given = ["data", "text", "dataFile", "stdin"].iter().filter(|k| o.has(k)).count();

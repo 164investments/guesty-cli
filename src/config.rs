@@ -18,7 +18,8 @@ pub fn save_settings(values: &[(&str, Option<&str>)]) -> Result<PathBuf> {
             && name.starts_with(|c: char| c.is_ascii_alphabetic() || c == '_')
             && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
         let bad_value = value.is_some_and(|v| {
-            v.chars().any(|c| (c as u32) < 0x20 || c == '\x7f' || c.is_whitespace() || c == '#' || c == '"' || c == '\'')
+            v.chars()
+                .any(|c| (c as u32) < 0x20 || c == '\x7f' || c.is_whitespace() || c == '#' || c == '"' || c == '\'')
         });
         if !valid_name || bad_value {
             return Err(CliError::new(format!("Refusing to save an invalid value for {name}.")));

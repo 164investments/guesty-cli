@@ -9,7 +9,6 @@
 //! Command::new("get <ids...>")
 //!     .description("Retrieve reservations by ID")
 //!     .option("--fields <fields>", "Fields to return")
-//!     .calls("GET", "/v1/reservations-v3")
 //!     .action(|c| { ... })
 //! ```
 
@@ -96,11 +95,6 @@ impl Opt {
         self
     }
 
-    pub fn default_value(mut self, value: Value) -> Opt {
-        self.default = Some(value);
-        self
-    }
-
     pub fn mandatory(mut self) -> Opt {
         self.mandatory = true;
         self
@@ -108,11 +102,6 @@ impl Opt {
 
     pub fn parser(mut self, parser: Parser) -> Opt {
         self.parser = Some(parser);
-        self
-    }
-
-    pub fn hide(mut self) -> Opt {
-        self.hidden = true;
         self
     }
 
@@ -143,10 +132,7 @@ impl Opt {
     fn help_description(&self) -> String {
         let mut extra = Vec::new();
         if let Some(choices) = &self.choices {
-            extra.push(format!(
-                "choices: {}",
-                choices.iter().map(|c| json::quote(c)).collect::<Vec<_>>().join(", ")
-            ));
+            extra.push(format!("choices: {}", choices.iter().map(|c| json::quote(c)).collect::<Vec<_>>().join(", ")));
         }
         if let Some(default) = &self.default {
             let show = self.required || self.optional || (self.is_boolean() && matches!(default, Value::Bool(_)));
@@ -154,11 +140,7 @@ impl Opt {
                 extra.push(format!("default: {}", json::compact(&default.to_json())));
             }
         }
-        if extra.is_empty() {
-            self.description.clone()
-        } else {
-            format!("{} ({})", self.description, extra.join(", "))
-        }
+        if extra.is_empty() { self.description.clone() } else { format!("{} ({})", self.description, extra.join(", ")) }
     }
 }
 
@@ -233,19 +215,6 @@ impl Arg {
     }
 }
 
-/// An API request a command makes, for the CLI contract (`guesty-cli-spec.json`).
-#[derive(Clone, Debug)]
-pub struct Request {
-    pub helper: &'static str,
-    pub method: &'static str,
-    pub path: &'static str,
-    pub paginated: bool,
-    pub results_key: Option<&'static str>,
-    pub response_type: &'static str,
-    pub query: Vec<&'static str>,
-    pub dynamic_path: bool,
-}
-
 pub struct Command {
     pub name: String,
     pub aliases: Vec<String>,
@@ -258,9 +227,6 @@ pub struct Command {
     pub hidden: bool,
     pub file: &'static str,
     pub line: u32,
-    pub requests: Vec<Request>,
-    /// Facts about input for the contract (stdin, --data, files).
-    pub input: Vec<&'static str>,
 }
 
 impl Command {
@@ -283,8 +249,6 @@ impl Command {
             hidden: false,
             file: at.file(),
             line: at.line(),
-            requests: Vec::new(),
-            input: Vec::new(),
         }
     }
 
@@ -333,16 +297,15 @@ impl Command {
         self.add_option(opt)
     }
 
-    /// `.requiredOption(flags, description, default)`.
-    #[track_caller]
-    pub fn required_option_default(self, flags: &str, description: &str, default: &str) -> Command {
-        let opt = Opt::new(flags, description).mandatory().default(default);
-        self.add_option(opt)
-    }
-
     /// `.requiredOption(flags, description, parser, default)`.
     #[track_caller]
-    pub fn required_option_parsed(self, flags: &str, description: &str, parser: Parser, default: Option<Value>) -> Command {
+    pub fn required_option_parsed(
+        self,
+        flags: &str,
+        description: &str,
+        parser: Parser,
+        default: Option<Value>,
+    ) -> Command {
         let mut opt = Opt::new(flags, description).mandatory().parser(parser);
         opt.default = default;
         self.add_option(opt)
@@ -350,9 +313,8 @@ impl Command {
 
     /// `.addOption(new Option(...))`.
     pub fn add_option(mut self, opt: Opt) -> Command {
-        let clash = |o: &Opt| {
-            opt.short.as_deref().is_some_and(|s| o.is(s)) || opt.long.as_deref().is_some_and(|l| o.is(l))
-        };
+        let clash =
+            |o: &Opt| opt.short.as_deref().is_some_and(|s| o.is(s)) || opt.long.as_deref().is_some_and(|l| o.is(l));
         assert!(
             !self.options.iter().any(clash),
             "Cannot add option '{}' to command '{}' due to a conflicting flag",
@@ -391,33 +353,6 @@ impl Command {
         self
     }
 
-    /// Records an Open API request (`guestyFetch`) for the CLI contract.
-    pub fn calls(mut self, method: &'static str, path: &'static str) -> Command {
-        self.requests.push(Request {
-            helper: "guestyFetch",
-            method,
-            path,
-            paginated: false,
-            results_key: None,
-            response_type: "auto",
-            query: Vec::new(),
-            dynamic_path: false,
-        });
-        self
-    }
-
-    /// Records a request with full contract detail.
-    pub fn request(mut self, request: Request) -> Command {
-        self.requests.push(request);
-        self
-    }
-
-    /// Records an input capability for the CLI contract.
-    pub fn input(mut self, capability: &'static str) -> Command {
-        self.input.push(capability);
-        self
-    }
-
     pub fn find_command(&self, name: &str) -> Option<&Command> {
         if name.is_empty() {
             return None;
@@ -437,9 +372,6 @@ impl Command {
 /// Everything an action gets: its arguments and option values.
 pub struct Call<'a> {
     pub command: &'a Command,
-    /// Names from the root down to this command, e.g. `["guesty", "res", "get"]`
-    /// as typed (commander's `name()` gives the canonical name; see `names`).
-    pub names: Vec<String>,
     pub args: Vec<ArgValue>,
     pub opts: Opts,
 }
@@ -526,11 +458,6 @@ impl Opts {
     /// `opts.x !== undefined`.
     pub fn has(&self, key: &str) -> bool {
         self.values.contains_key(key)
-    }
-
-    /// Where a value came from: "default" or "cli".
-    pub fn source(&self, key: &str) -> Option<&'static str> {
-        self.sources.get(key).copied()
     }
 
     fn set(&mut self, key: String, value: Value, source: &'static str) {
@@ -641,8 +568,7 @@ fn parse_command<'a>(
         check_unknown(&unknown, chain)?;
         let processed = process_arguments(cmd, &args)?;
         let frame = chain.pop().expect("frame");
-        let names = chain.iter().map(|f| f.cmd.name.clone()).chain(std::iter::once(cmd.name.clone())).collect();
-        return Ok(Call { command: cmd, names, args: processed, opts: frame.opts });
+        return Ok(Call { command: cmd, args: processed, opts: frame.opts });
     }
     if !operands.is_empty() {
         if !cmd.commands.is_empty() {
@@ -737,7 +663,8 @@ fn parse_options(chain: &mut [Frame], argv: Vec<String>) -> std::result::Result<
                     };
                     emit(cmd, &mut frame.opts, opt, Some(value))?;
                 } else if opt.optional {
-                    let value = if args.front().is_some_and(|next| !maybe_option(next)) { args.pop_front() } else { None };
+                    let value =
+                        if args.front().is_some_and(|next| !maybe_option(next)) { args.pop_front() } else { None };
                     emit(cmd, &mut frame.opts, opt, value)?;
                 } else {
                     emit(cmd, &mut frame.opts, opt, None)?;
@@ -1188,12 +1115,6 @@ pub fn contract(cmd: &Command, ancestors: &[&str]) -> Json {
             "choices": o.choices,
             "line": o.line,
         })).collect::<Vec<_>>(),
-        "requests": cmd.requests.iter().map(|r| json::json!({
-            "helper": r.helper, "method": r.method, "path": r.path, "paginated": r.paginated,
-            "resultsKey": r.results_key, "responseType": r.response_type, "queryParams": r.query,
-            "dynamicPath": r.dynamic_path,
-        })).collect::<Vec<_>>(),
-        "input": cmd.input,
         "sourceFile": cmd.file,
         "line": cmd.line,
         "commands": cmd.commands.iter().map(|c| contract(c, &full)).collect::<Vec<_>>(),
@@ -1206,7 +1127,8 @@ mod tests {
 
     #[test]
     fn suggestions_match_commander() {
-        let names: Vec<String> = ["list", "search", "list-v3", "search-v3", "get"].iter().map(|s| s.to_string()).collect();
+        let names: Vec<String> =
+            ["list", "search", "list-v3", "search-v3", "get"].iter().map(|s| s.to_string()).collect();
         assert_eq!(suggest_similar("lst", &names), "\n(Did you mean list?)");
         assert_eq!(suggest_similar("zzzzzz", &names), "");
     }

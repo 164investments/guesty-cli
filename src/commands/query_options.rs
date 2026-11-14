@@ -17,7 +17,10 @@ pub fn integer_in(value: &str, option: &str, minimum: f64, maximum: f64) -> Resu
     } else {
         f64::NAN
     };
-    if !(parsed.is_finite() && parsed.fract() == 0.0 && parsed.abs() <= MAX_SAFE_INTEGER) || parsed < minimum || parsed > maximum {
+    if !(parsed.is_finite() && parsed.fract() == 0.0 && parsed.abs() <= MAX_SAFE_INTEGER)
+        || parsed < minimum
+        || parsed > maximum
+    {
         return Err(CliError::new(format!(
             "{option} must be an integer between {} and {}.",
             json::number_to_string(minimum, false),
@@ -25,19 +28,6 @@ pub fn integer_in(value: &str, option: &str, minimum: f64, maximum: f64) -> Resu
         )));
     }
     Ok(parsed)
-}
-
-/// An integer option given as a number (commander defaults are strings, but
-/// some callers pass numbers).
-pub fn integer_number(value: f64, option: &str, minimum: f64, maximum: f64) -> Result<f64> {
-    if !(value.is_finite() && value.fract() == 0.0 && value.abs() <= MAX_SAFE_INTEGER) || value < minimum || value > maximum {
-        return Err(CliError::new(format!(
-            "{option} must be an integer between {} and {}.",
-            json::number_to_string(minimum, false),
-            json::number_to_string(maximum, false)
-        )));
-    }
-    Ok(value)
 }
 
 fn days_in_month(year: i64, month: u32) -> u32 {
@@ -67,7 +57,13 @@ fn digits(s: &str) -> bool {
 /// `Date.parse` for `YYYY-MM-DD` (UTC midnight), or None if invalid.
 pub fn parse_date(value: &str) -> Option<f64> {
     let b = value.as_bytes();
-    if b.len() != 10 || b[4] != b'-' || b[7] != b'-' || !digits(&value[..4]) || !digits(&value[5..7]) || !digits(&value[8..]) {
+    if b.len() != 10
+        || b[4] != b'-'
+        || b[7] != b'-'
+        || !digits(&value[..4])
+        || !digits(&value[5..7])
+        || !digits(&value[8..])
+    {
         return None;
     }
     let (y, m, d): (i64, u32, u32) = (value[..4].parse().ok()?, value[5..7].parse().ok()?, value[8..].parse().ok()?);
@@ -85,7 +81,13 @@ pub fn parse_date_time(value: &str) -> Option<f64> {
     let day = parse_date(&value[..10])?;
     let rest = &value[11..];
     let b = rest.as_bytes();
-    if b.len() < 9 || b[2] != b':' || b[5] != b':' || !digits(&rest[..2]) || !digits(&rest[3..5]) || !digits(&rest[6..8]) {
+    if b.len() < 9
+        || b[2] != b':'
+        || b[5] != b':'
+        || !digits(&rest[..2])
+        || !digits(&rest[3..5])
+        || !digits(&rest[6..8])
+    {
         return None;
     }
     let (h, mi, s): (u32, u32, u32) = (rest[..2].parse().ok()?, rest[3..5].parse().ok()?, rest[6..8].parse().ok()?);
@@ -104,7 +106,12 @@ pub fn parse_date_time(value: &str) -> Option<f64> {
         0
     } else {
         let tb = tail.as_bytes();
-        if tb.len() != 6 || !(tb[0] == b'+' || tb[0] == b'-') || tb[3] != b':' || !digits(&tail[1..3]) || !digits(&tail[4..]) {
+        if tb.len() != 6
+            || !(tb[0] == b'+' || tb[0] == b'-')
+            || tb[3] != b':'
+            || !digits(&tail[1..3])
+            || !digits(&tail[4..])
+        {
             return None;
         }
         let (oh, om): (i64, i64) = (tail[1..3].parse().ok()?, tail[4..].parse().ok()?);
@@ -283,6 +290,9 @@ mod tests {
             integer_in("2oops", "--limit", 1.0, 100.0).unwrap_err().message(),
             "--limit must be an integer between 1 and 100."
         );
-        assert_eq!(integer("-1", "--skip").unwrap_err().message(), "--skip must be an integer between 0 and 9007199254740991.");
+        assert_eq!(
+            integer("-1", "--skip").unwrap_err().message(),
+            "--skip must be an integer between 0 and 9007199254740991."
+        );
     }
 }

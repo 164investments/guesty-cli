@@ -275,3 +275,11 @@ test("legacy get normalizes field selection", async (t) => {
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.requests, [request("GET", "/v1/reservations/res-1", { query: { fields: "_id guest.fullName" } })]);
 });
+
+// From test/cli-contract.test.mjs (1.x); its other test, that the published
+// contract lists every command and option, is now `npm run check:cli-spec`.
+test("CLI JSON errors do not echo private input snippets", async (t) => {
+  const result = await run(t, ["res", "create", "--data", '{"email":"private-fixture@example.invalid", invalid}']);
+  rejectsWithoutRequest(result, /Invalid JSON input/);
+  assert.doesNotMatch(result.stderr, /private-fixture/);
+});

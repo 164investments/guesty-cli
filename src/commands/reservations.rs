@@ -1,6 +1,5 @@
 //! Port of src/commands/reservations.ts.
 
-
 use crate::bail;
 use crate::cli::{Call, Command, Opt};
 use crate::client::{Body, Fetch, Params, ResponseType, get, guesty_fetch, paginate_all};

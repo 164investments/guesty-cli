@@ -1,6 +1,0 @@
-#!/bin/sh
-# The Node CLI with the Rust binary's test hooks; see hooks.mjs. The harness may
-# run a copy of this file from a fake package (<package>/dist/guesty), so the
-# repository is found through GUESTY_TEST_ORIGINAL_BIN.
-here=$(dirname "$(realpath "${GUESTY_TEST_ORIGINAL_BIN:-$0}")")
-GUESTY_TEST_EXE=$(realpath "$0") exec node --import "$here/hooks.mjs" "$here/../../../dist/cli.js" "$@"

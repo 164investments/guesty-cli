@@ -146,7 +146,11 @@ fn read_shared_token(token_type: TokenType) -> Result<CachedToken> {
     if url.is_empty() || key.is_empty() {
         return Err(cache_unavailable(
             token_type,
-            if uses_shared_cache() { "shared-cache configuration is incomplete" } else { "this CLI isn't connected to a team yet" },
+            if uses_shared_cache() {
+                "shared-cache configuration is incomplete"
+            } else {
+                "this CLI isn't connected to a team yet"
+            },
         ));
     }
     let target = format!(
@@ -222,8 +226,9 @@ fn read_service_token(token_type: TokenType) -> Result<CachedToken> {
             }
         }
     };
-    usable(&token, token_type)
-        .ok_or_else(|| cache_unavailable(token_type, "the token service returned a missing, expired, rejected, or invalid token"))
+    usable(&token, token_type).ok_or_else(|| {
+        cache_unavailable(token_type, "the token service returned a missing, expired, rejected, or invalid token")
+    })
 }
 
 /// Marks a token rejected for this process. A 401 invalidates only this
@@ -262,7 +267,7 @@ pub fn get_token() -> Result<String> {
 }
 
 /// Unit tests share one process; each starts with an empty process cache.
-#[cfg(test)]
+#[cfg(all(test, feature = "test-hooks"))]
 pub(crate) fn reset_for_tests() {
     *STATE.lock().unwrap_or_else(|e| e.into_inner()) = None;
 }

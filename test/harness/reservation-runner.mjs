@@ -1,6 +1,6 @@
-// The Rust-binary replacement for test/fixtures/reservation-runner.mjs (which
-// test/cli-contract.test.mjs still uses with the Node CLI): the same replies,
-// the same recorded resource requests and the same safety assertions.
+// Runs reservation and calendar commands against the scenario in
+// scenarios.mjs (the 1.x fixture's replies), recording resource requests and
+// checking that authentication only read the fake cache.
 import assert from "node:assert/strict";
 import { runReservationScenario } from "./scenarios.mjs";
 
