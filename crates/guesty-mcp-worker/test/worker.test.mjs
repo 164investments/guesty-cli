@@ -1172,6 +1172,22 @@ test("near the hosted limits, a tool call's memory stays well under the Worker's
   assert.equal(failed(single), false, textOf(single));
   t.diagnostic(`one ~7.5 MB response: wasm memory ${memory(single)} bytes`);
 
+  // One record of 250,000 numbers inside 120 array levels (~500 KB): within every limit, and
+  // formatted only as far as it's shown.
+  const deepText = `{"_id":"d","n":${"[".repeat(120)}${Array(250_000).fill(1).join(",")}${"]".repeat(120)}}`;
+  const deep = (entry, url) => (entry.path === "/v1/listings" && !url.searchParams.has("skip") ? new Response(deepText, { headers: { "content-type": "application/json" } }) : undefined);
+  const { result: nested } = await withGuesty(deep, () => tool(session.access_token, "call_operation", { operation: "propertieslistinglist" }, options));
+  assert.equal(failed(nested), false, textOf(nested));
+  assert.match(textOf(nested), /\[Truncated: showing the first 60,000 of [\d,]+ characters\./);
+  t.diagnostic(`one deeply nested 250,000-number record: wasm memory ${memory(nested)} bytes`);
+
+  // 200,000 eight-level [1] chains (~3.6 MB, 1.8 million values): refused before parsing.
+  const chainsText = `[${Array(200_000).fill("[[[[[[[[1]]]]]]]]").join(",")}]`;
+  const chains = (entry, url) => (entry.path === "/v1/listings" && !url.searchParams.has("skip") ? new Response(chainsText, { headers: { "content-type": "application/json" } }) : undefined);
+  const { result: chained } = await withGuesty(chains, () => tool(session.access_token, "call_operation", { operation: "propertieslistinglist" }, options));
+  assert.equal(failed(chained), true);
+  assert.match(textOf(chained), /returned more than 300,000 JSON values/);
+
   const flat = (entry, url) => (entry.path === "/v1/listings" && !url.searchParams.has("skip") ? new Response(`[${Array(3_000_000).fill(1).join(",")}]`, { headers: { "content-type": "application/json" } }) : undefined);
   const { result: refused } = await withGuesty(flat, () => tool(session.access_token, "call_operation", { operation: "propertieslistinglist" }, options));
   assert.equal(failed(refused), true);

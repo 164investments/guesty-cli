@@ -45,8 +45,8 @@ pub fn nests_deeper_than(text: &str, max: usize) -> bool {
 }
 
 /// Whether valid JSON `text` has more than `max` values, counted cheaply
-/// without parsing: every `,` and `:` outside strings starts another value
-/// (or member), plus the first one.
+/// without parsing: every `[` and `{` outside strings is a value, and every
+/// `,` and `:` starts another (an overcount for members, never an undercount).
 pub fn has_more_values_than(text: &str, max: usize) -> bool {
     let b = text.as_bytes();
     let (mut values, mut i) = (1usize, 0usize);
@@ -58,7 +58,7 @@ pub fn has_more_values_than(text: &str, max: usize) -> bool {
                     i += if b[i] == b'\\' { 2 } else { 1 };
                 }
             }
-            b',' | b':' => {
+            b',' | b':' | b'[' | b'{' => {
                 values += 1;
                 if values > max {
                     return true;
@@ -69,6 +69,88 @@ pub fn has_more_values_than(text: &str, max: usize) -> bool {
         i += 1;
     }
     false
+}
+
+/// Where formatted JSON goes: a `String`, or a `Capped` text.
+pub trait Sink {
+    fn push(&mut self, c: char);
+    fn push_str(&mut self, s: &str);
+}
+
+impl Sink for String {
+    fn push(&mut self, c: char) {
+        String::push(self, c);
+    }
+    fn push_str(&mut self, s: &str) {
+        String::push_str(self, s);
+    }
+}
+
+/// Text kept only up to `cap` UTF-16 units, with its full length counted,
+/// so a huge text can be cut without ever being held whole. Every line after
+/// a newline starts with `margin`.
+pub struct Capped {
+    /// The start of the text: everything until `cap` units were reached.
+    pub text: String,
+    kept: usize,
+    /// The whole text's length in UTF-16 units.
+    pub length: usize,
+    cap: usize,
+    margin: String,
+}
+
+impl Capped {
+    pub fn new(cap: usize) -> Capped {
+        Capped { text: String::new(), kept: 0, length: 0, cap, margin: String::new() }
+    }
+
+    /// Indents every following line by `margin` (formatting a value nested
+    /// inside text written around it).
+    pub fn set_margin(&mut self, margin: &str) {
+        self.margin = margin.to_string();
+    }
+
+    /// Whether the whole text was kept.
+    pub fn complete(&self) -> bool {
+        self.kept == self.length
+    }
+
+    fn add(&mut self, s: &str) {
+        let units = js_len(s);
+        if self.kept < self.cap {
+            self.text.push_str(s);
+            self.kept += units;
+        }
+        self.length += units;
+    }
+}
+
+impl Sink for Capped {
+    fn push(&mut self, c: char) {
+        let mut buf = [0u8; 4];
+        self.add(c.encode_utf8(&mut buf));
+        if c == '\n' && !self.margin.is_empty() {
+            let margin = std::mem::take(&mut self.margin);
+            self.add(&margin);
+            self.margin = margin;
+        }
+    }
+    fn push_str(&mut self, s: &str) {
+        if self.margin.is_empty() || !s.contains('\n') {
+            return self.add(s);
+        }
+        for (i, line) in s.split('\n').enumerate() {
+            if i > 0 {
+                self.push('\n');
+            }
+            self.add(line);
+        }
+    }
+}
+
+/// `JSON.stringify(value, null, indent)` written to `out`.
+pub fn pretty_to<S: Sink>(out: &mut S, value: &Value, indent: usize) {
+    write_value(out, value, Some(indent), 0);
 }
 
 /// `JSON.stringify(value)`.
@@ -92,7 +174,7 @@ pub fn quote(text: &str) -> String {
     out
 }
 
-fn newline(out: &mut String, indent: Option<usize>, depth: usize) {
+fn newline<S: Sink>(out: &mut S, indent: Option<usize>, depth: usize) {
     if let Some(width) = indent {
         out.push('\n');
         for _ in 0..width * depth {
@@ -101,7 +183,7 @@ fn newline(out: &mut String, indent: Option<usize>, depth: usize) {
     }
 }
 
-fn write_value(out: &mut String, value: &Value, indent: Option<usize>, depth: usize) {
+fn write_value<S: Sink>(out: &mut S, value: &Value, indent: Option<usize>, depth: usize) {
     match value {
         Value::Null => out.push_str("null"),
         Value::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
@@ -147,7 +229,7 @@ fn write_value(out: &mut String, value: &Value, indent: Option<usize>, depth: us
     }
 }
 
-fn write_string(out: &mut String, s: &str) {
+fn write_string<S: Sink>(out: &mut S, s: &str) {
     out.push('"');
     for c in s.chars() {
         match c {
@@ -308,6 +390,24 @@ mod tests {
     use super::*;
 
     #[test]
+    fn capped_text_keeps_the_start_and_counts_the_whole() {
+        let value = parse(r#"{"a":[1,{"b":"x\u00e9\ud83c\udfe0"}],"c":"line\nbreak"}"#).unwrap();
+        let full = pretty(&value, 1);
+        let mut all = Capped::new(usize::MAX);
+        pretty_to(&mut all, &value, 1);
+        assert_eq!((all.text.as_str(), all.length, all.complete()), (full.as_str(), js_len(&full), true));
+        let mut cut = Capped::new(10);
+        pretty_to(&mut cut, &value, 1);
+        assert!(!cut.complete() && full.starts_with(&cut.text) && js_len(&cut.text) >= 10);
+        assert_eq!(cut.length, js_len(&full));
+        let mut indented = Capped::new(usize::MAX);
+        indented.push_str("  ");
+        indented.set_margin("  ");
+        pretty_to(&mut indented, &value, 1);
+        assert_eq!(indented.text, format!("  {}", full.replace('\n', "\n  ")));
+    }
+
+    #[test]
     fn numbers_print_like_javascript() {
         for (v, s) in [
             (1.0, "1"),
@@ -343,8 +443,12 @@ mod tests {
         assert!(nests_deeper_than(r#"{"a":[1,{"b":[]}]}"#, 3));
         assert!(!nests_deeper_than(r#""\"[[[""#, 0));
         assert!(!nests_deeper_than("[]", 1) && nests_deeper_than("[[]]", 1));
-        assert!(!has_more_values_than(r#"{"a":[1,2],"b":"x,y:z"}"#, 6));
+        assert!(!has_more_values_than(r#"{"a":[1,2],"b":"x,y:z"}"#, 7));
         assert!(has_more_values_than(r#"{"a":[1,2],"b":"x,y:z"}"#, 4));
-        assert!(!has_more_values_than("[1]", 1) && has_more_values_than("[1,2]", 1));
+        assert!(!has_more_values_than("1", 1) && has_more_values_than("[1]", 1));
+        // Nested arrays are values too: [[[1]]] is four.
+        assert!(!has_more_values_than("[[[1]]]", 4) && has_more_values_than("[[[1]]]", 3));
+        let chains = format!("[{}]", vec!["[[[[[[[[1]]]]]]]]"; 1000].join(","));
+        assert!(has_more_values_than(&chains, 9_000));
     }
 }
