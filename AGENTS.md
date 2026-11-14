@@ -44,6 +44,18 @@ The CLI validates every key and invite link a service returns before saving or p
 - A CLI release is a `v*` tag on `main` that matches the version in `package.json` and `Cargo.toml`. `.github/workflows/release.yml` builds the binaries for macOS and Linux (arm64, x64) and Windows (x64), packs them into `guesty-cli-<version>.tgz` (`scripts/pack.mjs`), installs that package on each platform (`scripts/smoke-install.mjs`) and publishes a GitHub release with `RELEASE_NOTES.md` as its notes. It also runs, without publishing, on pull requests that touch the build.
 - The package's `dist/bin.js` is a Node launcher (`npm/launcher.js`). On macOS and Linux its first run copies the native binary over itself, so later runs start the binary directly; npm 12 blocks install scripts, so this can't happen in a postinstall. `dist/cli.js` stays a launcher because 1.x's `guesty update` checks for it.
 - The hosted token service is the `hosted` environment in `server/wrangler.jsonc`, deployed by hand. Its production deploys need Trevor's or Hayden's authorization.
+- The hosted MCP server is `crates/guesty-mcp-worker` (Rust on Workers, `guesty-mcp.staykit.ai`), the `hosted` environment in its `wrangler.toml`, deployed by hand like the token service and with the same authorization. It has its own D1 database (`guesty-mcp`, migrations in the crate) and `MCP_KEY` secret, and reaches the token service only through the `TOKENS` service binding.
+
+## The hosted MCP server (`crates/guesty-mcp-worker`)
+
+It's an OAuth 2.1 authorization server and an MCP server in one Worker, a client of the token service like the CLI. Keep these:
+
+- Guesty data passes through and is never stored or logged. Invocation logs and traces stay off; the Worker logs only short error codes.
+- Every tool call checks the member key with the token service first; there is no token cache, so a revoked key stops working at once and its sign-in is revoked.
+- PKCE S256 only; redirect URIs match exactly, except a loopback `http` URI's port; codes and refresh tokens are bound to their client, redirect URI, resource and grant, spent in one statement, and reuse revokes the grant.
+- Client ID metadata documents are read only from the allowed origins; other apps register.
+- Member keys are sealed and codes and tokens are hashed with keys derived from `MCP_KEY`; changing it signs everyone out.
+- The tools come from `guesty-core` with `Limits::HOSTED`, so they match `guesty mcp` exactly except the instructions text and those limits.
 
 ## Code map
 
