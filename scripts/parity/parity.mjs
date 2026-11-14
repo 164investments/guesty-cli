@@ -9,6 +9,13 @@
 //
 // A case may give "replies": [reply, ...] to answer API requests in turn, and
 // "github": reply to answer GitHub's latest-release request (404 otherwise).
+// Upload fixtures are created at startup; cases name them $FIXTURES/b/... and
+// $FIXTURES/c/..., and outputs show that path as $FIXTURES.
+//
+// Golden mode, for CI once the Node CLI is gone: --record runs only the Node
+// CLI and writes each case back with its result as "expected"; a case with
+// "expected" is compared against the Rust CLI alone.
+//   node scripts/parity/parity.mjs --cases scripts/parity/cases/core.jsonl --record
 // Options: --stdin <text> (piped to both), --reply <json> (the mock's reply to
 // API requests: {status, json|raw, headers}), --rust <path>, --node <path>,
 // --env KEY=VALUE (repeatable), --quiet (print only failures).
@@ -28,7 +35,7 @@ let cases = [];
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i];
   if (a === "--") { cases.push({ args: argv.slice(i + 1) }); break; }
-  else if (a === "--cases") cases.push(...readFileSync(argv[++i], "utf8").split("\n").filter((l) => l.trim() && !l.startsWith("#")).map((l) => {
+  else if (a === "--cases") (opts.files ??= []).push(argv[i + 1]), cases.push(...readFileSync(argv[++i], "utf8").split("\n").filter((l) => l.trim() && !l.startsWith("#")).map((l) => {
     const v = JSON.parse(l);
     return Array.isArray(v) ? { args: v } : v;
   }));
@@ -38,12 +45,32 @@ for (let i = 0; i < argv.length; i++) {
   else if (a === "--node") opts.node = resolve(argv[++i]);
   else if (a === "--env") { const [k, ...v] = argv[++i].split("="); opts.env[k] = v.join("="); }
   else if (a === "--quiet") opts.quiet = true;
+  else if (a === "--record") opts.record = true;
   else throw new Error(`Unknown option ${a}`);
 }
 
 const IGNORED_HEADERS = new Set(["host", "user-agent", "accept-encoding", "accept-language", "sec-fetch-mode", "connection",
   "content-length", "transfer-encoding", "x-guesty-test-origin"]);
-const now = Date.now();
+// A fixed expiry keeps token output identical between runs.
+const EXPIRES_AT = 4_102_444_800_000;
+const fixtures = mkdtempSync(join(tmpdir(), "guesty-parity-fixtures-"));
+for (const [name, content] of Object.entries({
+  "b/photo.JPG": Buffer.from([0xff, 0xd8, 0xff, 0xd9]),
+  "b/photo.png": Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff]),
+  "b/a.gif": "GIF89a",
+  "b/x.webp": Buffer.from("RIFF\x00WEBP", "latin1"),
+  'b/we ird"name.jpeg': "jpeg",
+  "b/.jpg": "plain",
+  "b/noext": "raw",
+  "c/sample.pdf": "%PDF-1.7\nfixture",
+  "c/oversized.pdf": Buffer.alloc(5_242_881),
+})) {
+  mkdirSync(dirname(join(fixtures, name)), { recursive: true });
+  writeFileSync(join(fixtures, name), content);
+}
+mkdirSync(join(fixtures, "b", "dir.jpg"));
+const withFixtures = (value) => JSON.parse(JSON.stringify(value).replaceAll("$FIXTURES", fixtures));
+const hideFixtures = (text) => text.replaceAll(fixtures, "$FIXTURES");
 let requests = [];
 let reply = undefined;
 let replies = undefined;
@@ -83,7 +110,7 @@ const server = createServer((req, res) => {
     const path = new URL(url).pathname;
     if (origin === "https://tokens.invalid" && path === "/v1/token") {
       const type = typeof body === "string" ? JSON.parse(body).token_type : "openapi";
-      return send(200, { token_type: type, access_token: `parity-fake-${type}-token`, expires_at: now + 36_000_000 });
+      return send(200, { token_type: type, access_token: `parity-fake-${type}-token`, expires_at: EXPIRES_AT });
     }
     if (origin === "https://tokens.invalid") return send(200, { ok: true });
     if (origin === "https://api.github.com") {
@@ -112,7 +139,8 @@ function run(command, args, stdin, extraEnv) {
     child.stderr.on("data", (c) => err.push(c));
     child.on("close", (code) => {
       rmSync(home, { recursive: true, force: true });
-      ok({ code, stdout: Buffer.concat(out).toString("utf8").replaceAll(home, "$HOME"), stderr: Buffer.concat(err).toString("utf8").replaceAll(home, "$HOME") });
+      const text = (chunks) => hideFixtures(Buffer.concat(chunks).toString("utf8").replaceAll(home, "$HOME"));
+      ok({ code, stdout: text(out), stderr: text(err) });
     });
     child.stdin.end(stdin ?? "");
   });
@@ -120,7 +148,10 @@ function run(command, args, stdin, extraEnv) {
 
 const nodeCommand = [process.execPath, "--import", join(root, "scripts/parity/node-hook.mjs"), opts.node];
 let failures = 0;
-for (const c of cases) {
+const recorded = [];
+for (const original of cases) {
+  const { expected, ...inputs } = original;
+  const c = withFixtures(inputs);
   const stdin = c.stdin ?? opts.stdin;
   reply = c.reply ?? opts.reply;
   replies = c.replies;
@@ -128,12 +159,17 @@ for (const c of cases) {
   const env = { ...opts.env, ...(c.env ?? {}) };
   requests = [];
   replyIndex = 0;
-  const node = await run(nodeCommand, c.args, stdin, env);
-  const nodeRequests = requests;
+  const node = expected ?? await run(nodeCommand, c.args, stdin, env);
+  const nodeRequests = expected?.requests ?? JSON.parse(hideFixtures(JSON.stringify(requests)));
+  if (opts.record) {
+    const { expected: _, ...plain } = original;
+    recorded.push({ ...plain, expected: { ...node, requests: nodeRequests } });
+    continue;
+  }
   requests = [];
   replyIndex = 0;
   const rust = await run([opts.rust], c.args, stdin, env);
-  const rustRequests = requests;
+  const rustRequests = JSON.parse(hideFixtures(JSON.stringify(requests)));
   // The versions differ by design.
   const version = (s) => s.replace(/^\d+\.\d+\.\d+(-[\w.]+)?\n$/, "<version>\n");
   const diffs = [];
@@ -151,5 +187,13 @@ for (const c of cases) {
   }
 }
 server.close();
+rmSync(fixtures, { recursive: true, force: true });
+if (opts.record) {
+  if (opts.files?.length !== 1) throw new Error("--record needs exactly one --cases file");
+  const comments = readFileSync(opts.files[0], "utf8").split("\n").filter((l) => l.startsWith("#"));
+  writeFileSync(opts.files[0], [...comments, ...recorded.map((r) => JSON.stringify(r))].join("\n") + "\n");
+  console.log(`Recorded ${recorded.length} cases in ${opts.files[0]}`);
+  process.exit(0);
+}
 console.log(`${cases.length - failures}/${cases.length} cases match`);
 process.exit(failures ? 1 : 0);
