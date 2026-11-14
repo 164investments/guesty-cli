@@ -1,15 +1,84 @@
 name: Release
 
+# A v* tag on main that matches package.json and Cargo.toml publishes a GitHub
+# release. Pull requests that touch the build run everything except the
+# publish step, so every platform's build and install is proven before merge.
 on:
   push:
     tags: ["v*"]
+  pull_request:
+    paths:
+      - Cargo.toml
+      - Cargo.lock
+      - build.rs
+      - src/**
+      - npm/**
+      - package.json
+      - scripts/pack.mjs
+      - scripts/smoke-install.mjs
+      - "*.json"
+      - .github/workflows/release.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    name: build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-musl, os: ubuntu-24.04 }
+          - { target: aarch64-unknown-linux-musl, os: ubuntu-24.04-arm }
+          - { target: aarch64-apple-darwin, os: macos-15 }
+          - { target: x86_64-apple-darwin, os: macos-15 }
+          - { target: x86_64-pc-windows-msvc, os: windows-2025 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add ${{ matrix.target }}
+      - name: Install musl tools
+        if: contains(matrix.target, 'musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - name: Build
+        shell: bash
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: Check the binary
+        shell: bash
+        run: |
+          exe=target/${{ matrix.target }}/release/guesty
+          [[ "${{ matrix.target }}" == *windows* ]] && exe="$exe.exe"
+          want=$(node -p 'require("./package.json").version')
+          if [[ "${{ matrix.target }}" == x86_64-apple-darwin ]]; then run=(arch -x86_64 "$exe"); else run=("$exe"); fi
+          got=$("${run[@]}" --version)
+          test "$got" = "$want" || { echo "version $got, package.json $want"; exit 1; }
+          "${run[@]}" reservations list-v3 --help > /dev/null
+          mkdir -p out
+          cp "$exe" "out/guesty-${{ matrix.target }}$([[ "${{ matrix.target }}" == *windows* ]] && echo .exe)"
+      - name: Release builds ignore the test hooks
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > hooks.log 2>&1 &
+          sleep 1
+          GUESTY_TEST_REDIRECT=http://127.0.0.1:8765 SUPABASE_URL=https://cache.invalid SUPABASE_SERVICE_ROLE_KEY=x HOME=$(mktemp -d) \
+            target/${{ matrix.target }}/release/guesty token && exit 1 || true
+          kill %1
+          if grep -q "GET\|POST" hooks.log; then echo "a release build followed GUESTY_TEST_REDIRECT"; cat hooks.log; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guesty-${{ matrix.target }}
+          path: out/*
+          if-no-files-found: error
+
+  package:
+    needs: build
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,27 +86,71 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - name: Validate release tag and production ancestry
+        if: startsWith(github.ref, 'refs/tags/')
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           node -e 'if (`v${JSON.parse(require("fs").readFileSync("package.json")).version}` !== process.env.RELEASE_TAG) process.exit(1)'
+          grep -qx "version = \"${RELEASE_TAG#v}\"" Cargo.toml
           git merge-base --is-ancestor HEAD origin/main
-      - run: npm ci
-      - run: npm run check
-      - name: Build and verify installable package
+      - uses: actions/download-artifact@v4
+        with:
+          path: bins
+          merge-multiple: true
+      - name: Pack
         run: |
-          mkdir release
-          npm pack --pack-destination release
-          npm install --prefix "$RUNNER_TEMP/guesty-smoke" ./release/guesty-cli-*.tgz
-          "$RUNNER_TEMP/guesty-smoke/node_modules/.bin/guesty" --version
-          "$RUNNER_TEMP/guesty-smoke/node_modules/.bin/guesty" reservations --help
+          ls -l bins
+          node scripts/pack.mjs bins release
+      - name: Install the package and check it
+        run: node scripts/smoke-install.mjs release/guesty-cli-*.tgz
+      - name: Release files
+        run: |
           cd release
           # A copy under a fixed name, so releases/latest/download/guesty-cli.tgz
           # always installs the newest release. Invite emails link to it.
           cp guesty-cli-*.tgz guesty-cli.tgz
-          sha256sum guesty-cli-*.tgz guesty-cli.tgz > SHA256SUMS
+          cp ../bins/guesty-* .
+          sha256sum guesty-cli-*.tgz guesty-cli.tgz guesty-x86_64-* guesty-aarch64-* > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: release/*
+
+  smoke:
+    name: install on ${{ matrix.os }}
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-24.04-arm, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
+      - name: Install the package and check it
+        shell: bash
+        run: node scripts/smoke-install.mjs release/guesty-cli-$(node -p 'require("./package.json").version').tgz
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [package, smoke]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+          path: release
       - name: Publish GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -47,4 +160,4 @@ jobs:
           if [[ "$RELEASE_TAG" == *-* ]]; then
             release_flags+=(--prerelease --latest=false)
           fi
-          gh release create "$RELEASE_TAG" release/guesty-cli-*.tgz release/guesty-cli.tgz release/SHA256SUMS --verify-tag --title "Guesty CLI $RELEASE_TAG" --notes-file RELEASE_NOTES.md "${release_flags[@]}"
+          gh release create "$RELEASE_TAG" release/* --verify-tag --title "Guesty CLI $RELEASE_TAG" --notes-file RELEASE_NOTES.md "${release_flags[@]}"

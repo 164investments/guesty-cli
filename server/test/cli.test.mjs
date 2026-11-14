@@ -1,17 +1,17 @@
-// Drives the real CLI (../dist/cli.js, from npm run build in the repository
-// root) against the bundled Worker in Miniflare. Guesty's token endpoint and
+// Drives the real CLI (the Rust binary: GUESTY_CLI_BIN, or target/debug/guesty
+// from cargo build in the repository root) against the bundled Worker in Miniflare. Guesty's token endpoint and
 // Resend's email API are mocked; nothing here contacts Guesty or sends email.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test, { after, before } from "node:test";
 import { Miniflare } from "miniflare";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const cliPath = join(root, "..", "dist", "cli.js");
+const cliPath = process.env.GUESTY_CLI_BIN ? resolve(process.env.GUESTY_CLI_BIN) : join(root, "..", "target", "debug", "guesty");
 const oauthRequests = [];
 const emails = [];
 const homes = [];
@@ -29,7 +29,7 @@ function cli(homeDir, args, input = "") {
   const env = { ...process.env, HOME: homeDir };
   for (const name of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "GUESTY_TOKEN_SERVICE_URL", "GUESTY_TOKEN_SERVICE_KEY"]) delete env[name];
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [cliPath, ...args], { cwd: homeDir, env, timeout: 30_000 });
+    const child = spawn(cliPath, args, { cwd: homeDir, env, timeout: 30_000 });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk) => { stdout += chunk; });
@@ -49,7 +49,7 @@ function terminal(homeDir, args) {
   for (const name of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "GUESTY_TOKEN_SERVICE_URL", "GUESTY_TOKEN_SERVICE_KEY", "NO_COLOR", "CI"]) delete env[name];
   // stty gives the new terminal a size before the CLI starts; it has none otherwise.
   const shim = "import os, pty, sys; sys.exit(os.waitstatus_to_exitcode(pty.spawn(sys.argv[1:])))";
-  const child = spawn("python3", ["-c", shim, "sh", "-c", 'stty cols 100 rows 40 && exec "$@"', "sh", process.execPath, cliPath, ...args], { cwd: homeDir, env });
+  const child = spawn("python3", ["-c", shim, "sh", "-c", 'stty cols 100 rows 40 && exec "$@"', "sh", cliPath, ...args], { cwd: homeDir, env });
   terminals.push(child);
   let output = "";
   let seen = 0;
@@ -86,7 +86,7 @@ const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const linkPattern = () => new RegExp(`^${escapeRegExp(base)}/join/[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$`);
 
 before(async () => {
-  assert.ok(existsSync(cliPath), "Build the CLI first: npm run build in the repository root.");
+  assert.ok(existsSync(cliPath), "Build the CLI first: cargo build in the repository root, or set GUESTY_CLI_BIN.");
   mf = new Miniflare({
     modules: true,
     scriptPath: join(root, "dist/index.js"),

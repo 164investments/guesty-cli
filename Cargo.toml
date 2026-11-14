@@ -1,0 +1,40 @@
+[package]
+name = "guesty-cli"
+description = "CLI and MCP server for the Guesty Open API and Booking Engine API, with read-only cached-token authentication"
+# Kept equal to package.json's version; build.rs checks.
+version = "2.0.0"
+edition = "2024"
+rust-version = "1.90"
+license = "MIT"
+repository = "https://github.com/164investments/guesty-cli"
+publish = false
+
+[[bin]]
+name = "guesty"
+path = "src/main.rs"
+
+[features]
+# Hooks the offline tests need: send every request to a local mock, a fake
+# clock and recorded sleeps. Never enabled in release builds; release.yml
+# checks that the shipped binary ignores the GUESTY_TEST_* variables.
+test-hooks = []
+
+[dependencies]
+base64 = "0.22"
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+chrono-tz = { version = "0.10", default-features = false }
+cliclack = "0.3"
+libc = "0.2"
+serde = "1"
+url = "2"
+ryu = "1"
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip", "unbounded_depth"] }
+terminal_size = "0.4"
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+opt-level = 3
