@@ -156,6 +156,8 @@ function run(command, args, stdin, extraEnv) {
       const text = (chunks) => hideFixtures(Buffer.concat(chunks).toString("utf8").replaceAll(home, "$HOME"));
       ok({ code, stdout: text(out), stderr: text(err) });
     });
+    // A CLI that exits before reading stdin closes the pipe; that is not a failure.
+    child.stdin.on("error", () => {});
     child.stdin.end(stdin ?? "");
   });
 }
