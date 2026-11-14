@@ -1,0 +1,48 @@
+[package]
+name = "guesty-mcp-worker"
+description = "The hosted Guesty MCP server on Cloudflare Workers: OAuth 2.1, storage, sign-in and transport"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.90"
+license = "MIT"
+publish = false
+
+# Standalone for now, so it doesn't join the guesty-cli package; it joins the
+# repository's workspace when the shared core lands.
+[workspace]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Only the cipher: nonces come from getrandom below.
+aes-gcm = { version = "0.10.3", default-features = false, features = ["aes", "alloc"] }
+base64 = "0.22"
+hkdf = "0.12"
+hmac = "0.12"
+serde = { version = "1", features = ["derive"] }
+# Default features keep serde_json's recursion limit of 128 (the hosted depth limit).
+serde_json = "1"
+sha2 = "0.10"
+url = "2"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+getrandom = { version = "0.2", features = ["js"] }
+js-sys = "0.3"
+# Pinned to the version worker 0.8.7 was built with, so worker-build uses the matching CLI.
+wasm-bindgen = "=0.2.129"
+web-sys = { version = "0.3", features = ["AbortSignal", "Request", "RequestInit"] }
+worker = { version = "0.8.7", features = ["d1"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+getrandom = "0.2"
+
+[dev-dependencies]
+rusqlite = { version = "0.41", features = ["bundled"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+panic = "abort"
