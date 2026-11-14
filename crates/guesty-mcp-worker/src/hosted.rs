@@ -7,7 +7,7 @@
 //!
 //! - every attempt first gets the team's token from the token service (S2, no cache);
 //! - it is sent with manual redirects, a timeout of the smaller of the request's own and what's
-//!   left of the call (S8), and a 16 MB body cap (S7); a Guesty 3xx reaches the core as a
+//!   left of the call (S8), and an 8 MB body cap (S7); a Guesty 3xx reaches the core as a
 //!   response, so the core says redirects aren't followed;
 //! - a 401 re-reads the token once; the same token again fails with the hosted guidance;
 //! - error bodies are redacted with the tokens sent and the member key;

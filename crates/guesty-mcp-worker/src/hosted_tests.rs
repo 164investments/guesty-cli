@@ -172,7 +172,7 @@ fn a_read_sends_the_teams_token_with_the_hosted_limits() {
     assert_eq!(fake.authorization(0), "Bearer open-token-1");
     assert!(request.headers.contains(&("accept".into(), "application/json".into())));
     assert!(limits.redirect_as_response);
-    assert_eq!(limits.max_body_bytes, 16 * 1024 * 1024);
+    assert_eq!(limits.max_body_bytes, 8 * 1024 * 1024);
     // The request's own 60 s, cut to the call's 50 s.
     assert_eq!(limits.timeout_ms, 50_000);
     assert_eq!(*fake.token_reads.borrow(), [TokenType::OpenApi]);
@@ -278,10 +278,10 @@ fn error_bodies_lose_the_tokens_sent_and_the_member_key() {
 
 #[test]
 fn a_response_over_16_mb_is_refused() {
-    let fake = Fake::new(vec![Err(TransportError::BodyTooLarge { limit: 16 * 1024 * 1024 })]);
+    let fake = Fake::new(vec![Err(TransportError::BodyTooLarge { limit: 8 * 1024 * 1024 })]);
     assert_eq!(
         message(get(&fake, "/v1/listings")),
-        "Guesty API GET /v1/listings returned more than 16 MB, the most this server reads. Ask for less with query parameters such as fields, limit or filters."
+        "Guesty API GET /v1/listings returned more than 8 MB, the most this server reads. Ask for less with query parameters such as fields, limit or filters."
     );
 }
 

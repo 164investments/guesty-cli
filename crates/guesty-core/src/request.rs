@@ -910,6 +910,11 @@ impl Attempts {
                 return Err(Error::new(limits::too_deep_message(&self.label, max)));
             }
         }
+        if let Some(max) = self.limits.max_json_values {
+            if json::has_more_values_than(text, max) {
+                return Err(Error::new(limits::too_many_values_message(&self.label, max)));
+            }
+        }
         json::parse(text)
             .map_err(|_| Error::new(format!("{} returned invalid JSON; the request was not retried.", self.label)))
     }
@@ -1010,6 +1015,8 @@ pub struct Paginator {
     limit: f64,
     skip: f64,
     all: Vec<Json>,
+    /// Results accepted so far (kept in `all` by `accept`, handed back by `page`).
+    count: usize,
     seen: HashSet<String>,
     limits: Limits,
     bytes: usize,
@@ -1026,6 +1033,7 @@ impl Paginator {
             limit,
             skip,
             all: Vec::new(),
+            count: 0,
             seen: HashSet::new(),
             limits: Limits::NONE,
             bytes: 0,
@@ -1052,7 +1060,16 @@ impl Paginator {
 
     /// Takes one page's response. `Some` when every result has arrived.
     pub fn accept(&mut self, res: Json) -> Result<Option<Vec<Json>>> {
-        let path = &self.path;
+        let (items, done) = self.page(res)?;
+        self.all.extend(items);
+        Ok(done.then(|| std::mem::take(&mut self.all)))
+    }
+
+    /// Takes one page's response and hands back its results, keeping only
+    /// counts, so a caller can use each page and let it go (a hosted server's
+    /// memory). `true` when every result has arrived. The checks are `accept`'s.
+    pub fn page(&mut self, mut res: Json) -> Result<(Vec<Json>, bool)> {
+        let path = self.path.clone();
         let record = res.as_object();
         let key = self.results_key.clone().or_else(|| {
             ["results", "data", "items"]
@@ -1060,12 +1077,9 @@ impl Paginator {
                 .find(|n| record.and_then(|r| r.get(**n)).is_some_and(Json::is_array))
                 .map(|s| s.to_string())
         });
-        let items: Vec<Json> = if let Some(items) = res.as_array() {
-            items.clone()
-        } else if let Some(items) = key.as_deref().and_then(|k| record.and_then(|r| r.get(k))).and_then(Json::as_array)
-        {
-            items.clone()
-        } else {
+        let has_items =
+            res.is_array() || key.as_deref().and_then(|k| record.and_then(|r| r.get(k))).is_some_and(Json::is_array);
+        if !has_items {
             return Err(Error::new(format!(
                 "Cannot paginate {path}: expected an array{}.",
                 match &self.results_key {
@@ -1073,7 +1087,7 @@ impl Paginator {
                     None => " of results".into(),
                 }
             )));
-        };
+        }
         let pagination = record.and_then(|r| r.get("pagination"));
         if let Some(p) = pagination {
             if !p.is_object() {
@@ -1098,6 +1112,16 @@ impl Paginator {
             Some(Json::Bool(b)) => Some(*b),
             Some(_) => return Err(Error::new(format!("Cannot paginate {path}: invalid hasMore metadata."))),
         };
+        // The metadata is read; move the results out rather than copy them.
+        let items: Vec<Json> = match &mut res {
+            Json::Array(items) => std::mem::take(items),
+            Json::Object(map) => match key.as_deref().and_then(|k| map.get_mut(k)) {
+                Some(Json::Array(items)) => std::mem::take(items),
+                _ => Vec::new(),
+            },
+            _ => Vec::new(),
+        };
+        drop(res);
         if let Some(server) = server_limit {
             self.limit = self.limit.min(server);
         }
@@ -1107,7 +1131,7 @@ impl Paginator {
                     "Cannot paginate {path}: the API returned an empty page before completion."
                 )));
             }
-            return Ok(Some(std::mem::take(&mut self.all)));
+            return Ok((Vec::new(), true));
         }
         for item in &items {
             let id = item.as_object().and_then(|o| o.get("_id").filter(|v| !v.is_null()).or_else(|| o.get("id")));
@@ -1122,13 +1146,13 @@ impl Paginator {
                 )));
             }
         }
-        if self.all.len() + items.len() > MAX_PAGINATED_RESULTS {
+        if self.count + items.len() > MAX_PAGINATED_RESULTS {
             return Err(Error::new(
                 "Pagination exceeds 10,000 results. Use filters to narrow your query; no partial result was returned.",
             ));
         }
         if let Some(max) = self.limits.max_results {
-            if self.all.len() + items.len() > max {
+            if self.count + items.len() > max {
                 return Err(Error::new(limits::too_many_results_message(max)));
             }
         }
@@ -1139,22 +1163,22 @@ impl Paginator {
             }
         }
         let count = items.len();
-        self.all.extend(items);
+        self.count += count;
         self.skip += count as f64;
         if has_more == Some(false) || (has_more.is_none() && total.is_some_and(|t| self.skip >= t)) {
-            return Ok(Some(std::mem::take(&mut self.all)));
+            return Ok((items, true));
         }
         if has_more.is_none() && total.is_none() && server_limit.is_some_and(|l| (count as f64) < l) {
-            return Ok(Some(std::mem::take(&mut self.all)));
+            return Ok((items, true));
         }
-        if self.all.len() >= MAX_PAGINATED_RESULTS {
+        if self.count >= MAX_PAGINATED_RESULTS {
             return Err(Error::new(
                 "Pagination reached 10,000 results without confirming completion. Use filters to narrow your query; no partial result was returned.",
             ));
         }
         // Without count/limit metadata, a short page may reflect the server's cap.
         // Continue by the actual item count until an empty page confirms completion.
-        Ok(None)
+        Ok((items, false))
     }
 }
 

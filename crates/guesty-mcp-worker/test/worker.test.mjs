@@ -43,6 +43,7 @@ let guestyTokens = 0;
 const api = { requests: [], handler: null, total: 250 };
 let mf;
 let shortWorker;
+let memoryWorker;
 let tokenService;
 let mcpDb;
 let admin;
@@ -296,6 +297,8 @@ before(async () => {
       mcpWorker("guesty-mcp", {}, "1"),
       // The token service's first origin is somewhere else here, so its invite links don't match.
       mcpWorker("guesty-mcp-short", { CALL_BUDGET_MS: String(SHORT_BUDGET_MS), GUESTY_TIMEOUT_MS: "1000", TOKEN_SERVICE_ORIGINS: "https://other-tokens.example" }, "2"),
+      // A fresh copy that reports its wasm memory, for the near-limit memory test.
+      mcpWorker("guesty-mcp-memory", { REPORT_WASM_MEMORY: "1" }, "3"),
       {
         name: "guesty-token-service",
         modules: true,
@@ -311,6 +314,7 @@ before(async () => {
   await mf.ready;
   tokenService = await mf.getWorker("guesty-token-service");
   shortWorker = await mf.getWorker("guesty-mcp-short");
+  memoryWorker = await mf.getWorker("guesty-mcp-memory");
   mcpDb = await mf.getD1Database("DB", "guesty-mcp");
   await migrate(mcpDb, join(crate, "migrations"));
   await migrate(await mf.getD1Database("DB", "guesty-token-service"), join(server, "migrations"));
@@ -936,15 +940,15 @@ test("Guesty error bodies are shown without the token sent or the member key", a
   assert.doesNotMatch(text, /mock-open-token|gts_/);
 });
 
-test("a Guesty response over 16 MB is refused, streamed or declared", async () => {
+test("a Guesty response over 8 MB is refused, streamed or declared", async () => {
   const chunk = new TextEncoder().encode("x".repeat(1024 * 1024));
   const streamed = () => {
     let sent = 0;
-    return new Response(new ReadableStream({ pull(c) { if (sent++ >= 17) return c.close(); c.enqueue(chunk); } }), { headers: { "content-type": "application/json" } });
+    return new Response(new ReadableStream({ pull(c) { if (sent++ >= 9) return c.close(); c.enqueue(chunk); } }), { headers: { "content-type": "application/json" } });
   };
-  for (const answer of [streamed, () => new Response("x".repeat(17 * 1024 * 1024), { headers: { "content-type": "application/json" } })]) {
+  for (const answer of [streamed, () => new Response("x".repeat(9 * 1024 * 1024), { headers: { "content-type": "application/json" } })]) {
     const { result, requests } = await withGuesty(answer, () => listings());
-    assert.equal(textOf(result), "Guesty API GET /v1/listings returned more than 16 MB, the most this server reads. Ask for less with query parameters such as fields, limit or filters.");
+    assert.equal(textOf(result), "Guesty API GET /v1/listings returned more than 8 MB, the most this server reads. Ask for less with query parameters such as fields, limit or filters.");
     assert.equal(requests.length, 1);
   }
 });
@@ -1135,4 +1139,44 @@ test("the official MCP SDK client signs in with an invite, uses the tools and re
   assert.notEqual(described.isError, true);
   assert.notEqual(saved.tokens.refresh_token, before, "the refresh token rotated");
   await client.close();
+});
+
+// Cloudflare stops a Worker that passes 128 MB. Near the hosted limits (2,000 results and 32 MB
+// over many pages, an 8 MB response) a call must stay well under that; a response that would parse
+// into millions of values is refused before parsing. Wasm memory only grows, so the last reading
+// is the peak.
+test("near the hosted limits, a tool call's memory stays well under the Worker's 128 MB", async (t) => {
+  const session = await signIn(client, admin);
+  const filler = "x".repeat(300);
+  const record = (i) => Object.fromEntries([["_id", `r${i}`], ...Array.from({ length: 52 }, (_, f) => [`field${f}`, `${filler}${i}`])]);
+  const options = { worker: memoryWorker };
+  const memory = (res) => Number(res.headers.get("x-wasm-memory-bytes"));
+
+  const total = 1950;
+  const pages = (entry, url) => {
+    if (entry.path !== "/v1/listings" || !url.searchParams.has("skip")) return undefined;
+    const skip = Number(url.searchParams.get("skip"));
+    const limit = Number(url.searchParams.get("limit"));
+    const results = Array.from({ length: Math.max(0, Math.min(limit, total - skip)) }, (_, i) => record(skip + i));
+    return Response.json({ results, count: total, skip, limit });
+  };
+  const { result: paged, requests } = await withGuesty(pages, () => tool(session.access_token, "call_operation", { operation: "propertieslistinglist", all_pages: true }, options));
+  assert.equal(failed(paged), false, textOf(paged));
+  assert.equal(requests.length, 20);
+  assert.match(textOf(paged), /^\{\n "count": 1950,\n "results": \[\n  \{/);
+  assert.match(textOf(paged), /\[Truncated: showing the first 60,000 of [\d,]+ characters\./);
+  t.diagnostic(`all_pages, 1,950 results (~31 MB): wasm memory ${memory(paged)} bytes`);
+
+  const big = (entry, url) => (entry.path === "/v1/listings" && !url.searchParams.has("skip") ? Response.json({ results: Array.from({ length: 450 }, (_, i) => record(i)) }) : undefined);
+  const { result: single } = await withGuesty(big, () => tool(session.access_token, "call_operation", { operation: "propertieslistinglist" }, options));
+  assert.equal(failed(single), false, textOf(single));
+  t.diagnostic(`one ~7.5 MB response: wasm memory ${memory(single)} bytes`);
+
+  const flat = (entry, url) => (entry.path === "/v1/listings" && !url.searchParams.has("skip") ? new Response(`[${Array(3_000_000).fill(1).join(",")}]`, { headers: { "content-type": "application/json" } }) : undefined);
+  const { result: refused } = await withGuesty(flat, () => tool(session.access_token, "call_operation", { operation: "propertieslistinglist" }, options));
+  assert.equal(failed(refused), true);
+  assert.match(textOf(refused), /returned more than 300,000 JSON values/);
+  const peak = memory(refused);
+  t.diagnostic(`after a 3,000,000-value response: wasm memory ${peak} bytes`);
+  assert.ok(peak > 0 && peak < 96 * 1024 * 1024, `peak wasm memory ${peak} bytes`);
 });

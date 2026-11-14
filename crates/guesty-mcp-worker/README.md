@@ -41,7 +41,7 @@ core's own decisions (`prepare_*`, `Attempts`), as the CLI's client does:
   retry network errors, timeouts, 408 and 5xx, any request retries a 429 after Retry-After, and
   only when the wait fits; a write that times out says its outcome is unknown;
 - a 401 re-reads the token once; the same token again fails with what an admin can do;
-- response bodies over 16 MB are refused (S7), error bodies lose the tokens sent and the member key;
+- response bodies over 8 MB, or with more than 300,000 JSON values, are refused before parsing, and all_pages keeps one page in memory at a time (S7), error bodies lose the tokens sent and the member key;
 - one tool call makes at most 50 requests, token lookups included (S7); `all_pages` stops past
   2,000 results or 32 MB, or when the deadline would pass, with no partial result;
 - a revoked member key anywhere in a call answers the whole request 401 `invalid_token`.

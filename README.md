@@ -157,7 +157,7 @@ The app opens a sign-in page. Paste the invite your team's admin sent you (`gues
 
 - **Clients:** Claude Code (`claude mcp add --transport http guesty https://guesty-mcp.staykit.ai/mcp`) is tested. Claude.ai, ChatGPT and Cursor use the same sign-in and are expected to work; tell us if one doesn't.
 - **Pass-through only:** Guesty data passes through StayKit's server on its way to your app and is never stored or logged. The server keeps your sign-in (the team key, sealed) and the app's registration, nothing else.
-- **Same tools and safeguards** as `guesty mcp` below, with hosted limits: each tool call has 50 seconds, `all_pages` stops at 2,000 results, and a Guesty response over 16 MB is refused.
+- **Same tools and safeguards** as `guesty mcp` below, with hosted limits: each tool call has 50 seconds, `all_pages` stops at 2,000 results, and a Guesty response over 8 MB (or 300,000 JSON values) is refused.
 - **Sign-out:** remove the server from the app. An admin can end a sign-in with `guesty team revoke <name>`; the app then asks you to sign in again.
 
 ### On your computer: `guesty mcp`

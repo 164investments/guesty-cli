@@ -164,8 +164,23 @@ async fn post(req: &mut Request, app: &App) -> Result<Response> {
     };
     let backend = WorkerBackend { app, grant: info, member_key, deadline };
     let handler = CoreHandler { settings: app.config.hosted_settings() };
-    match handler.handle(&backend, &request).await {
-        McpOutcome::Response(text) => json_text_response(200, text),
-        McpOutcome::Unauthorized => unauthorized(app, true),
+    let response = match handler.handle(&backend, &request).await {
+        McpOutcome::Response(text) => json_text_response(200, text)?,
+        McpOutcome::Unauthorized => unauthorized(app, true)?,
+    };
+    if app.config.report_wasm_memory {
+        let headers = response.headers().clone();
+        headers.set("x-wasm-memory-bytes", &wasm_memory_bytes().to_string())?;
+        return Ok(response.with_headers(headers));
     }
+    Ok(response)
+}
+
+/// The wasm instance's memory size in bytes (tests only; see `Config::report_wasm_memory`).
+fn wasm_memory_bytes() -> u32 {
+    use wasm_bindgen::JsCast;
+    wasm_bindgen::memory()
+        .dyn_into::<js_sys::WebAssembly::Memory>()
+        .map(|memory| memory.buffer().unchecked_into::<js_sys::ArrayBuffer>().byte_length())
+        .unwrap_or(0)
 }

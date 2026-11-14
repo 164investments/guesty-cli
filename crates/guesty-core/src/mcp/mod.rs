@@ -259,6 +259,17 @@ pub struct ToolResult {
 impl ToolResult {
     pub fn new(value: String, is_error: bool) -> ToolResult {
         let length = json::js_len(&value);
+        Self::cut(value, length, is_error)
+    }
+
+    /// The result for a text of `length` UTF-16 units of which `prefix` is the
+    /// start, at least `MAX_TEXT` long: what `new` would make of the whole text.
+    fn from_prefix(prefix: String, length: usize, is_error: bool) -> ToolResult {
+        debug_assert!(json::js_len(&prefix) >= MAX_TEXT && length > MAX_TEXT);
+        Self::cut(prefix, length, is_error)
+    }
+
+    fn cut(value: String, length: usize, is_error: bool) -> ToolResult {
         if length <= MAX_TEXT {
             return ToolResult { text: value, lone: None, is_error };
         }
@@ -626,6 +637,9 @@ impl<B: Backend> Server<B> {
         let data = if op.api == Api::BookingEngine {
             let fetch = BookingFetch { method: op.method, params, body: body.cloned(), ..BookingFetch::default() };
             self.backend.booking_engine(&path, fetch, call).await?
+        } else if all_pages && call.limits.max_total_bytes.is_some() {
+            // A hosted server keeps one page in memory at a time.
+            return self.all_pages_shown(&path, &params.unwrap_or_default(), call).await;
         } else if all_pages {
             let results = paginate(&self.backend, &path, &params.unwrap_or_default(), None, call).await?;
             Data::Json(json!({ "count": results.len(), "results": results }))
@@ -640,6 +654,49 @@ impl<B: Backend> Server<B> {
         };
         let shown = describe_result(data);
         ok(if op.changes_data { format!("Done: {} {path} ({}).\n{shown}", op.method, op.title) } else { shown })
+    }
+
+    /// `all_pages` for a hosted server: the same text as formatting
+    /// `{ count, results }` (`JSON.stringify(x, null, 1)`) and cutting it to
+    /// `MAX_TEXT`, made page by page so only one page and the shown start of
+    /// the text are ever in memory.
+    async fn all_pages_shown(&self, path: &str, params: &Params, call: &Call) -> Result<ToolResult> {
+        let mut pages = Paginator::new(path, params, None)?.with_limits(call.limits);
+        // The results' text inside the array, each indented two levels and
+        // joined by ",\n"; kept until it's long enough to fill MAX_TEXT.
+        let (mut shown, mut shown_units, mut total_units, mut count) = (String::new(), 0usize, 0usize, 0usize);
+        loop {
+            if past_deadline(&self.backend, call) {
+                return Err(Error::new(limits::pagination_deadline_message(call.limits.call_deadline_ms.unwrap_or(0))));
+            }
+            let page = self.backend.open_api(path, Fetch::get(pages.next_params()), call).await?.into_json();
+            let (items, done) = pages.page(page)?;
+            for item in items {
+                let text = format!("  {}", json::pretty(&item, 1).replace('\n', "\n  "));
+                let units = json::js_len(&text) + if count == 0 { 0 } else { 2 };
+                if shown_units < MAX_TEXT {
+                    if count > 0 {
+                        shown.push_str(",\n");
+                    }
+                    shown.push_str(&text);
+                    shown_units += units;
+                }
+                total_units += units;
+                count += 1;
+            }
+            if done {
+                break;
+            }
+        }
+        let header = format!("{{\n \"count\": {count},\n \"results\": ");
+        if count == 0 {
+            return ok(format!("{header}[]\n}}"));
+        }
+        if shown_units == total_units {
+            return ok(format!("{header}[\n{shown}\n ]\n}}"));
+        }
+        let length = json::js_len(&header) + "[\n".len() + total_units + "\n ]\n}".len();
+        Ok(ToolResult::from_prefix(format!("{header}[\n{shown}"), length, false))
     }
 
     async fn invite_teammate(&self, args: &Map<String, Json>, call: &Call) -> Result<ToolResult> {
@@ -750,6 +807,10 @@ mod tests {
         /// Milliseconds each request takes on the fake clock.
         latency: f64,
         team: bool,
+        /// How many records the paginated list has (150 when unset), and text
+        /// each record carries.
+        records: Option<usize>,
+        pad: String,
     }
 
     impl Backend for Fake {
@@ -762,10 +823,17 @@ mod tests {
             Ok(Data::Json(match skip {
                 // A list of 150 records, served a page at a time.
                 Some(crate::request::Param::Num(skip)) => {
-                    let skip = skip as usize;
-                    let results: Vec<Json> =
-                        (skip..150.min(skip + 100)).map(|i| json!({ "_id": i.to_string() })).collect();
-                    json!({ "results": results, "count": 150, "skip": skip })
+                    let (skip, records) = (skip as usize, self.records.unwrap_or(150));
+                    let results: Vec<Json> = (skip..records.min(skip + 100))
+                        .map(|i| {
+                            if self.pad.is_empty() {
+                                json!({ "_id": i.to_string() })
+                            } else {
+                                json!({ "_id": i.to_string(), "note": self.pad, "n": [i, 1.5, null, { "2": true, "a": "x" }] })
+                            }
+                        })
+                        .collect();
+                    json!({ "results": results, "count": records, "skip": skip })
                 }
                 _ => json!({ "_id": "r1", "status": "confirmed" }),
             }))
@@ -805,6 +873,28 @@ mod tests {
             json!({ "jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": { "name": name, "arguments": args } });
         let reply = block_on(server.handle_text(&json::compact(&message))).expect("a reply");
         json::parse(&reply).expect("JSON")["result"].clone()
+    }
+
+    /// A hosted server builds all_pages' text page by page; it must be exactly
+    /// the text the CLI builds from the whole result.
+    #[test]
+    fn hosted_all_pages_text_is_the_local_text() {
+        let list = catalog::operations().iter().find(|op| op.method == "GET" && op.path == "/v1/reservations").unwrap();
+        let hosted = Limits { call_deadline_ms: None, ..Limits::HOSTED };
+        for (records, pad) in [
+            (0, ""),
+            (3, ""),
+            (150, ""),
+            (150, "short note, \u{e9}"),
+            (1_500, "a longer note with an emoji \u{1f3e0} and \"quotes\" and a newline\n"),
+        ] {
+            let fake = || Fake { records: Some(records), pad: pad.to_string(), ..Fake::default() };
+            let args = json!({ "operation": list.id, "all_pages": true });
+            let local = call(&server(fake(), Limits::NONE), "call_operation", args.clone());
+            let shown = call(&server(fake(), hosted), "call_operation", args);
+            assert_eq!(text(&shown), text(&local), "{records} records");
+            assert_eq!(shown, local, "{records} records");
+        }
     }
 
     fn text(result: &Json) -> &str {

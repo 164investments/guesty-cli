@@ -79,9 +79,9 @@ pub struct FetchLimits {
 }
 
 impl FetchLimits {
-    /// Guesty responses: 16 MB (S7); the timeout is whatever is left of the call.
+    /// Guesty responses: 8 MB (S7, `Limits::HOSTED`); the timeout is whatever is left of the call.
     pub const GUESTY: FetchLimits =
-        FetchLimits { timeout_ms: i64::MAX, max_body_bytes: 16 * 1024 * 1024, redirect_as_response: true };
+        FetchLimits { timeout_ms: i64::MAX, max_body_bytes: 8 * 1024 * 1024, redirect_as_response: true };
     /// Token-service answers are small.
     pub const TOKEN_SERVICE: FetchLimits =
         FetchLimits { timeout_ms: 10_000, max_body_bytes: 64 * 1024, redirect_as_response: false };

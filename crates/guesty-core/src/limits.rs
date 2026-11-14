@@ -19,6 +19,9 @@ pub struct Limits {
     pub max_response_bytes: Option<usize>,
     /// JSON nested deeper than this is refused before it's parsed.
     pub max_json_depth: Option<usize>,
+    /// JSON with more values than this is refused before it's parsed: parsed
+    /// values take far more memory than their text, and a Worker has 128 MB.
+    pub max_json_values: Option<usize>,
 }
 
 impl Limits {
@@ -28,6 +31,7 @@ impl Limits {
         max_total_bytes: None,
         max_response_bytes: None,
         max_json_depth: None,
+        max_json_values: None,
     };
 
     /// The limits the hosted MCP server uses (plan items S7 and S8).
@@ -35,8 +39,9 @@ impl Limits {
         call_deadline_ms: Some(50_000),
         max_results: Some(2_000),
         max_total_bytes: Some(32 * 1024 * 1024),
-        max_response_bytes: Some(16 * 1024 * 1024),
+        max_response_bytes: Some(8 * 1024 * 1024),
         max_json_depth: Some(128),
+        max_json_values: Some(300_000),
     };
 
     /// The absolute time a call starting `now` must end by.
@@ -97,6 +102,13 @@ pub fn response_too_large_message(label: &str, max: usize) -> String {
     format!(
         "{label} returned more than {} MB, the most this server reads. Ask for less with query parameters such as fields, limit or filters.",
         megabytes(max)
+    )
+}
+
+pub fn too_many_values_message(label: &str, max: usize) -> String {
+    format!(
+        "{label} returned more than {} JSON values, the most this server reads at once. Ask for less with query parameters such as fields, limit or filters.",
+        grouped(max)
     )
 }
 

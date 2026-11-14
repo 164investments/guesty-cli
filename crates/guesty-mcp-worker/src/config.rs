@@ -20,6 +20,9 @@ pub struct Config {
     /// A lower cap on each Guesty request's timeout, from `GUESTY_TIMEOUT_MS` (tests). Unset in
     /// production, where a request has its own 60 s or what's left of the call.
     pub guesty_timeout_ms: Option<u64>,
+    /// Tests only (`REPORT_WASM_MEMORY=1`): `/mcp` answers carry the wasm memory size, which only
+    /// grows, so tests can check a call's peak stays well under the Worker's 128 MB.
+    pub report_wasm_memory: bool,
 }
 
 impl Config {
@@ -50,6 +53,7 @@ impl Config {
             token_service_url,
             call_budget_ms: CALL_BUDGET_MS,
             guesty_timeout_ms: None,
+            report_wasm_memory: false,
         })
     }
 

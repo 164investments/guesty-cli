@@ -44,6 +44,33 @@ pub fn nests_deeper_than(text: &str, max: usize) -> bool {
     false
 }
 
+/// Whether valid JSON `text` has more than `max` values, counted cheaply
+/// without parsing: every `,` and `:` outside strings starts another value
+/// (or member), plus the first one.
+pub fn has_more_values_than(text: &str, max: usize) -> bool {
+    let b = text.as_bytes();
+    let (mut values, mut i) = (1usize, 0usize);
+    while i < b.len() {
+        match b[i] {
+            b'"' => {
+                i += 1;
+                while i < b.len() && b[i] != b'"' {
+                    i += if b[i] == b'\\' { 2 } else { 1 };
+                }
+            }
+            b',' | b':' => {
+                values += 1;
+                if values > max {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    false
+}
+
 /// `JSON.stringify(value)`.
 pub fn compact(value: &Value) -> String {
     let mut out = String::new();
@@ -316,5 +343,8 @@ mod tests {
         assert!(nests_deeper_than(r#"{"a":[1,{"b":[]}]}"#, 3));
         assert!(!nests_deeper_than(r#""\"[[[""#, 0));
         assert!(!nests_deeper_than("[]", 1) && nests_deeper_than("[[]]", 1));
+        assert!(!has_more_values_than(r#"{"a":[1,2],"b":"x,y:z"}"#, 6));
+        assert!(has_more_values_than(r#"{"a":[1,2],"b":"x,y:z"}"#, 4));
+        assert!(!has_more_values_than("[1]", 1) && has_more_values_than("[1,2]", 1));
     }
 }

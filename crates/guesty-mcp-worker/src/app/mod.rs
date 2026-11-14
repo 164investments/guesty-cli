@@ -55,6 +55,7 @@ fn app(env: Env) -> std::result::Result<App, &'static str> {
     let config = Config::new(&public_url, &origins)
         .ok_or("config_public_url")?
         .with_test_limits(test_var("CALL_BUDGET_MS").as_deref(), test_var("GUESTY_TIMEOUT_MS").as_deref());
+    let config = Config { report_wasm_memory: test_var("REPORT_WASM_MEMORY").as_deref() == Some("1"), ..config };
     let secret = env.secret("MCP_KEY").map(|v| v.to_string()).map_err(|_| "config_mcp_key")?;
     let keys = Keys::from_secret(&secret).map_err(|_| "config_mcp_key")?;
     let db = D1Db(env.d1("DB").map_err(|_| "config_db")?);
