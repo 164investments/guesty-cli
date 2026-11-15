@@ -1,7 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { run, now } from "./fixtures/isolated-runner.mjs";
+import { run, now } from "./harness/isolated-runner.mjs";
 
+// Runs the CLI against test/harness: GitHub's release API is the mock, `npm`
+// is a fake that records its arguments, and the installed version is
+// GUESTY_TEST_VERSION (1.0.0 unless a scenario names one). `guesty update`
+// runs from a fake installed package: <npm global root>/guesty-cli/dist/bin.js,
+// with a .git directory unless sourceCheckout is false, or (globalMismatch) a
+// separate package while another copy is installed globally.
+//
+// The update check itself ran as `checkForUpdate()` in a Node script. It needs
+// a hidden test-hooks command in the Rust binary, `guesty __test-update-check
+// [count]`, that runs update::check_for_update() count times (see the report).
 const repo = "164investments/guesty-cli";
 const installUrl = `https://github.com/${repo}/releases/download/v1.2.0/guesty-cli-1.2.0.tgz`;
 const release = (overrides = {}) => ({
@@ -9,22 +19,22 @@ const release = (overrides = {}) => ({
   assets: [{ name: "guesty-cli-1.2.0.tgz", state: "uploaded", browser_download_url: installUrl }],
   ...overrides,
 });
-const updater = 'import {checkForUpdate,runSelfUpdate} from "./dist/update-check.js";';
-const checkScript = `${updater} await checkForUpdate();`;
-const success = (t, options) => {
-  const result = run(t, options);
+const checkOnce = ["__test-update-check"];
+const checkTwice = ["__test-update-check", "2"];
+const success = async (t, options) => {
+  const result = await run(t, options);
   assert.equal(result.status, 0, result.stderr);
   return result;
 };
 
-test("update check reads latest published GitHub release, validates package asset, and writes notices only to stderr", (t) => {
-  const result = success(t, { script: checkScript, scenario: { github: { json: release() } } });
+test("update check reads latest published GitHub release, validates package asset, and writes notices only to stderr", async (t) => {
+  const result = await success(t, { args: checkOnce, scenario: { github: { json: release() } } });
   assert.equal(result.stdout, "");
   assert.match(result.stderr, /1\.0\.0 → 1\.2\.0/);
   assert.match(result.stderr, /guesty update/);
   assert.equal(result.trace.requests[0].url, `https://api.github.com/repos/${repo}/releases/latest`);
   assert.equal(result.trace.requests[0].timeout, true);
-  assert.equal(result.trace.requests[0].redirect, "error");
+  // Was `redirect === "error"` (a fetch option); see "update check does not follow a redirect".
   assert.equal(result.trace.tokenReads, 0);
   assert.equal(result.trace.commands.length, 0);
   const saved = JSON.parse(result.trace.writes[0].text);
@@ -32,31 +42,37 @@ test("update check reads latest published GitHub release, validates package asse
   assert.equal(saved.latestVersion, "1.2.0");
 });
 
-test("cached update notices avoid another network request for four hours", (t) => {
-  const result = success(t, { script: checkScript, scenario: { checkData: { source: "github-release", lastCheck: now - 1000, latestVersion: "1.2.0" } } });
+test("update check does not follow a redirect", async (t) => {
+  const result = await success(t, { args: checkOnce, scenario: { github: { status: 302, headers: { location: "https://other.invalid/release" }, json: release() } } });
+  assert.equal(result.trace.requests.length, 1);
+  assert.doesNotMatch(result.stderr, /Update available/);
+});
+
+test("cached update notices avoid another network request for four hours", async (t) => {
+  const result = await success(t, { args: checkOnce, scenario: { checkData: { source: "github-release", lastCheck: now - 1000, latestVersion: "1.2.0" } } });
   assert.match(result.stderr, /Update available/);
   assert.equal(result.trace.requests.length, 0);
   assert.equal(result.trace.writes.length, 0);
 });
 
-test("failed checks are cached even before any latest version is known", (t) => {
-  const result = success(t, { script: `${updater} await checkForUpdate(); await checkForUpdate();`, scenario: { github: { throw: true } } });
+test("failed checks are cached even before any latest version is known", async (t) => {
+  const result = await success(t, { args: checkTwice, scenario: { github: { throw: true } } });
   assert.equal(result.stdout + result.stderr, "");
   assert.equal(result.trace.requests.length, 1);
   assert.equal(JSON.parse(result.trace.writes[0].text).latestVersion, null);
 });
 
 for (const data of [null, [], "invalid-json", { lastCheck: now, latestVersion: "99.0.0" }, { source: "github-release", lastCheck: "invalid", latestVersion: "1.2.0" }, { source: "github-release", lastCheck: now + 999999, latestVersion: "1.2.0" }, { source: "github-release", lastCheck: now, latestVersion: { broken: true } }]) {
-  test(`malformed, legacy-main, or future cache is refreshed safely (${JSON.stringify(data)})`, (t) => {
-    const result = success(t, { script: checkScript, scenario: { checkData: data, github: { json: release() } } });
+  test(`malformed, legacy-main, or future cache is refreshed safely (${JSON.stringify(data)})`, async (t) => {
+    const result = await success(t, { args: checkOnce, scenario: { checkData: data, github: { json: release() } } });
     assert.equal(result.trace.requests.length, 1);
     assert.doesNotMatch(result.stderr, /99\.0\.0/);
   });
 }
 
 for (const [version, updateExpected] of [["1.2.0", false], ["1.2.1", false], ["1.10.0", false], ["1.2.0-beta.2", true], ["1.2.0+build.4", false], ["1.1.9", true]]) {
-  test(`semantic version comparison for installed ${version}`, (t) => {
-    const result = success(t, { script: checkScript, scenario: { localVersion: version, github: { json: release() } } });
+  test(`semantic version comparison for installed ${version}`, async (t) => {
+    const result = await success(t, { args: checkOnce, scenario: { localVersion: version, github: { json: release() } } });
     assert.equal(result.stderr.includes("Update available"), updateExpected);
   });
 }
@@ -75,16 +91,16 @@ const invalidReleases = [
   ["credential URL", release({ assets: [{ name: "guesty-cli-1.2.0.tgz", state: "uploaded", browser_download_url: installUrl.replace("https://", "https://user:password@") }] })],
 ];
 for (const [name, data] of invalidReleases) {
-  test(`self-update rejects ${name} without running npm`, (t) => {
-    const result = run(t, { args: ["update"], scenario: { sourceCheckout: false, github: { raw: JSON.stringify(data) } } });
+  test(`self-update rejects ${name} without running npm`, async (t) => {
+    const result = await run(t, { args: ["update"], scenario: { sourceCheckout: false, github: { raw: JSON.stringify(data) } } });
     assert.equal(result.status, 1);
     assert.match(result.stderr, /Cannot find an installable published GitHub release/);
     assert.equal(result.trace.commands.length, 0);
   });
 }
 
-test("self-update protects source checkouts and offers the exact released tarball", (t) => {
-  const result = run(t, { args: ["update"], scenario: { github: { json: release() } } });
+test("self-update protects source checkouts and offers the exact released tarball", async (t) => {
+  const result = await run(t, { args: ["update"], scenario: { github: { json: release() } } });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /source checkout/);
   assert.ok(result.stderr.includes(`npm install -g --allow-remote=all ${installUrl}`));
@@ -92,16 +108,16 @@ test("self-update protects source checkouts and offers the exact released tarbal
   assert.equal(result.trace.writes.length, 0);
 });
 
-test("self-update protects project-local or mismatched global installations", (t) => {
-  const result = run(t, { args: ["update"], scenario: { sourceCheckout: false, globalMismatch: true, github: { json: release() } } });
+test("self-update protects project-local or mismatched global installations", async (t) => {
+  const result = await run(t, { args: ["update"], scenario: { sourceCheckout: false, globalMismatch: true, github: { json: release() } } });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Cannot verify this CLI/);
   assert.equal(result.trace.commands.length, 1);
   assert.deepEqual(result.trace.commands[0].args, ["root", "--global"]);
 });
 
-test("self-update installs the exact release asset in the verified global npm prefix and verifies its version", (t) => {
-  const result = success(t, { args: ["update"], scenario: { sourceCheckout: false, github: { json: release() } } });
+test("self-update installs the exact release asset in the verified global npm prefix and verifies its version", async (t) => {
+  const result = await success(t, { args: ["update"], scenario: { sourceCheckout: false, github: { json: release() } } });
   assert.equal(result.trace.commands.length, 2);
   assert.deepEqual(result.trace.commands[1].args, ["install", "--global", "--allow-remote=all", installUrl]);
   assert.ok(result.trace.commands.every(({ command }) => command === "npm"));
@@ -111,8 +127,8 @@ test("self-update installs the exact release asset in the verified global npm pr
 });
 
 for (const [name, scenario] of [["npm failure", { installFails: true }], ["wrong installed version", { installedVersion: "1.1.0" }], ["missing CLI build", { installedMissingEntry: true }]]) {
-  test(`self-update reports ${name} instead of claiming success`, (t) => {
-    const result = run(t, { args: ["update"], scenario: { sourceCheckout: false, github: { json: release() }, ...scenario } });
+  test(`self-update reports ${name} instead of claiming success`, async (t) => {
+    const result = await run(t, { args: ["update"], scenario: { sourceCheckout: false, github: { json: release() }, ...scenario } });
     assert.equal(result.status, 1);
     assert.doesNotMatch(result.stdout, /Updated successfully/);
     assert.ok(result.stderr.includes(installUrl));
@@ -120,17 +136,18 @@ for (const [name, scenario] of [["npm failure", { installFails: true }], ["wrong
   });
 }
 
-test("already-current and newer installations are not downgraded", (t) => {
+test("already-current and newer installations are not downgraded", async (t) => {
   for (const localVersion of ["1.2.0", "2.0.0"]) {
-    const result = success(t, { args: ["update"], scenario: { localVersion, github: { json: release() } } });
+    const result = await success(t, { args: ["update"], scenario: { localVersion, github: { json: release() } } });
     assert.match(result.stdout, /up to date/);
     assert.equal(result.trace.commands.length, 0);
   }
 });
 
 for (const args of [["--help"], ["--version"], ["raw", "--help"], ["init"]]) {
-  test(`${args.join(" ")} never waits for an update check`, (t) => {
-    const result = success(t, { args, scenario: { github: { throw: true } } });
+  test(`${args.join(" ")} never waits for an update check`, async (t) => {
+    // With terminals, as the update check runs only when stdout and stderr are terminals.
+    const result = await success(t, { args, scenario: { github: { throw: true } }, tty: "stdout,stderr" });
     assert.equal(result.trace.requests.length, 0);
   });
 }

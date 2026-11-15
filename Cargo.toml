@@ -1,0 +1,50 @@
+[package]
+name = "guesty-cli"
+description = "CLI and MCP server for the Guesty Open API and Booking Engine API, with read-only cached-token authentication"
+# Kept equal to package.json's version; build.rs checks.
+version = "2.0.0"
+edition = "2024"
+rust-version = "1.90"
+license = "MIT"
+repository = "https://github.com/164investments/guesty-cli"
+publish = false
+
+# The CLI stays the root package; the workspace adds its I/O-free core and the
+# hosted MCP server (a Cloudflare Worker) that shares it. The Worker isn't a
+# default member: plain `cargo build`/`cargo test` stay the CLI's, and the
+# Worker builds with `cargo test -p guesty-mcp-worker` or worker-build.
+[workspace]
+members = [".", "crates/guesty-core", "crates/guesty-mcp-worker"]
+default-members = [".", "crates/guesty-core"]
+
+[[bin]]
+name = "guesty"
+path = "src/main.rs"
+
+[features]
+# Hooks the offline tests need: send every request to a local mock, a fake
+# clock and recorded sleeps. Never enabled in release builds; release.yml
+# checks that the shipped binary ignores the GUESTY_TEST_* variables.
+test-hooks = []
+
+[dependencies]
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+chrono-tz = { version = "0.10", default-features = false }
+cliclack = "0.3"
+guesty-core = { path = "crates/guesty-core" }
+libc = "0.2"
+url = "2"
+terminal_size = "0.4"
+ureq = { version = "3", default-features = false, features = ["rustls", "gzip"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+opt-level = 3
+
+# The Worker's wasm goes through wasm-bindgen (worker-build), which needs the
+# custom sections `strip` removes; lto and panic = "abort" still apply to it.
+[profile.release.package.guesty-mcp-worker]
+strip = false

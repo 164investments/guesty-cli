@@ -1,15 +1,18 @@
 {
   "name": "guesty-cli",
-  "version": "1.5.1",
-  "description": "CLI for the Guesty property management API with read-only cached-token authentication and rate limiting",
+  "version": "2.0.0",
+  "description": "CLI and MCP server for the Guesty Open API and Booking Engine API, with read-only cached-token authentication and rate limiting",
   "type": "module",
   "bin": {
     "guesty": "dist/bin.js"
   },
   "files": [
-    "dist",
+    "dist/bin.js",
+    "dist/cli.js",
+    "dist/guesty-*",
     "README.md",
     "RELEASE_NOTES.md",
+    "LICENSE",
     "docs/api-audit-2026-09-07.md",
     "docs/endpoint-tests-2026-09-07.md",
     "docs/endpoint-coverage-2026-10-21.md",
@@ -20,19 +23,21 @@
     "booking-engine-openapi-spec.json"
   ],
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "test": "npm run build && node --test test/*.test.mjs",
-    "typecheck": "tsrs --version && tsrs --noEmit",
-    "check": "npm run typecheck && npm test && npm run check:cli-spec",
+    "test": "npm run test:rust && npm run test:cli && npm run test:scripts",
+    "test:rust": "cargo test --features test-hooks -- --test-threads=1",
+    "build:test-hooks": "cargo build --features test-hooks && cargo build --target-dir target/no-test-hooks",
+    "test:cli": "npm run build:test-hooks && node --test test/auth.test.mjs test/client.test.mjs test/io.test.mjs test/api-commands.test.mjs test/booking-engine.test.mjs test/calendar.test.mjs test/reservations.test.mjs test/update-check.test.mjs test/release-hooks.test.mjs test/mcp.test.mjs test/mcp-install.test.mjs test/mcp-sdk.test.mjs",
+    "test:scripts": "node --test test/docs-watch.test.mjs test/reference-refresh.test.mjs test/api-reference.test.mjs",
+    "check": "cargo fmt --check && npm test && npm run check:cli-spec && npm run check:parity",
     "check:cli-spec": "node scripts/generate-cli-spec.mjs --check",
-    "check:server": "npm run build && npm --prefix server run check",
-    "generate:cli-spec": "node scripts/generate-cli-spec.mjs",
-    "link": "npm run build && npm link",
+    "check:parity": "node scripts/parity/parity.mjs --quiet && node scripts/parity/mcp-parity.mjs --golden --quiet",
+    "check:server": "cargo build && npm --prefix server run check",
+    "generate:cli-spec": "cargo build --features test-hooks && node scripts/generate-cli-spec.mjs",
     "refresh:api-spec": "node scripts/refresh-api-spec.mjs",
     "refresh:booking-engine-spec": "node scripts/refresh-api-spec.mjs --booking-engine",
     "docs:watch": "node scripts/docs-watch.mjs",
-    "prepack": "npm run build"
+    "pack": "node scripts/pack.mjs",
+    "smoke:install": "node scripts/smoke-install.mjs"
   },
   "keywords": [
     "guesty",
@@ -47,16 +52,9 @@
     "url": "git+https://github.com/164investments/guesty-cli.git"
   },
   "engines": {
-    "node": ">=20.12"
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.8.1",
-    "commander": "^13.0.0"
+    "node": ">=22"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "@typescript/native": "npm:typescript@^7.0.2",
-    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
-    "typescript": "npm:@typescript/typescript6@^6.0.2"
+    "@modelcontextprotocol/sdk": "^1.32.2"
   }
 }

@@ -1,12 +1,26 @@
+// Writes guesty-cli-spec.json, the CLI's machine-readable contract: every
+// command and option (from the binary: `guesty __contract`), the Guesty
+// requests each command makes, and the matching Guesty reference entries and
+// schemas (from api-spec.json / openapi-spec.json and the Booking Engine
+// equivalents, which the nightly docs watch refreshes).
+//
+// The Node CLI's generator read requests out of its TypeScript source. The
+// Rust port keeps that request metadata (helper, method, path, query
+// parameters, pagination, input capabilities) per command in
+// scripts/cli-contract-requests.json; a new command needs an entry there.
+//
+//   node scripts/generate-cli-spec.mjs           # rewrite the file
+//   node scripts/generate-cli-spec.mjs --check   # fail if it is out of date
+// GUESTY_CLI_BIN picks the binary (default target/debug/guesty).
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import ts from "typescript";
 import { BOOKING_ENGINE_API, listOperations, OPEN_API, operationSchemas, requestMatchesEndpoint } from "./api-reference.mjs";
 
 const ROOT = process.cwd();
-const COMMANDS_DIR = join(ROOT, "src", "commands");
 const OUTPUT_FILE = join(ROOT, "guesty-cli-spec.json");
 const PACKAGE_FILE = join(ROOT, "package.json");
+const REQUESTS_FILE = join(ROOT, "scripts", "cli-contract-requests.json");
 const OPTIONAL_REFERENCE_FILE = join(ROOT, "api-spec.json");
 const OPTIONAL_SCHEMAS_FILE = join(ROOT, "schemas.json");
 const OPENAPI_FILE = join(ROOT, "openapi-spec.json");
@@ -15,46 +29,10 @@ const BOOKING_ENGINE_REFERENCE_FILE = join(ROOT, "booking-engine-api-spec.json")
 const BOOKING_ENGINE_OPENAPI_FILE = join(ROOT, "booking-engine-openapi-spec.json");
 const OPEN_API_DOCS_URL = "https://open-api-docs.guesty.com/reference";
 const BOOKING_ENGINE_DOCS_URL = "https://booking-api-docs.guesty.com/reference";
-// Request helpers in src/client.ts and the API each one calls.
-const REQUEST_HELPERS = { guestyFetch: "open-api", paginateAll: "open-api", bookingEngineFetch: "booking-engine" };
+const BINARY = process.env.GUESTY_CLI_BIN ?? join(ROOT, "target", "debug", "guesty");
 
 function readJson(filePath) {
   return JSON.parse(readFileSync(filePath, "utf8"));
-}
-
-function listCommandFiles() {
-  const host = ts.sys;
-  return host.readDirectory(COMMANDS_DIR, [".ts"], undefined, ["**/*.ts"]).sort();
-}
-
-function getLiteralValue(node, seen = new Set()) {
-  if (!node) return null;
-  if (ts.isAsExpression(node) || ts.isParenthesizedExpression(node)) return getLiteralValue(node.expression, seen);
-  if (ts.isIdentifier(node) && !seen.has(node.text)) {
-    let initializer;
-    const visit = (child) => {
-      if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name) && child.name.text === node.text) initializer = child.initializer;
-      ts.forEachChild(child, visit);
-    };
-    visit(node.getSourceFile());
-    if (initializer) return getLiteralValue(initializer, new Set([...seen, node.text]));
-  }
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (ts.isNumericLiteral(node)) return Number(node.text);
-  if (node.kind === ts.SyntaxKind.TrueKeyword) return true;
-  if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
-  if (ts.isArrayLiteralExpression(node)) {
-    return node.elements.flatMap((element) => {
-      if (!ts.isSpreadElement(element)) return [getLiteralValue(element)];
-      const spread = getLiteralValue(element.expression, seen);
-      return Array.isArray(spread) ? spread : [null];
-    });
-  }
-  return null;
-}
-
-function getNodeText(node, sourceFile) {
-  return node.getText(sourceFile).trim();
 }
 
 function normalizePath(path) {
@@ -68,93 +46,6 @@ function normalizePath(path) {
     }
   }
   return normalized;
-}
-
-function templateToPath(node) {
-  if (!node) return null;
-  if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
-  if (ts.isTemplateExpression(node)) {
-    let value = node.head.text;
-    for (const span of node.templateSpans) {
-      value += "{param}" + span.literal.text;
-    }
-    return value;
-  }
-  return null;
-}
-
-function parseSyntax(commandSyntax) {
-  const parts = commandSyntax.trim().split(/\s+/).filter(Boolean);
-  const name = parts[0] ?? "";
-  const args = [];
-  for (const token of parts.slice(1)) {
-    const required = token.startsWith("<") && token.endsWith(">");
-    const optional = token.startsWith("[") && token.endsWith("]");
-    if (!required && !optional) continue;
-    const rawName = token.slice(1, -1);
-    const variadic = rawName.endsWith("...");
-    args.push({
-      name: variadic ? rawName.slice(0, -3) : rawName,
-      required,
-      variadic,
-    });
-  }
-  return { name, args };
-}
-
-function lineForNode(node, sourceFile) {
-  return sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
-}
-
-function unwrapChain(node) {
-  if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
-    const base = unwrapChain(node.expression.expression);
-    if (!base) return null;
-    return {
-      root: base.root,
-      newArgs: base.newArgs,
-      segments: [
-        ...base.segments,
-        {
-          kind: "call",
-          name: node.expression.name.text,
-          args: [...node.arguments],
-          node,
-        },
-      ],
-    };
-  }
-
-  if (ts.isPropertyAccessExpression(node)) {
-    const base = unwrapChain(node.expression);
-    if (!base) return null;
-    return {
-      root: base.root,
-      newArgs: base.newArgs,
-      segments: [
-        ...base.segments,
-        {
-          kind: "property",
-          name: node.name.text,
-          node,
-        },
-      ],
-    };
-  }
-
-  if (ts.isIdentifier(node)) {
-    return { root: node.text, newArgs: null, segments: [] };
-  }
-
-  if (ts.isNewExpression(node) && ts.isIdentifier(node.expression) && ["Command", "Option"].includes(node.expression.text)) {
-    return {
-      root: node.expression.text,
-      newArgs: [...(node.arguments ?? [])],
-      segments: [],
-    };
-  }
-
-  return null;
 }
 
 function loadExistingContractSchemas() {
@@ -183,8 +74,6 @@ function loadExistingContractSchemas() {
   }
 }
 
-// The catalog and the OpenAPI document come from the same refresh and must
-// list exactly the same operations.
 function loadCatalogSchemas(catalogFile, openapiFile, api, refreshCommand) {
   const schema = readJson(openapiFile);
   const operations = new Map(listOperations(schema, api).map((entry) =>
@@ -270,339 +159,6 @@ function parseBookingEngineReference() {
   );
 }
 
-function parseRootCommand(sourceFilePath) {
-  const sourceText = readFileSync(sourceFilePath, "utf8");
-  const sourceFile = ts.createSourceFile(sourceFilePath, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  let rootCommand = null;
-
-  function visit(node) {
-    if (rootCommand) return;
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-      const chain = unwrapChain(node.initializer);
-      if (!chain || chain.root !== "Command") {
-        ts.forEachChild(node, visit);
-        return;
-      }
-
-      const nameSegment = chain.segments.find((segment) => segment.name === "name");
-      const commandName = getLiteralValue(chain.newArgs?.[0] ?? nameSegment?.args[0]);
-      if (typeof commandName !== "string") {
-        ts.forEachChild(node, visit);
-        return;
-      }
-
-      const aliasSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "alias");
-      const descriptionSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "description");
-
-      rootCommand = {
-        variableName: node.name.text,
-        name: commandName,
-        alias: aliasSegment ? getLiteralValue(aliasSegment.args[0]) : null,
-        description: descriptionSegment ? getLiteralValue(descriptionSegment.args[0]) : null,
-        sourceFile: relative(ROOT, sourceFilePath),
-        line: lineForNode(node, sourceFile),
-        initializerChain: chain,
-      };
-    }
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
-  return { rootCommand, sourceFile };
-}
-
-function collectParamsFromObjectLiteral(node, sourceFile) {
-  const params = [];
-  for (const prop of node.properties) {
-    if (ts.isPropertyAssignment(prop)) {
-      const key = ts.isIdentifier(prop.name) || ts.isStringLiteral(prop.name) ? prop.name.text : getNodeText(prop.name, sourceFile);
-      const source = getNodeText(prop.initializer, sourceFile);
-      const cliOptionMatch = source.match(/opts\.([A-Za-z0-9_]+)/);
-      params.push({
-        name: key,
-        source,
-        cliOption: cliOptionMatch?.[1] ?? null,
-      });
-    } else if (ts.isShorthandPropertyAssignment(prop)) {
-      params.push({
-        name: prop.name.text,
-        source: prop.name.text,
-        cliOption: null,
-      });
-    } else if (ts.isSpreadAssignment(prop)) {
-      params.push({
-        name: "...spread",
-        source: getNodeText(prop.expression, sourceFile),
-        cliOption: null,
-      });
-    }
-  }
-  return params;
-}
-
-function collectParamAssignments(actionNode, sourceFile) {
-  const params = new Map();
-
-  function addParam(name, sourceExpression) {
-    if (!params.has(name)) {
-      const cliOptionMatch = sourceExpression.match(/opts\.([A-Za-z0-9_]+)/);
-      params.set(name, {
-        name,
-        source: sourceExpression,
-        cliOption: cliOptionMatch?.[1] ?? null,
-      });
-    }
-  }
-
-  function visit(node) {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === "params" && node.initializer) {
-      if (ts.isObjectLiteralExpression(node.initializer)) {
-        for (const param of collectParamsFromObjectLiteral(node.initializer, sourceFile)) {
-          addParam(param.name, param.source);
-        }
-      }
-    }
-
-    if (
-      ts.isBinaryExpression(node) &&
-      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      ts.isPropertyAccessExpression(node.left) &&
-      ts.isIdentifier(node.left.expression) &&
-      node.left.expression.text === "params"
-    ) {
-      addParam(node.left.name.text, getNodeText(node.right, sourceFile));
-    }
-
-    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-        ts.isElementAccessExpression(node.left) && ts.isIdentifier(node.left.expression) &&
-        node.left.expression.text === "params") {
-      const name = getLiteralValue(node.left.argumentExpression);
-      if (typeof name === "string") addParam(name, getNodeText(node.right, sourceFile));
-    }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(actionNode);
-  return [...params.values()];
-}
-
-function extractRequestDetails(actionNode, sourceFile, references) {
-  const collectedParams = collectParamAssignments(actionNode, sourceFile);
-  const requests = [];
-
-  function matchReference(reference, method, path, queryParams) {
-    if (!path) return null;
-    const matches = [...reference.byKey.values()].flat().filter((endpoint) =>
-      requestMatchesEndpoint({ method, path, queryParams }, endpoint));
-    return matches.map((match) => {
-      const entry = {
-        group: match.group,
-        title: match.title,
-        slug: match.slug,
-        docsUrl: match.slug ? `${reference.docsUrl}/${match.slug}` : null,
-      };
-      if (match.slug) {
-        const schema = reference.schemas.get(match.slug);
-        if (schema) {
-          if (schema.parameters) entry.parameters = schema.parameters;
-          if (schema.requestBody) entry.requestBody = schema.requestBody;
-          if (schema.responses) entry.responses = schema.responses;
-          entry.deprecated = schema.deprecated === true;
-        }
-      }
-      return entry;
-    });
-  }
-
-  function visit(node) {
-    if (ts.isCallExpression(node)) {
-      const helperName = ts.isIdentifier(node.expression) ? node.expression.text : null;
-      if (Object.hasOwn(REQUEST_HELPERS, helperName ?? "")) {
-        const api = REQUEST_HELPERS[helperName];
-        const path = templateToPath(node.arguments[0]);
-        let method = "GET";
-        let responseType = "auto";
-        let params = collectedParams;
-        let paginated = helperName === "paginateAll";
-        let resultsKey = helperName === "paginateAll" ? getLiteralValue(node.arguments[2]) : null;
-
-        if (helperName !== "paginateAll" && node.arguments[1] && ts.isObjectLiteralExpression(node.arguments[1])) {
-          for (const property of node.arguments[1].properties) {
-            if (!ts.isPropertyAssignment(property)) continue;
-            const propertyName = ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
-              ? property.name.text
-              : null;
-            if (!propertyName) continue;
-
-            if (propertyName === "method") {
-              const literalMethod = getLiteralValue(property.initializer);
-              if (typeof literalMethod === "string") method = literalMethod;
-            }
-
-            if (propertyName === "responseType") {
-              const literalResponseType = getLiteralValue(property.initializer);
-              if (typeof literalResponseType === "string") responseType = literalResponseType;
-            }
-
-            if (propertyName === "params") {
-              if (ts.isObjectLiteralExpression(property.initializer)) {
-                params = collectParamsFromObjectLiteral(property.initializer, sourceFile);
-              } else if (ts.isIdentifier(property.initializer) && property.initializer.text === "params") {
-                params = collectedParams;
-              } else {
-                params = [
-                  {
-                    name: "*dynamic*",
-                    source: getNodeText(property.initializer, sourceFile),
-                    cliOption: null,
-                  },
-                ];
-              }
-            }
-          }
-        }
-
-        requests.push({
-          helper: helperName,
-          api,
-          method,
-          path,
-          dynamicPath: path === null,
-          paginated,
-          resultsKey,
-          responseType,
-          queryParams: params,
-          line: lineForNode(node, sourceFile),
-          reference: matchReference(api === "booking-engine" ? references.bookingEngine : references.openApi, method, path, params),
-        });
-      }
-    }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(actionNode);
-  return requests;
-}
-
-function parseOptionSegment(segment, sourceFile) {
-  if (segment.name === "addOption") {
-    const option = unwrapChain(segment.args[0]);
-    if (!option || option.root !== "Option") throw new Error("Cannot inspect addOption; use an inline new Option.");
-    const defaultSegment = option.segments.find((item) => item.name === "default");
-    const choicesSegment = option.segments.find((item) => item.name === "choices");
-    const mandatorySegment = option.segments.find((item) => item.name === "makeOptionMandatory");
-    return {
-      flags: getLiteralValue(option.newArgs?.[0]),
-      description: getLiteralValue(option.newArgs?.[1]),
-      required: !!mandatorySegment && getLiteralValue(mandatorySegment.args[0]) !== false,
-      defaultValue: defaultSegment ? getLiteralValue(defaultSegment.args[0]) : null,
-      ...(choicesSegment ? { choices: getLiteralValue(choicesSegment.args[0]) } : {}),
-      line: lineForNode(segment.node, sourceFile),
-    };
-  }
-  const flags = getLiteralValue(segment.args[0]);
-  const description = getLiteralValue(segment.args[1]);
-  const trailingArgs = segment.args.slice(2).map((arg) => getLiteralValue(arg)).filter((value) => value !== null);
-  const defaultValue = trailingArgs.length > 0 ? trailingArgs[trailingArgs.length - 1] : null;
-  return {
-    flags,
-    description,
-    required: segment.name === "requiredOption",
-    defaultValue,
-    line: lineForNode(segment.node, sourceFile),
-  };
-}
-
-function parseArgumentSegment(segment, sourceFile) {
-  return {
-    syntax: getLiteralValue(segment.args[0]),
-    description: getLiteralValue(segment.args[1]),
-    defaultValue: getLiteralValue(segment.args[2]),
-    line: lineForNode(segment.node, sourceFile),
-  };
-}
-
-function buildOperation(chain, sourceFile, rootCommand, references) {
-  const commandSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "command");
-  const descriptionSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "description");
-  const optionSegments = chain.segments.filter(
-    (segment) => segment.kind === "call" && ["option", "requiredOption", "addOption"].includes(segment.name)
-  );
-  const argumentSegments = chain.segments.filter(
-    (segment) => segment.kind === "call" && segment.name === "argument"
-  );
-  const actionSegment = chain.segments.find((segment) => segment.kind === "call" && segment.name === "action");
-
-  if (!actionSegment || !actionSegment.args[0] || !(ts.isArrowFunction(actionSegment.args[0]) || ts.isFunctionExpression(actionSegment.args[0]))) {
-    return null;
-  }
-
-  const actionNode = actionSegment.args[0];
-  const actionText = getNodeText(actionNode, sourceFile);
-  const syntax = commandSegment ? getLiteralValue(commandSegment.args[0]) : rootCommand.name;
-  if (typeof syntax !== "string") throw new Error(`Cannot inspect dynamic command syntax in ${sourceFile.fileName}:${lineForNode(actionNode, sourceFile)}. Declare the command inline.`);
-  const parsedSyntax = parseSyntax(syntax);
-  const rootAction = !commandSegment;
-  const fullCommand = rootAction
-    ? `guesty ${rootCommand.name}`
-    : `guesty ${rootCommand.name === "guesty" ? "" : `${rootCommand.name} `}${syntax}`;
-
-  const options = optionSegments.map((segment) => parseOptionSegment(segment, sourceFile));
-  const jsonStdin = actionText.includes("JSON.parse(await readStdin())") || actionText.includes("readObject(") ||
-    (actionText.includes("await readStdin()") && actionText.includes("jsonObject("));
-  return {
-    id: fullCommand,
-    rootAction,
-    name: rootAction ? rootCommand.name : parsedSyntax.name,
-    syntax,
-    fullCommand,
-    description: descriptionSegment ? getLiteralValue(descriptionSegment.args[0]) : null,
-    aliases: chain.segments.filter((segment) => segment.name === "alias").map((segment) => getLiteralValue(segment.args[0])),
-    arguments: rootAction
-      ? argumentSegments.map((segment) => parseArgumentSegment(segment, sourceFile))
-      : parsedSyntax.args,
-    options,
-    inputCapabilities: {
-      supportsDataOption: options.some((option) => String(option.flags ?? "").includes("--data ")),
-      supportsTextOption: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--text ")),
-      supportsDataFileOption: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--data-file ")),
-      supportsStdinFlag: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--stdin")),
-      readsJsonFromStdin: jsonStdin,
-      readsTextFromStdin: actionText.includes("await readStdin()") && !jsonStdin,
-      writesToOutputFile: optionSegments.some((segment) => String(getLiteralValue(segment.args[0]) ?? "").includes("--output ")),
-    },
-    requests: extractRequestDetails(actionNode, sourceFile, references),
-    sourceFile: relative(ROOT, sourceFile.fileName),
-    line: lineForNode(actionSegment.node, sourceFile),
-  };
-}
-
-function collectOperations(sourceFile, rootCommand, references) {
-  const operations = [];
-
-  if (rootCommand.initializerChain?.segments.some((segment) => segment.kind === "call" && segment.name === "action")) {
-    const rootOperation = buildOperation(rootCommand.initializerChain, sourceFile, rootCommand, references);
-    if (rootOperation) operations.push(rootOperation);
-  }
-
-  function visit(node) {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === "action") {
-      const chain = unwrapChain(node);
-      if (chain && chain.root === rootCommand.variableName) {
-        const operation = buildOperation(chain, sourceFile, rootCommand, references);
-        if (operation) operations.push(operation);
-      }
-    }
-
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
-  return operations.sort((a, b) => a.line - b.line);
-}
-
 function summarizeCoverage(operations, reference, api) {
   const implementedKeys = new Set();
   const implementedReferences = new Set();
@@ -658,35 +214,113 @@ function summarizeCoverage(operations, reference, api) {
   };
 }
 
+function matchReference(reference, method, path, queryParams) {
+  if (!path) return null;
+  const matches = [...reference.byKey.values()].flat().filter((endpoint) =>
+    requestMatchesEndpoint({ method, path, queryParams }, endpoint));
+  return matches.map((match) => {
+    const entry = {
+      group: match.group,
+      title: match.title,
+      slug: match.slug,
+      docsUrl: match.slug ? `${reference.docsUrl}/${match.slug}` : null,
+    };
+    if (match.slug) {
+      const schema = reference.schemas.get(match.slug);
+      if (schema) {
+        if (schema.parameters) entry.parameters = schema.parameters;
+        if (schema.requestBody) entry.requestBody = schema.requestBody;
+        if (schema.responses) entry.responses = schema.responses;
+        entry.deprecated = schema.deprecated === true;
+      }
+    }
+    return entry;
+  });
+}
+function option(dumped) {
+  return {
+    flags: dumped.flags,
+    description: dumped.description,
+    required: dumped.required,
+    defaultValue: dumped.defaultValue ?? null,
+    ...(dumped.choices ? { choices: dumped.choices } : {}),
+    line: dumped.line,
+  };
+}
+
+// One operation (a command with an action), shaped as the Node generator wrote it.
+function buildOperation(command, group, requestsById, references) {
+  const rootAction = group === null || command.name === group.name;
+  const syntax = rootAction ? command.name : command.syntax;
+  const fullCommand = rootAction ? `guesty ${command.name}` : `guesty ${group.name === "guesty" ? "" : `${group.name} `}${syntax}`;
+  const metadata = requestsById[fullCommand];
+  if (!metadata) {
+    throw new Error(`${fullCommand} has no entry in scripts/cli-contract-requests.json. Add its inputCapabilities and requests.`);
+  }
+  return {
+    id: fullCommand,
+    rootAction,
+    name: command.name,
+    syntax,
+    fullCommand,
+    description: command.description,
+    aliases: command.aliases,
+    arguments: rootAction
+      ? command.arguments.filter((a) => !a.inline).map((a) => ({ syntax: a.syntax, description: a.description, defaultValue: null, line: command.line }))
+      : command.arguments.filter((a) => a.inline).map((a) => ({ name: a.name, required: a.required, variadic: a.variadic })),
+    options: command.options.map(option),
+    inputCapabilities: metadata.inputCapabilities,
+    requests: metadata.requests.map((request) => ({
+      ...request,
+      line: command.line,
+      reference: matchReference(request.api === "booking-engine" ? references.bookingEngine : references.openApi, request.method, request.path, request.queryParams),
+    })),
+    sourceFile: command.sourceFile,
+    line: command.line,
+  };
+}
+
 function main() {
   const packageJson = readJson(PACKAGE_FILE);
   const reference = parseReference();
   const bookingEngineReference = parseBookingEngineReference();
   const references = { openApi: reference, bookingEngine: bookingEngineReference };
-  const commandFiles = [...listCommandFiles(), join(ROOT, "src", "cli.ts")];
+  const requestsById = readJson(REQUESTS_FILE);
+  const program = JSON.parse(execFileSync(BINARY, ["__contract"], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }));
   const commands = [];
   const allOperations = [];
+  const used = new Set();
 
-  for (const file of commandFiles) {
-    const { rootCommand, sourceFile } = parseRootCommand(file);
-    if (!rootCommand) continue;
-
-    const operations = collectOperations(sourceFile, rootCommand, references);
-    if (rootCommand.name === "guesty") {
+  for (const top of program.commands.filter((command) => !command.hidden)) {
+    const operations = [];
+    if (top.commands.length === 0 || top.hasAction) {
+      // A command defined at the top level: its own operation, rooted at its
+      // own file (or, for update, at the program).
+      if (top.hasAction) operations.push(buildOperation(top, top.sourceFile === program.sourceFile ? program : null, requestsById, references));
+    }
+    for (const sub of top.commands.filter((command) => command.hasAction && !command.hidden)) {
+      operations.push(buildOperation(sub, top, requestsById, references));
+    }
+    for (const operation of operations) used.add(operation.id);
+    if (top.sourceFile === program.sourceFile) {
       for (const operation of operations) commands.push({
         name: operation.name, alias: null, description: operation.description,
-        sourceFile: rootCommand.sourceFile, line: operation.line, operations: [operation],
+        sourceFile: top.sourceFile, line: operation.line, operations: [operation],
       });
-    } else commands.push({
-      name: rootCommand.name,
-      alias: rootCommand.alias,
-      description: rootCommand.description,
-      sourceFile: rootCommand.sourceFile,
-      line: rootCommand.line,
-      operations,
-    });
+    } else {
+      commands.push({
+        name: top.name,
+        alias: top.aliases[0] ?? null,
+        description: top.description,
+        sourceFile: top.sourceFile,
+        line: top.line,
+        operations,
+      });
+    }
     allOperations.push(...operations);
   }
+  const unused = Object.keys(requestsById).filter((id) => !used.has(id));
+  if (unused.length) throw new Error(`scripts/cli-contract-requests.json lists commands the CLI doesn't have: ${unused.join(", ")}`);
 
   commands.sort((a, b) => a.name.localeCompare(b.name));
   allOperations.sort((a, b) => a.fullCommand.localeCompare(b.fullCommand));
@@ -698,7 +332,8 @@ function main() {
     cliVersion: packageJson.version,
     generatedFrom: {
       packageFile: relative(ROOT, PACKAGE_FILE),
-      commandFiles: commandFiles.map((file) => relative(ROOT, file)),
+      commandTree: "guesty __contract",
+      requestsFile: relative(ROOT, REQUESTS_FILE),
       optionalReferenceFile: reference.file,
       bookingEngineReferenceFile: bookingEngineReference.file,
     },
@@ -731,7 +366,7 @@ function main() {
     if (JSON.stringify(existing) !== JSON.stringify(expected)) {
       throw new Error("guesty-cli-spec.json is out of date. Run npm run generate:cli-spec.");
     }
-    process.stdout.write("CLI contract matches source and current OpenAPI.\n");
+    process.stdout.write("CLI contract matches the CLI and current OpenAPI.\n");
     return;
   }
   writeFileSync(OUTPUT_FILE, JSON.stringify(spec, null, 2) + "\n");

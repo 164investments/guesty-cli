@@ -8,7 +8,7 @@ Command-line access to the [Guesty](https://guesty.com) Open API and Booking Eng
 npm install -g --allow-remote=all https://github.com/164investments/guesty-cli/releases/latest/download/guesty-cli.tgz && guesty setup
 ```
 
-That one line installs the CLI and starts setup. It needs Node.js 20.12 or later. `--allow-remote=all` is for npm 12, which otherwise refuses to install from a web address; npm 10 and 11 accept it.
+That one line installs the CLI and starts setup. The CLI is a native program for macOS and Linux (Apple silicon or arm64, and x64) and Windows (x64), so it starts in about a millisecond; npm (Node.js 22 or later) is only used to install it. `--allow-remote=all` is for npm 12, which otherwise refuses to install from a web address; npm 10 and 11 accept it.
 
 `guesty setup` connects the CLI to a token service, so everyone on your team shares one Guesty token. You can use StayKit's hosted service for free or run your own. See [Share one token across a team](#share-one-token-across-a-team). The CLI itself never requests OAuth tokens.
 
@@ -31,12 +31,14 @@ Older CLI versions use a Git-based updater that can fail during npm 11 global de
 
 For an npm-linked source checkout or a custom installation prefix, update with its original package manager or use the separate GitHub package installation command above. The 1.2.0 updater preserves these installations and prints the applicable command.
 
-Or build from this repo:
+Each release also has the bare binaries (`guesty-aarch64-apple-darwin`, `guesty-x86_64-unknown-linux-musl` and so on) and `SHA256SUMS`, if you'd rather put one on your PATH yourself.
+
+On macOS and Linux, the first `guesty` command after an install or update runs through a small Node launcher, which then puts the native binary in its place. Every later command starts the binary directly, without Node.
+
+Or build from this repo with [Rust](https://rustup.rs):
 
 ```bash
-npm install
-npm run build
-npm link
+cargo install --path .     # puts guesty in ~/.cargo/bin
 ```
 
 ## Configure
@@ -140,6 +142,53 @@ npm run deploy
 ```
 
 Invite codes from your service include its address, so teammates run `guesty join https://your-service/join/CODE`. Only codes from StayKit's hosted service work on their own.
+
+## Use Guesty from AI agents (MCP)
+
+### In Claude.ai, ChatGPT and other apps: the hosted server
+
+Add this address as a custom connector or MCP server in your AI app:
+
+```
+https://guesty-mcp.staykit.ai/mcp
+```
+
+The app opens a sign-in page. Paste the invite your team's admin sent you (`guesty team invite`; a code like `ABCD-EFGH-JKLM` or the whole link), or, if you already use the CLI, your access key from `~/.guesty-cli/.env`. Tick "read-only" to refuse every change. There's nothing to install, and it works for every team on StayKit's hosted token service.
+
+- **Clients:** Claude Code (`claude mcp add --transport http guesty https://guesty-mcp.staykit.ai/mcp`) is tested. Claude.ai, ChatGPT and Cursor use the same sign-in and are expected to work; tell us if one doesn't.
+- **Pass-through only:** Guesty data passes through StayKit's server on its way to your app and is never stored or logged. The server keeps your sign-in (the team key, sealed) and the app's registration, nothing else.
+- **Same tools and safeguards** as `guesty mcp` below, with hosted limits: each tool call has 50 seconds, `all_pages` stops at 2,000 results, and a Guesty response over 8 MB (or 300,000 JSON values) is refused.
+- **Sign-out:** remove the server from the app. An admin can end a sign-in with `guesty team revoke <name>`; the app then asks you to sign in again.
+
+### On your computer: `guesty mcp`
+
+`guesty mcp` runs a [Model Context Protocol](https://modelcontextprotocol.io) server, so Claude Code, Codex, Cursor, Claude Desktop and other agents can work in Guesty for you. It uses your team's shared token, so agents never use up Guesty's five tokens a day, and it reaches every Open API and Booking Engine API operation, for reads and changes.
+
+Add it to the AI apps on your computer:
+
+```bash
+guesty mcp install                        # asks which apps
+guesty mcp install --client claude-code   # or codex, cursor, claude-desktop; separate several with commas
+guesty mcp install --print                # shows the settings to add by hand, and changes nothing
+```
+
+The settings run the installed `guesty` binary itself (`guesty mcp`), so the server starts in about a millisecond.
+
+The server gives the agent five tools:
+
+| Tool | What it does |
+|------|--------------|
+| `search_operations` | Finds operations from plain words, such as "cancel a reservation", or from a path, across both APIs |
+| `describe_operation` | Shows an operation's parameters, request body, response fields, docs link, and whether it changes data |
+| `call_operation` | Runs an operation with the team's token. Reads run straight away. Anything that changes data returns a preview and is sent only when the agent calls again with `confirm: true`, after you approve |
+| `team_status` | Shows the team's token use, keys and pending invites (admins) |
+| `invite_teammate` | Invites a member, after you approve that exact person (admins). Admin invites need `guesty team invite --admin` in a terminal |
+
+- The agent never sees your client secret or the token, and tool results never include them.
+- `guesty mcp --read-only` refuses every change. Install it that way with `guesty mcp install --read-only`, or set `GUESTY_MCP_READ_ONLY=1`. Read-only is a setting of the server on this computer, not a team permission: anyone with a team key can still make changes with the CLI's own commands.
+- The server reads settings only from `~/.guesty-cli/.env` and the environment, never from the `.env` of the folder the agent is working in.
+- Results longer than 60,000 characters are cut. Ask for less with `fields`, `limit` or filters.
+- Operations that upload files aren't available through the server; use their CLI commands.
 
 ## Getting a raw token
 
@@ -308,9 +357,9 @@ npm ci
 npm run check
 ```
 
-The check compiles strict TypeScript, runs offline authentication, transport, command, and update regression tests, and verifies that the generated CLI contract matches the source. Authentication tests replace all network calls and private-cache reads with fake data and prove that cache failures cannot request OAuth tokens. Endpoint tests assert methods, paths, query parameters, bodies, and meaningful validation failures. Live write tests are not part of this suite.
+You need [Rust](https://rustup.rs) and Node.js. The check runs `cargo fmt --check`, the Rust unit tests, the offline authentication, transport, command, update and MCP regression tests against a build with test hooks (requests go to a local mock, the clock is fake), checks that the generated CLI contract matches the binary, and replays more than 2,000 recorded cases of the 1.x Node CLI (`scripts/parity/`) to prove the output, errors, exit codes and requests are unchanged. Authentication tests replace all network calls and private-cache reads with fake data and prove that cache failures cannot request OAuth tokens. Endpoint tests assert methods, paths, query parameters, bodies, and meaningful validation failures. Live write tests are not part of this suite.
 
-For the token service, run `npm ci --prefix server` once, then `npm run check:server`. It type-checks the Worker with tsrs and runs the bundled Worker in Miniflare with a local D1 database and mocks of Guesty's token endpoint and Resend's email API, so it never contacts Guesty or sends email. It also drives the built CLI through setup, invites, joining, revocation and team deletion against that Worker.
+For the token service, run `npm ci --prefix server` once, then `npm run check:server`. It type-checks the Worker with tsrs and runs the bundled Worker in Miniflare with a local D1 database and mocks of Guesty's token endpoint and Resend's email API, so it never contacts Guesty or sends email. It also drives the CLI binary through setup, invites, joining, revocation and team deletion against that Worker.
 
 ## Rate Limiting
 

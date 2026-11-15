@@ -1,33 +1,27 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import test from "node:test";
+import { runApiContractScenario } from "./harness/scenarios.mjs";
 
-const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const reservationId = "507f1f77bcf86cd799439011";
 const secondId = "507f1f77bcf86cd799439012";
 
-function run(t, args) {
-  const temporary = mkdtempSync(join(tmpdir(), "guesty-api-contract-"));
-  t.after(() => rmSync(temporary, { recursive: true, force: true }));
-  const tracePath = join(temporary, "trace.json");
-  const result = spawnSync(process.execPath, ["--import", join(root, "test/fixtures/api-command-runtime.mjs"), join(root, "dist/cli.js"), ...args], {
-    cwd: root, encoding: "utf8", timeout: 10_000,
-    env: { ...process.env, GUESTY_API_TEST_TRACE: tracePath },
-  });
-  assert.ifError(result.error);
-  const trace = JSON.parse(readFileSync(tracePath, "utf8"));
+// Runs the Rust CLI against test/harness (the scenario of the former
+// test/fixtures/api-command-runtime.mjs): a valid cached Open API token and
+// `{ ok: true }` for every Open API request.
+async function run(t, args) {
+  const result = await runApiContractScenario(t, args);
+  const { trace } = result;
   assert.deepEqual(trace.writes, [], "commands must not mutate local or shared token caches");
   assert.doesNotMatch(result.stdout + result.stderr, /fake-openapi-token/);
-  return { ...result, trace };
+  return result;
 }
 
 function contract(name, args, path, params = {}, body, method = body === undefined ? "GET" : "POST") {
-  test(name, (t) => {
-    const result = run(t, args);
+  test(name, async (t) => {
+    const result = await run(t, args);
     assert.equal(result.status, 0, result.stderr);
     assert.equal(result.trace.requests.length, 1, "exactly one mocked API request");
     const request = result.trace.requests[0];
@@ -43,8 +37,8 @@ function contract(name, args, path, params = {}, body, method = body === undefin
 }
 
 function invalid(name, args, message) {
-  test(name, (t) => {
-    const result = run(t, args);
+  test(name, async (t) => {
+    const result = await run(t, args);
     assert.equal(result.status, 1);
     assert.match(result.stderr, message);
     assert.deepEqual(result.trace.requests, [], "invalid inputs must fail before network activity");
@@ -194,18 +188,18 @@ invalid("house rules reject empty property IDs", ["properties", "list-house-rule
 contract("webhook secret lookup includes the callback URL", ["webhooks", "secret", "--url", "https://example.invalid/hooks?target=guesty"], "/v1/webhooks-v2/secret", { url: "https://example.invalid/hooks?target=guesty" });
 invalid("webhook secret lookup requires a callback URL", ["webhooks", "secret"], /required option.*--url/);
 
-test("photo uploads send a multipart file and optional caption without a manual boundary", (t) => {
+test("photo uploads send a multipart file and optional caption without a manual boundary", async (t) => {
   const temporary = mkdtempSync(join(tmpdir(), "guesty-photo-contract-"));
   t.after(() => rmSync(temporary, { recursive: true, force: true }));
   const file = join(temporary, "sample.jpeg");
   const bytes = Buffer.from([0xff, 0xd8, 0xff, 0xd9]);
   writeFileSync(file, bytes);
-  const result = run(t, ["properties", "upload-photo", "listing", "--data-file", file, "--caption", "Example caption"]);
+  const result = await run(t, ["properties", "upload-photo", "listing", "--data-file", file, "--caption", "Example caption"]);
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.trace.requests.length, 1);
   assert.deepEqual(result.trace.requests[0], {
     url: "https://open-api.guesty.com/v1/properties-api/property-photos/property-photos/listing/upload/blob",
-    method: "POST", body: "binary", contentType: null,
+    method: "POST", body: "binary", contentType: "multipart/form-data",
     multipart: [{ name: "file", filename: "sample.jpeg", type: "image/jpeg", data: bytes.toString("base64") }, { name: "caption", value: "Example caption" }],
   });
 });
@@ -219,16 +213,16 @@ for (const command of ["payment-provider", "get-payment-provider"]) contract(`li
 invalid("listing search rejects contradictory status filters", ["listings", "list", "--active", "--inactive"], /only one/);
 invalid("listing search rejects invalid pagination", ["listings", "list", "--limit", "10bad"], /integer/);
 
-test("owner document creation sends its required PDF and metadata as multipart", (t) => {
+test("owner document creation sends its required PDF and metadata as multipart", async (t) => {
   const temporary = mkdtempSync(join(tmpdir(), "guesty-document-contract-"));
   t.after(() => rmSync(temporary, { recursive: true, force: true }));
   const file = join(temporary, "sample.pdf");
   const bytes = Buffer.from("%PDF-1.7\nfixture");
   writeFileSync(file, bytes);
-  const result = run(t, ["owners", "create-document", "owner", "--data-file", file, "--name", "Example contract", "--type", "CONTRACT", "--description", "Example description", "--shared", "--start-date", "2026-01-01", "--end-date", "2026-12-31"]);
+  const result = await run(t, ["owners", "create-document", "owner", "--data-file", file, "--name", "Example contract", "--type", "CONTRACT", "--description", "Example description", "--shared", "--start-date", "2026-01-01", "--end-date", "2026-12-31"]);
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.trace.requests, [{
-    url: "https://open-api.guesty.com/v1/owners/owner/documents", method: "POST", body: "binary", contentType: null,
+    url: "https://open-api.guesty.com/v1/owners/owner/documents", method: "POST", body: "binary", contentType: "multipart/form-data",
     multipart: [
       { name: "file", filename: "sample.pdf", type: "application/pdf", data: bytes.toString("base64") },
       { name: "name", value: "Example contract" }, { name: "type", value: "CONTRACT" }, { name: "isShared", value: "true" },
@@ -238,12 +232,12 @@ test("owner document creation sends its required PDF and metadata as multipart",
 });
 invalid("owner document creation requires a file", ["owners", "create-document", "owner", "--name", "Document"], /required option.*--data-file/);
 invalid("owner document creation requires a document name", ["owners", "create-document", "owner", "--data-file", "file.pdf"], /required option.*--name/);
-test("oversized owner document fails before authentication or network", (t) => {
+test("oversized owner document fails before authentication or network", async (t) => {
   const temporary = mkdtempSync(join(tmpdir(), "guesty-document-size-"));
   t.after(() => rmSync(temporary, { recursive: true, force: true }));
   const file = join(temporary, "oversized.pdf");
   writeFileSync(file, Buffer.alloc(5 * 1024 * 1024 + 1));
-  const result = run(t, ["owners", "create-document", "owner", "--data-file", file, "--name", "Document"]);
+  const result = await run(t, ["owners", "create-document", "owner", "--data-file", file, "--name", "Document"]);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /5 MB/);
   assert.deepEqual(result.trace.requests, []);
@@ -252,8 +246,8 @@ test("oversized owner document fails before authentication or network", (t) => {
 
 contract("guest payment methods retain the unscoped default request", ["guests", "payment-methods", "guest"], "/v1/guests/guest/payment-methods");
 contract("guest payment methods can specify the reservation for VCC context", ["guests", "payment-methods", "guest", "--reservation", reservationId], "/v1/guests/guest/payment-methods", { reservationId });
-test("guest payment methods help explains the reservation context", (t) => {
-  const result = run(t, ["guests", "payment-methods", "--help"]);
+test("guest payment methods help explains the reservation context", async (t) => {
+  const result = await run(t, ["guests", "payment-methods", "--help"]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /--reservation <id>/);
   assert.match(result.stdout, /virtual credit cards/);
@@ -392,8 +386,8 @@ for (const [args, path, method, replacement] of [
   [["listings", "custom-fields", "listing"], "/v1/listings/listing/custom-fields", "GET", /"guesty properties custom-fields <propertyId>"/],
   [["reservations", "export-email", "--data", "{}"], "/v1/reservations.email", "POST", /Guesty documents no replacement/],
 ]) {
-  test(`deprecated ${args.slice(0, 2).join(" ")} still works and names its replacement on stderr`, (t) => {
-    const result = run(t, args);
+  test(`deprecated ${args.slice(0, 2).join(" ")} still works and names its replacement on stderr`, async (t) => {
+    const result = await run(t, args);
     assert.equal(result.status, 0, result.stderr);
     assert.match(result.stderr, /\[deprecated\]/);
     assert.match(result.stderr, replacement);

@@ -1,0 +1,120 @@
+# The hosted Guesty MCP server: https://guesty-mcp.staykit.ai/mcp
+#
+# Deploy (needs Trevor's or Hayden's authorization), from crates/guesty-mcp-worker:
+#   npx wrangler d1 create guesty-mcp                     # once; put its id in env.hosted below
+#   npx wrangler d1 migrations apply DB --env hosted --remote
+#   openssl rand -base64 32 | npx wrangler secret put MCP_KEY --env hosted
+#   npx wrangler deploy --env hosted
+#
+# MCP_KEY seals stored member keys and keys every stored hash; changing it signs everyone out.
+# CALL_BUDGET_MS and GUESTY_TIMEOUT_MS only lower the 50 s call budget and Guesty's timeout for
+# tests; leave them unset here.
+# The top level is a local configuration (wrangler dev); only env.hosted is deployed.
+
+name = "guesty-mcp"
+main = "build/index.js"
+compatibility_date = "2026-08-01"
+workers_dev = false
+
+[build]
+command = "worker-build --release"
+
+[vars]
+PUBLIC_URL = "http://localhost:8787"
+TOKEN_SERVICE_ORIGINS = "https://guesty-tokens.staykit.ai,https://guesty-tokens.simplyvacationrentalmanagement.com"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "guesty-mcp"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[services]]
+binding = "TOKENS"
+service = "guesty-token-service"
+
+# Rate limits are approximate: each Cloudflare location counts on its own.
+# Per client network (IPv4 address or IPv6 /64), per minute.
+[[ratelimits]]
+name = "REGISTER_LIMITER"
+namespace_id = "2026111401"
+simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
+name = "AUTHORIZE_LIMITER"
+namespace_id = "2026111402"
+simple = { limit = 30, period = 60 }
+
+[[ratelimits]]
+name = "TOKEN_LIMITER"
+namespace_id = "2026111403"
+simple = { limit = 60, period = 60 }
+
+# Tool calls per sign-in (grant) per minute (S3). Guesty's own 429 / Retry-After is the real limit.
+[[ratelimits]]
+name = "TOOL_LIMITER"
+namespace_id = "2026111404"
+simple = { limit = 100, period = 60 }
+
+# S9: no invocation logs (they record request URLs) and no traces. The Worker's own console
+# output is one-line error codes only.
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = false
+
+[observability.traces]
+enabled = false
+
+[env.hosted]
+name = "guesty-mcp"
+account_id = "52211577e087a1619838cda534d59d7b"
+workers_dev = false
+routes = [{ pattern = "guesty-mcp.staykit.ai", custom_domain = true }]
+
+[env.hosted.vars]
+PUBLIC_URL = "https://guesty-mcp.staykit.ai"
+TOKEN_SERVICE_ORIGINS = "https://guesty-tokens.staykit.ai,https://guesty-tokens.simplyvacationrentalmanagement.com"
+
+[[env.hosted.d1_databases]]
+binding = "DB"
+database_name = "guesty-mcp"
+# Filled in at deploy time from `wrangler d1 create guesty-mcp`.
+database_id = "REPLACE_WITH_GUESTY_MCP_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[env.hosted.services]]
+binding = "TOKENS"
+service = "guesty-token-service"
+
+[[env.hosted.ratelimits]]
+name = "REGISTER_LIMITER"
+namespace_id = "2026111401"
+simple = { limit = 10, period = 60 }
+
+[[env.hosted.ratelimits]]
+name = "AUTHORIZE_LIMITER"
+namespace_id = "2026111402"
+simple = { limit = 30, period = 60 }
+
+[[env.hosted.ratelimits]]
+name = "TOKEN_LIMITER"
+namespace_id = "2026111403"
+simple = { limit = 60, period = 60 }
+
+[[env.hosted.ratelimits]]
+name = "TOOL_LIMITER"
+namespace_id = "2026111404"
+simple = { limit = 100, period = 60 }
+
+[env.hosted.observability]
+enabled = true
+
+[env.hosted.observability.logs]
+enabled = true
+invocation_logs = false
+
+[env.hosted.observability.traces]
+enabled = false
