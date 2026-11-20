@@ -9223,6 +9223,126 @@
    }
   ]
  },
+ "guesty reservations lock-property <reservationId>": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "POST",
+    "path": "/v1/reservations-v3/{param}/property-lock",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
+ },
+ "guesty reservations unlock-property <reservationId>": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "DELETE",
+    "path": "/v1/reservations-v3/{param}/property-lock",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
+ },
+ "guesty reservations guests <reservationId>": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "GET",
+    "path": "/v1/reservations-v3/{param}/guests",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
+ },
+ "guesty reservations assign-guest <reservationId>": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "PUT",
+    "path": "/v1/reservations-v3/{param}/guests/assign",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
+ },
+ "guesty reservations unassign-guest <reservationId>": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "PUT",
+    "path": "/v1/reservations-v3/{param}/guests/unassign",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
+ },
  "guesty reservations report <viewId>": {
   "inputCapabilities": {
    "supportsDataOption": false,
@@ -9258,6 +9378,213 @@
       "name": "skip",
       "source": "integer(opts.skip, \"--skip\")",
       "cliOption": "skip"
+     }
+    ]
+   }
+  ]
+ },
+ "guesty reservations report-csv <viewId>": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": true
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "GET",
+    "path": "/v1/reservations-reports/{param}/csv",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "text",
+    "queryParams": [
+     {
+      "name": "*dynamic*",
+      "source": "reportParams(opts)",
+      "cliOption": null
+     }
+    ]
+   }
+  ]
+ },
+ "guesty reservations report-search": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "paginateAll",
+    "api": "open-api",
+    "method": "GET",
+    "path": "/v1/reservations-reports/reservations/search",
+    "dynamicPath": false,
+    "paginated": true,
+    "resultsKey": "results",
+    "responseType": "auto",
+    "queryParams": [
+     {
+      "name": "limit",
+      "source": "integer(opts.limit, \"--limit\", 1, 100)",
+      "cliOption": "limit"
+     },
+     {
+      "name": "skip",
+      "source": "integer(opts.skip, \"--skip\")",
+      "cliOption": "skip"
+     },
+     {
+      "name": "sort",
+      "source": "opts.sort",
+      "cliOption": "sort"
+     },
+     {
+      "name": "filter[checkInDate][gte]",
+      "source": "opts.from",
+      "cliOption": "from"
+     },
+     {
+      "name": "filter[checkInDate][lte]",
+      "source": "opts.to",
+      "cliOption": "to"
+     },
+     {
+      "name": "filter[checkOutDate][gte]",
+      "source": "opts.checkOutFrom",
+      "cliOption": "checkOutFrom"
+     },
+     {
+      "name": "filter[checkOutDate][lte]",
+      "source": "opts.checkOutTo",
+      "cliOption": "checkOutTo"
+     },
+     {
+      "name": "filter[createdAt][gte]",
+      "source": "opts.createdFrom",
+      "cliOption": "createdFrom"
+     },
+     {
+      "name": "filter[createdAt][lt]",
+      "source": "opts.createdBefore",
+      "cliOption": "createdBefore"
+     },
+     {
+      "name": "filter[status]",
+      "source": "opts.status",
+      "cliOption": "status"
+     },
+     {
+      "name": "filter[status][nin]",
+      "source": "opts.excludeStatus",
+      "cliOption": "excludeStatus"
+     },
+     {
+      "name": "filter[listingId]",
+      "source": "opts.listing",
+      "cliOption": "listing"
+     },
+     {
+      "name": "filter[confirmationCode]",
+      "source": "opts.confirmationCode",
+      "cliOption": "confirmationCode"
+     },
+     {
+      "name": "filter[source]",
+      "source": "opts.source",
+      "cliOption": "source"
+     }
+    ]
+   },
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "GET",
+    "path": "/v1/reservations-reports/reservations/search",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": [
+     {
+      "name": "limit",
+      "source": "integer(opts.limit, \"--limit\", 1, 100)",
+      "cliOption": "limit"
+     },
+     {
+      "name": "skip",
+      "source": "integer(opts.skip, \"--skip\")",
+      "cliOption": "skip"
+     },
+     {
+      "name": "sort",
+      "source": "opts.sort",
+      "cliOption": "sort"
+     },
+     {
+      "name": "filter[checkInDate][gte]",
+      "source": "opts.from",
+      "cliOption": "from"
+     },
+     {
+      "name": "filter[checkInDate][lte]",
+      "source": "opts.to",
+      "cliOption": "to"
+     },
+     {
+      "name": "filter[checkOutDate][gte]",
+      "source": "opts.checkOutFrom",
+      "cliOption": "checkOutFrom"
+     },
+     {
+      "name": "filter[checkOutDate][lte]",
+      "source": "opts.checkOutTo",
+      "cliOption": "checkOutTo"
+     },
+     {
+      "name": "filter[createdAt][gte]",
+      "source": "opts.createdFrom",
+      "cliOption": "createdFrom"
+     },
+     {
+      "name": "filter[createdAt][lt]",
+      "source": "opts.createdBefore",
+      "cliOption": "createdBefore"
+     },
+     {
+      "name": "filter[status]",
+      "source": "opts.status",
+      "cliOption": "status"
+     },
+     {
+      "name": "filter[status][nin]",
+      "source": "opts.excludeStatus",
+      "cliOption": "excludeStatus"
+     },
+     {
+      "name": "filter[listingId]",
+      "source": "opts.listing",
+      "cliOption": "listing"
+     },
+     {
+      "name": "filter[confirmationCode]",
+      "source": "opts.confirmationCode",
+      "cliOption": "confirmationCode"
+     },
+     {
+      "name": "filter[source]",
+      "source": "opts.source",
+      "cliOption": "source"
      }
     ]
    }
@@ -10923,5 +11250,88 @@
    "writesToOutputFile": false
   },
   "requests": []
+ },
+ "guesty accounting expense-rules": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "GET",
+    "path": "/v1/expenses-api/expense-rules",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": [
+     {
+      "name": "limit",
+      "source": "integer(opts.limit, \"--limit\", 1, 100)",
+      "cliOption": "limit"
+     },
+     {
+      "name": "skip",
+      "source": "integer(opts.skip, \"--skip\")",
+      "cliOption": "skip"
+     }
+    ]
+   }
+  ]
+ },
+ "guesty accounting expense-rule <id>": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "GET",
+    "path": "/v1/expenses-api/expense-rules/{param}",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
+ },
+ "guesty accounting create-expense-rule": {
+  "inputCapabilities": {
+   "supportsDataOption": true,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": true,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "POST",
+    "path": "/v1/expenses-api/expense-rules",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
  }
 }

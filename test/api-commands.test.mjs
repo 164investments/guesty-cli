@@ -128,6 +128,16 @@ contract("business models preserve unpaginated default", ["accounting", "busines
 contract("expense reads support documented filters and sorting", ["accounting", "expenses", "--status", "scheduled,paid", "--category", "category", "--vendor", "vendor", "--owner", "owner", "--listing", "listing", "--reservation", reservationId, "--expense-rule", "rule", "--from", "2026-01-01", "--to", "2026-02-01", "--sort-by", "expenseDate", "--sort-order", "ASC", "--limit", "15", "--skip", "30"], "/v1/expenses-api/expenses", {
   status: "scheduled,paid", categoryId: "category", vendorId: "vendor", ownerId: "owner", listingId: "listing", reservationId, expenseRuleId: "rule", expenseDateFrom: "2026-01-01", expenseDateTo: "2026-02-01", sortBy: "expenseDate", sortOrder: "ASC", limit: 15, skip: 30,
 });
+contract("expense rules list active and draft rules by default", ["accounting", "expense-rules"], "/v1/expenses-api/expense-rules", { limit: 50, skip: 0 });
+contract("expense rules support documented filters and sorting", ["accounting", "expense-rules", "--status", "inactive", "--status", "archived", "--listing", "listing", "--category", "category", "--vendor", "vendor", "--name", "cleaning", "--sort-by", "name", "--sort-order", "ASC", "--limit", "100", "--skip", "100"], "/v1/expenses-api/expense-rules", {
+  status: ["inactive", "archived"], listingId: "listing", categoryId: "category", vendorId: "vendor", name: "cleaning", sortBy: "name", sortOrder: "ASC", limit: 100, skip: 100,
+});
+invalid("expense rules reject an undocumented status", ["accounting", "expense-rules", "--status", "paused"], /active, inactive, draft or archived/);
+invalid("expense rules enforce the documented page size", ["accounting", "expense-rules", "--limit", "101"], /integer/);
+contract("expense rule reads one rule", ["accounting", "expense-rule", "rule-1"], "/v1/expenses-api/expense-rules/rule-1");
+contract("expense rule create posts the documented body", ["accounting", "create-expense-rule", "--data", JSON.stringify({ name: "Cleaning", status: "draft" })], "/v1/expenses-api/expense-rules", {}, { name: "Cleaning", status: "draft" });
+invalid("expense rule create requires a name", ["accounting", "create-expense-rule", "--data", JSON.stringify({ status: "draft" })], /needs name/);
+invalid("expense rule create requires a documented status", ["accounting", "create-expense-rule", "--data", JSON.stringify({ name: "Cleaning", status: "inactive" })], /status draft or active/);
 contract("vendor list can request subsequent pages", ["accounting", "vendors", "--limit", "100", "--skip", "100"], "/v1/vendors", { limit: 100, skip: 100 });
 invalid("vendors enforce the documented minimum page size", ["accounting", "vendors", "--limit", "1"], /integer/);
 
@@ -354,6 +364,29 @@ invalid("vendor create requires an email", ["accounting", "create-vendor", "--da
 invalid("vendor create requires a company", ["accounting", "create-vendor", "--data", JSON.stringify({ ...vendor, company: "" })], /needs company/);
 contract("vendor update patches a vendor", ["accounting", "update-vendor", "vendor", "--data", '{"notes":"Preferred"}'], "/v1/vendors/vendor", {}, { notes: "Preferred" }, "PATCH");
 invalid("vendor update requires a field", ["accounting", "update-vendor", "vendor", "--data", "{}"], /at least one vendor field/);
+
+contract("reservation guests lists the reservation's guest refs", ["reservations", "guests", reservationId], `/v1/reservations-v3/${reservationId}/guests`);
+contract("reservation assign-guest sends the guest ID and type", ["reservations", "assign-guest", reservationId, "--guest-id", "guest", "--type", "infant"], `/v1/reservations-v3/${reservationId}/guests/assign`, {}, { _id: "guest", type: "infant" }, "PUT");
+contract("reservation unassign-guest sends only the guest ID", ["reservations", "unassign-guest", reservationId, "--guest-id", "guest"], `/v1/reservations-v3/${reservationId}/guests/unassign`, {}, { _id: "guest" }, "PUT");
+invalid("reservation assign-guest requires a guest type", ["reservations", "assign-guest", reservationId, "--guest-id", "guest"], /required option.*--type/);
+invalid("reservation assign-guest rejects undocumented guest types", ["reservations", "assign-guest", reservationId, "--guest-id", "guest", "--type", "child"], /Allowed choices are adult, children, infant, pet/);
+invalid("reservation unassign-guest requires a guest ID", ["reservations", "unassign-guest", reservationId], /required option.*--guest-id/);
+invalid("reservation unassign-guest rejects a blank guest ID", ["reservations", "unassign-guest", reservationId, "--guest-id", " "], /non-empty guest ID/);
+contract("reservation lock-property posts the property lock", ["reservations", "lock-property", reservationId], `/v1/reservations-v3/${reservationId}/property-lock`, {}, undefined, "POST");
+contract("reservation unlock-property deletes the property lock", ["reservations", "unlock-property", reservationId], `/v1/reservations-v3/${reservationId}/property-lock`, {}, undefined, "DELETE");
+contract("reservation report-csv requires a timezone and forwards paging", ["reservations", "report-csv", "view", "--timezone", "America/Los_Angeles", "--limit", "10", "--skip", "5"], "/v1/reservations-reports/view/csv", { timezone: "America/Los_Angeles", limit: 10, skip: 5 });
+invalid("reservation report-csv rejects unknown timezones", ["reservations", "report-csv", "view", "--timezone", "Mars/Olympus"], /valid IANA timezone/);
+invalid("reservation report-csv requires a timezone", ["reservations", "report-csv", "view"], /required option.*--timezone/);
+contract("reservation report-search maps filters to the documented bracket parameters", ["reservations", "report-search", "--from", "2026-01-01", "--to", "2026-01-31", "--check-out-from", "2026-01-02", "--check-out-to", "2026-02-01", "--created-from", "2025-12-01T00:00:00Z", "--created-before", "2026-01-01T00:00:00Z", "--status", "confirmed,reserved", "--exclude-status", "canceled,inquiry", "--listing", "one,two", "--confirmation-code", "GY-1", "--source", "direct", "--limit", "50", "--skip", "10", "--sort", "-checkIn"], "/v1/reservations-reports/reservations/search", {
+  "filter[checkInDate][gte]": "2026-01-01", "filter[checkInDate][lte]": "2026-01-31", "filter[checkOutDate][gte]": "2026-01-02", "filter[checkOutDate][lte]": "2026-02-01",
+  "filter[createdAt][gte]": "2025-12-01T00:00:00Z", "filter[createdAt][lt]": "2026-01-01T00:00:00Z", "filter[status]": "confirmed,reserved", "filter[status][nin]": "canceled,inquiry",
+  "filter[listingId]": "one,two", "filter[confirmationCode]": "GY-1", "filter[source]": "direct", limit: 50, skip: 10, sort: "-checkIn",
+});
+contract("reservation report-search defaults to the documented page and sort", ["reservations", "report-search"], "/v1/reservations-reports/reservations/search", { limit: 25, skip: 0, sort: "-_id" });
+invalid("reservation report-search rejects a page over 100", ["reservations", "report-search", "--limit", "101"], /between 1 and 100/);
+invalid("reservation report-search takes dates, not datetimes, for check-in", ["reservations", "report-search", "--from", "2026-01-01T00:00:00Z"], /YYYY-MM-DD/);
+invalid("reservation report-search rejects reversed ranges", ["reservations", "report-search", "--from", "2026-02-01", "--to", "2026-01-01"], /on or before/);
+invalid("reservation report-search rejects undocumented sorts", ["reservations", "report-search", "--sort", "status"], /Allowed choices/);
 
 for (const [args, path, method, replacement] of [
   [["reservations", "add-payment", reservationId, "--data", "{}"], `/v1/reservations/${reservationId}/payments`, "POST", /"guesty payments create", or "guesty payments record"/],

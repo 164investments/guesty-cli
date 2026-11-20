@@ -100,6 +100,31 @@ fn filter(field: &str, operator: &str, value: &str) -> Json {
     json!({ "field": field, "operator": operator, "value": value })
 }
 
+/// `reportParams(opts)`: the timezone (required) and paging of the reservations report commands.
+fn report_params(c: &Call) -> Result<Params> {
+    let tz = c.opts.str("timezone").unwrap_or("");
+    if !valid_time_zone(tz) {
+        bail!("--timezone must be a valid IANA timezone, such as America/Los_Angeles.");
+    }
+    let mut params = Params::new();
+    params.set("timezone", tz);
+    if let Some(limit) = c.opts.str("limit") {
+        params.set("limit", integer_in(limit, "--limit", 1.0, MAX_SAFE_INTEGER)?);
+    }
+    if let Some(skip) = c.opts.str("skip") {
+        params.set("skip", integer(skip, "--skip")?);
+    }
+    Ok(params)
+}
+
+/// `guestId(value)`: a guest entity ID that isn't blank.
+fn guest_id(value: &str) -> Result<String> {
+    if js_trim(value).is_empty() {
+        bail!("--guest-id must be a non-empty guest ID.");
+    }
+    Ok(value.to_string())
+}
+
 /// `new Intl.DateTimeFormat("en-US", { timeZone })` accepts it: an IANA name
 /// or link (ASCII case-insensitive), one of ICU's legacy IDs, or a UTC offset.
 fn valid_time_zone(tz: &str) -> bool {
@@ -522,6 +547,16 @@ pub fn command() -> Command {
             send(&format!("/v1/reservations-v3/{}/relocate", c.arg(0)), "PUT", Some(body), Some(financial_params(c)))
         }))
         .command(
+            Command::new("lock-property <reservationId>")
+                .description("Lock the reservation's listing/unit against changes (refreshes the lock when already locked)")
+                .action(|c| send(&format!("/v1/reservations-v3/{}/property-lock", encode(c.arg(0))), "POST", None, None)),
+        )
+        .command(
+            Command::new("unlock-property <reservationId>")
+                .description("Unlock the reservation's listing/unit so it can be changed again")
+                .action(|c| send(&format!("/v1/reservations-v3/{}/property-lock", encode(c.arg(0))), "DELETE", None, None)),
+        )
+        .command(
             Command::new("update-booking-date <reservationId>")
                 .description("Update the real-world booking date (--data or stdin)")
                 .option("--data <json>", "JSON body with bookingDate (ISO datetime with timezone)")
@@ -588,6 +623,37 @@ pub fn command() -> Command {
             let body = body(c)?;
             send(&format!("/v1/reservations-v3/{}/guests", c.arg(0)), "PUT", Some(body), Some(financial_params(c)))
         }))
+        .command(
+            Command::new("guests <reservationId>")
+                .description("List the guest entity refs linked to a reservation, including the booker (refs only, no profiles)")
+                .action(|c| {
+                    print(&get(&format!("/v1/reservations-v3/{}/guests", encode(c.arg(0))), Params::new())?);
+                    Ok(())
+                }),
+        )
+        .command(
+            Command::new("assign-guest <reservationId>")
+                .description("Assign one guest entity to a reservation (not tied to the guest count)")
+                .required_option("--guest-id <id>", "Guest entity ID")
+                .add_option(
+                    Opt::new("--type <type>", "Guest type for this assignment")
+                        .choices(&["adult", "children", "infant", "pet"])
+                        .mandatory(),
+                )
+                .action(|c| {
+                    let body = json!({ "_id": guest_id(c.opts.str("guestId").unwrap_or(""))?, "type": c.opts.str("type").unwrap_or("") });
+                    send(&format!("/v1/reservations-v3/{}/guests/assign", encode(c.arg(0))), "PUT", Some(body), None)
+                }),
+        )
+        .command(
+            Command::new("unassign-guest <reservationId>")
+                .description("Unassign one guest entity from a reservation (the booker cannot be unassigned)")
+                .required_option("--guest-id <id>", "Guest entity ID")
+                .action(|c| {
+                    let body = json!({ "_id": guest_id(c.opts.str("guestId").unwrap_or(""))? });
+                    send(&format!("/v1/reservations-v3/{}/guests/unassign", encode(c.arg(0))), "PUT", Some(body), None)
+                }),
+        )
         // ─── internal comments (v3) ────────────────────────────────────────
         .command(
             Command::new("comments <reservationId>")
@@ -820,19 +886,108 @@ pub fn command() -> Command {
                 .option("--limit <n>", "Max results")
                 .option("--skip <n>", "Offset")
                 .action(|c| {
-                    let tz = c.opts.str("timezone").unwrap_or("");
-                    if !valid_time_zone(tz) {
-                        bail!("--timezone must be a valid IANA timezone, such as America/Los_Angeles.");
+                    print(&get(&format!("/v1/reservations-reports/{}", encode(c.arg(0))), report_params(c)?)?);
+                    Ok(())
+                }),
+        )
+        .command(
+            Command::new("report-csv <viewId>")
+                .description("Get reservations report by view ID as CSV")
+                .required_option("--timezone <tz>", "Timezone (e.g. America/Los_Angeles)")
+                .option("--limit <n>", "Max results")
+                .option("--skip <n>", "Offset")
+                .option("--output <path>", "Write CSV output to a file")
+                .action(|c| {
+                    let data = guesty_fetch(
+                        &format!("/v1/reservations-reports/{}/csv", encode(c.arg(0))),
+                        Fetch { params: Some(report_params(c)?), response_type: ResponseType::Text, ..Fetch::default() },
+                    )?;
+                    if let Some(output) = c.opts.str("output").filter(|s| !s.is_empty()) {
+                        let text = match &data {
+                            Data::Text(t) => t.clone(),
+                            // writeFileSync(path, undefined) after a 204/205.
+                            _ => bail!(
+                                "The \"data\" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received undefined"
+                            ),
+                        };
+                        std::fs::write(output, text).map_err(|e| CliError::new(node_fs_error(&e, "open", output)))?;
+                        write_err(&format!("Saved CSV to {output}\n"));
+                        return Ok(());
                     }
+                    print(&data);
+                    Ok(())
+                }),
+        )
+        .command(
+            Command::new("report-search")
+                .description(
+                    "Search reservations with report enrichments (money, listing, guest, accounting); dates are in the listing's timezone",
+                )
+                .option("--from <date>", "Check-in date on/after (YYYY-MM-DD)")
+                .option("--to <date>", "Check-in date on/before (YYYY-MM-DD)")
+                .option("--check-out-from <date>", "Check-out date on/after (YYYY-MM-DD)")
+                .option("--check-out-to <date>", "Check-out date on/before (YYYY-MM-DD)")
+                .option("--created-from <timestamp>", "Created on/after ISO datetime with timezone")
+                .option("--created-before <timestamp>", "Created strictly before ISO datetime with timezone")
+                .option("--status <statuses>", "Status or comma-separated statuses")
+                .option("--exclude-status <statuses>", "Exclude a status or comma-separated statuses")
+                .option("--listing <ids>", "Listing ID or comma-separated IDs")
+                .option("--confirmation-code <codes>", "Confirmation code or comma-separated codes")
+                .option("--source <sources>", "Source or comma-separated sources")
+                .option_default("--limit <n>", "Page size (1-100)", "25")
+                .option_default("--skip <n>", "Initial offset", "0")
+                .add_option(
+                    Opt::new("--sort <field>", "Sort field; prefix with - for descending")
+                        .choices(&["_id", "-_id", "checkIn", "-checkIn", "checkOut", "-checkOut", "createdAt", "-createdAt"])
+                        .default("-_id"),
+                )
+                .option("--all", "Fetch all pages from --skip (up to 10k)")
+                .action(|c| {
+                    let o = &c.opts;
                     let mut params = Params::new();
-                    params.set("timezone", tz);
-                    if let Some(limit) = c.opts.str("limit") {
-                        params.set("limit", integer_in(limit, "--limit", 1.0, MAX_SAFE_INTEGER)?);
+                    params.set("limit", integer_in(o.str("limit").unwrap_or(""), "--limit", 1.0, 100.0)?);
+                    params.set("skip", integer(o.str("skip").unwrap_or(""), "--skip")?);
+                    params.set("sort", o.str("sort").unwrap_or(""));
+                    let truthy = |k: &str| o.str(k).filter(|s| !s.is_empty());
+                    for (key, option) in
+                        [("from", "--from"), ("to", "--to"), ("checkOutFrom", "--check-out-from"), ("checkOutTo", "--check-out-to")]
+                    {
+                        if let Some(v) = truthy(key) {
+                            date(v, option)?;
+                        }
                     }
-                    if let Some(skip) = c.opts.str("skip") {
-                        params.set("skip", integer(skip, "--skip")?);
+                    date_range(o.str("from"), o.str("to"))?;
+                    date_range_named(o.str("checkOutFrom"), o.str("checkOutTo"), "--check-out-from", "--check-out-to")?;
+                    if let Some(v) = truthy("createdFrom") {
+                        date_time(v, "--created-from")?;
                     }
-                    print(&get(&format!("/v1/reservations-reports/{}", encode(c.arg(0))), params)?);
+                    if let Some(v) = truthy("createdBefore") {
+                        date_time(v, "--created-before")?;
+                    }
+                    date_range_named(o.str("createdFrom"), o.str("createdBefore"), "--created-from", "--created-before")?;
+                    for (key, param) in [
+                        ("from", "filter[checkInDate][gte]"),
+                        ("to", "filter[checkInDate][lte]"),
+                        ("checkOutFrom", "filter[checkOutDate][gte]"),
+                        ("checkOutTo", "filter[checkOutDate][lte]"),
+                        ("createdFrom", "filter[createdAt][gte]"),
+                        ("createdBefore", "filter[createdAt][lt]"),
+                        ("status", "filter[status]"),
+                        ("excludeStatus", "filter[status][nin]"),
+                        ("listing", "filter[listingId]"),
+                        ("confirmationCode", "filter[confirmationCode]"),
+                        ("source", "filter[source]"),
+                    ] {
+                        if let Some(v) = truthy(key) {
+                            params.set(param, v);
+                        }
+                    }
+                    if o.flag("all") {
+                        let results = paginate_all("/v1/reservations-reports/reservations/search", &params, Some("results"))?;
+                        print_value(&Json::Array(results));
+                    } else {
+                        print(&get("/v1/reservations-reports/reservations/search", params)?);
+                    }
                     Ok(())
                 }),
         )
