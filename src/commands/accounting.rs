@@ -319,6 +319,82 @@ pub fn command() -> Command {
             Ok(())
         }))
         .command(
+            Command::new("expense-rules")
+                .description("List recurring expense rules (paid add-on; active and draft unless --status)")
+                .option_parsed(
+                    "--status <status>",
+                    "Rule status: active, inactive, draft or archived (repeat for multiple)",
+                    collect,
+                    empty_list(),
+                )
+                .option("--listing <id>", "Listing ID filter")
+                .option("--category <id>", "Category ID filter")
+                .option("--vendor <id>", "Vendor ID filter")
+                .option("--name <text>", "Name filter (at most 255 characters)")
+                .add_option(Opt::new("--sort-by <field>", "Sort field").choices(&[
+                    "createdAt",
+                    "updatedAt",
+                    "name",
+                    "activatedAt",
+                ]))
+                .add_option(Opt::new("--sort-order <order>", "Sort order").choices(&["ASC", "DESC"]))
+                .option_default("--limit <n>", "Max results (1-100)", "50")
+                .option_default("--skip <n>", "Offset", "0")
+                .action(|c| {
+                    let o = &c.opts;
+                    let statuses = o.list("status");
+                    for status in statuses {
+                        if !["active", "inactive", "draft", "archived"].contains(&status.as_str()) {
+                            bail!("--status must be active, inactive, draft or archived.");
+                        }
+                    }
+                    if o.str("name").is_some_and(|name| name.chars().count() > 255) {
+                        bail!("--name must be at most 255 characters.");
+                    }
+                    let mut params = limit_skip(o, "limit", 1.0, 100.0)?;
+                    if !statuses.is_empty() {
+                        params.set("status", statuses);
+                    }
+                    map_truthy(
+                        &mut params,
+                        o,
+                        &[
+                            ("listing", "listingId"),
+                            ("category", "categoryId"),
+                            ("vendor", "vendorId"),
+                            ("name", "name"),
+                            ("sortBy", "sortBy"),
+                            ("sortOrder", "sortOrder"),
+                        ],
+                    );
+                    print(&guesty_fetch("/v1/expenses-api/expense-rules", Fetch::get(params))?);
+                    Ok(())
+                }),
+        )
+        .command(
+            Command::new("expense-rule <id>")
+                .description("Get an expense rule by ID, with its assigned listings")
+                .action(|c| get_print(&format!("/v1/expenses-api/expense-rules/{}", c.arg(0)))),
+        )
+        .command(
+            Command::new("create-expense-rule")
+                .description("Create a recurring expense rule (--data or stdin: name, status draft or active, ...)")
+                .option("--data <json>", "JSON body")
+                .action(|c| {
+                    let body = data_object(&c.opts)?;
+                    if !non_blank_string(body.get("name")) {
+                        bail!("The request body needs name.");
+                    }
+                    match body.get("status") {
+                        Some(Json::String(status)) if status == "draft" || status == "active" => {}
+                        _ => bail!("The request body needs status draft or active."),
+                    }
+                    let fetch = Fetch::json("POST", Json::Object(body));
+                    print(&guesty_fetch("/v1/expenses-api/expense-rules", fetch)?);
+                    Ok(())
+                }),
+        )
+        .command(
             Command::new("vendors")
                 .description("List vendors")
                 .option_default("--limit <n>", "Max results (25-100)", "25")

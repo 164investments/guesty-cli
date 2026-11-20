@@ -12,41 +12,41 @@
     {
       "method": "GET",
       "path": "/v1/accounting-api/categories",
-      "title": "Get categories list",
+      "title": "List categories",
       "slug": "categoriescontroller_getcategories",
       "operationId": "CategoriesController_getCategories"
     },
     {
       "method": "GET",
       "path": "/v1/accounting-api/journal-entries",
-      "title": "Get recognized journal entries",
+      "title": "Search recognized journal entries",
       "slug": "journalentriescontroller_getrecognized",
       "operationId": "JournalEntriesController_getRecognized"
     },
     {
       "method": "GET",
       "path": "/v1/accounting-api/journal-entries/all",
-      "title": "Get all journal entries",
+      "title": "Search all journal entries",
       "slug": "journalentriescontroller_getall",
       "operationId": "JournalEntriesController_getAll"
     },
     {
       "method": "GET",
-      "path": "/v1/accounting-api/owners/{id}/working-capital",
+      "path": "/v1/accounting-api/owners/{ownerId}/working-capital",
       "title": "Get owner working capital",
       "slug": "ownerscontroller_retrieve",
       "operationId": "OwnersController_retrieve"
     },
     {
       "method": "PUT",
-      "path": "/v1/accounting-api/owners/{id}/working-capital",
+      "path": "/v1/accounting-api/owners/{ownerId}/working-capital",
       "title": "Update owner working capital",
       "slug": "ownerscontroller_update",
       "operationId": "OwnersController_update"
     },
     {
       "method": "GET",
-      "path": "/v1/accounting-api/reservations/{id}/balance",
+      "path": "/v1/accounting-api/reservations/{reservationId}/balance",
       "title": "Get folio balances",
       "slug": "reservationscontroller_foliobalances",
       "operationId": "ReservationsController_folioBalances"
@@ -62,8 +62,8 @@
     },
     {
       "method": "GET",
-      "path": "/v1/accounting-api/disbursements/{id}",
-      "title": "Get a disbursement by ID",
+      "path": "/v1/accounting-api/disbursements/{disbursementId}",
+      "title": "Get disbursement by ID",
       "slug": "disbursementscontroller_getdisbursementbyid",
       "operationId": "DisbursementsController_getDisbursementById"
     },
@@ -117,6 +117,29 @@
       "title": "Get account details",
       "slug": "accountsget",
       "operationId": "accountsGet"
+    }
+  ],
+  "add-on-expenses": [
+    {
+      "method": "GET",
+      "path": "/v1/expenses-api/expense-rules",
+      "title": "List expense rules",
+      "slug": "expenserulescontroller_getexpenserules",
+      "operationId": "ExpenseRulesController_getExpenseRules"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/expenses-api/expense-rules",
+      "title": "Create expense rule",
+      "slug": "expenserulescontroller_createexpenserule",
+      "operationId": "ExpenseRulesController_createExpenseRule"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/expenses-api/expense-rules/{id}",
+      "title": "Get expense rule by ID",
+      "slug": "expenserulescontroller_getexpenserulebyid",
+      "operationId": "ExpenseRulesController_getExpenseRuleById"
     }
   ],
   "additional-fees": [
@@ -551,7 +574,7 @@
     {
       "method": "POST",
       "path": "/v1/expenses-api/expenses/{id}/attachments",
-      "title": "Add attachments to expense",
+      "title": "Add attachments to expense.\n**Note**: PDFs attached via the Open API cannot be previewed in your Guesty dashboard.",
       "slug": "expensescontroller_addattachments",
       "operationId": "ExpensesController_addAttachments"
     },

@@ -128,6 +128,16 @@ contract("business models preserve unpaginated default", ["accounting", "busines
 contract("expense reads support documented filters and sorting", ["accounting", "expenses", "--status", "scheduled,paid", "--category", "category", "--vendor", "vendor", "--owner", "owner", "--listing", "listing", "--reservation", reservationId, "--expense-rule", "rule", "--from", "2026-01-01", "--to", "2026-02-01", "--sort-by", "expenseDate", "--sort-order", "ASC", "--limit", "15", "--skip", "30"], "/v1/expenses-api/expenses", {
   status: "scheduled,paid", categoryId: "category", vendorId: "vendor", ownerId: "owner", listingId: "listing", reservationId, expenseRuleId: "rule", expenseDateFrom: "2026-01-01", expenseDateTo: "2026-02-01", sortBy: "expenseDate", sortOrder: "ASC", limit: 15, skip: 30,
 });
+contract("expense rules list active and draft rules by default", ["accounting", "expense-rules"], "/v1/expenses-api/expense-rules", { limit: 50, skip: 0 });
+contract("expense rules support documented filters and sorting", ["accounting", "expense-rules", "--status", "inactive", "--status", "archived", "--listing", "listing", "--category", "category", "--vendor", "vendor", "--name", "cleaning", "--sort-by", "name", "--sort-order", "ASC", "--limit", "100", "--skip", "100"], "/v1/expenses-api/expense-rules", {
+  status: ["inactive", "archived"], listingId: "listing", categoryId: "category", vendorId: "vendor", name: "cleaning", sortBy: "name", sortOrder: "ASC", limit: 100, skip: 100,
+});
+invalid("expense rules reject an undocumented status", ["accounting", "expense-rules", "--status", "paused"], /active, inactive, draft or archived/);
+invalid("expense rules enforce the documented page size", ["accounting", "expense-rules", "--limit", "101"], /integer/);
+contract("expense rule reads one rule", ["accounting", "expense-rule", "rule-1"], "/v1/expenses-api/expense-rules/rule-1");
+contract("expense rule create posts the documented body", ["accounting", "create-expense-rule", "--data", JSON.stringify({ name: "Cleaning", status: "draft" })], "/v1/expenses-api/expense-rules", {}, { name: "Cleaning", status: "draft" });
+invalid("expense rule create requires a name", ["accounting", "create-expense-rule", "--data", JSON.stringify({ status: "draft" })], /needs name/);
+invalid("expense rule create requires a documented status", ["accounting", "create-expense-rule", "--data", JSON.stringify({ name: "Cleaning", status: "inactive" })], /status draft or active/);
 contract("vendor list can request subsequent pages", ["accounting", "vendors", "--limit", "100", "--skip", "100"], "/v1/vendors", { limit: 100, skip: 100 });
 invalid("vendors enforce the documented minimum page size", ["accounting", "vendors", "--limit", "1"], /integer/);
 

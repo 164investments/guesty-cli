@@ -11250,5 +11250,88 @@
    "writesToOutputFile": false
   },
   "requests": []
+ },
+ "guesty accounting expense-rules": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "GET",
+    "path": "/v1/expenses-api/expense-rules",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": [
+     {
+      "name": "limit",
+      "source": "integer(opts.limit, \"--limit\", 1, 100)",
+      "cliOption": "limit"
+     },
+     {
+      "name": "skip",
+      "source": "integer(opts.skip, \"--skip\")",
+      "cliOption": "skip"
+     }
+    ]
+   }
+  ]
+ },
+ "guesty accounting expense-rule <id>": {
+  "inputCapabilities": {
+   "supportsDataOption": false,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": false,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "GET",
+    "path": "/v1/expenses-api/expense-rules/{param}",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
+ },
+ "guesty accounting create-expense-rule": {
+  "inputCapabilities": {
+   "supportsDataOption": true,
+   "supportsTextOption": false,
+   "supportsDataFileOption": false,
+   "supportsStdinFlag": false,
+   "readsJsonFromStdin": true,
+   "readsTextFromStdin": false,
+   "writesToOutputFile": false
+  },
+  "requests": [
+   {
+    "helper": "guestyFetch",
+    "api": "open-api",
+    "method": "POST",
+    "path": "/v1/expenses-api/expense-rules",
+    "dynamicPath": false,
+    "paginated": false,
+    "resultsKey": null,
+    "responseType": "auto",
+    "queryParams": []
+   }
+  ]
  }
 }
