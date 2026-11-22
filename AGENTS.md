@@ -1,82 +1,68 @@
 # Guesty CLI
 
-A Rust CLI (and stdio MCP server) for Guesty's Open API and Booking Engine API. Version 2 is a port of the 1.x TypeScript CLI with the same commands, options, output and exit codes; agents and scripts depend on that text, so changes to it are interface changes. It ships as the npm package `guesty-cli` with prebuilt binaries. `server/` is the token service it can read from (still TypeScript). This repository is public.
+Public Rust CLI (and stdio MCP server) for Guesty's Open API and Booking Engine API. Version 2 is a Rust port of the 1.x TypeScript CLI with identical commands, options, output, and exit codes — agents and scripts depend on that text, so changing it is an interface change. Ships as the npm package `guesty-cli` with prebuilt native binaries. `server/` is the TypeScript token service; `crates/guesty-mcp-worker` is the Rust hosted MCP Cloudflare Worker.
 
 ## Authentication is cache-only
 
-- Never mint or request a Guesty OAuth token in a CLI command, script, curl or agent workflow. Guesty allows only five tokens per 24 hours. Token refresh belongs to the designated server workflow or the team token service in `server/`, outside the CLI.
-- The CLI reads one of two caches. Either `GUESTY_TOKEN_SERVICE_*` variable selects the token service, which it reads only through `POST /v1/token` with the member's access key; it must never fall back to `SUPABASE_URL`. Otherwise it reads the server-managed `guesty_tokens` table with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
-- `guesty setup` and `guesty team credentials` are the only commands that take Guesty client credentials. They send them to the token service and never store them locally. The CLI saves only the service URL and access key, in `~/.guesty-cli/.env` with mode 0600.
-- For authorized scripts, use `guesty token` for Open API `/v1/*` calls and `guesty token --beapi` for booking-engine calls. Never choose the newest `guesty_tokens` row without a `token_type` filter; the types are not interchangeable.
-- `src/auth.rs` owns cache validation for both types. `get_token()` is the Open API string interface; `get_cached_token()` also returns type and expiry. Cache reads must verify the token string, explicit type and expiry with the five-minute buffer. Untyped legacy disk tokens are unusable.
-- Keep authentication read-only. Missing, expired, rejected, malformed or unavailable caches must fail with an actionable error and no token output. A 401 may invalidate the process's copy and retry a different cached token once. It must not change shared or disk caches or request a replacement token.
-- `init` displays configuration guidance only. `raw` must reject OAuth paths. Don't restore credential verification, token creation or a "last resort" OAuth fallback.
-- Don't print tokens, credentials, private cache contents or upstream authentication-error bodies during development. Never commit `.env` files or token caches. Token command output is only for an explicitly needed downstream request; keep it out of logs and notes.
+- Never mint or request a Guesty OAuth token in a CLI command, script, curl, or agent workflow. Guesty allows only **5 tokens per 24 hours**. Token refresh belongs solely to the designated server workflow or `server/`.
+- The CLI reads one of two caches. If either `GUESTY_TOKEN_SERVICE_*` variable is set, it reads only the token service via `POST /v1/token` with the member access key and must never fall back to `SUPABASE_URL`. Otherwise it reads the server-managed `guesty_tokens` table via `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+- Only `guesty setup` and `guesty team credentials` accept Guesty client credentials; they send them to the token service and never store them locally. The CLI saves only the service URL and access key in `~/.guesty-cli/.env` (mode `0600`).
+- For authorized scripts, use `guesty token` for Open API (`/v1/*`) and `guesty token --beapi` for Booking Engine calls. Never select the newest `guesty_tokens` row without filtering `token_type`; types are not interchangeable.
+- `src/auth.rs` owns cache validation for both types (`get_token()` returns the Open API string; `get_cached_token()` also returns type and expiry). Cache reads must verify token string, explicit type, and expiry with the 5-minute buffer. Untyped legacy disk tokens are unusable.
+- Keep authentication read-only. Missing, expired, rejected, malformed, or unavailable caches must fail with an actionable error and no token output. A 401 may invalidate the process's copy and retry a different cached token once; it must never mutate shared/disk caches or request a replacement token.
+- `init` displays configuration guidance only. `raw` must reject OAuth paths. Never restore credential verification, token creation, or a "last resort" OAuth fallback.
+- Never print tokens, credentials, private cache contents, or upstream auth-error bodies, and never commit `.env` files or token caches. Keep `guesty token` output out of logs and notes.
 
-## The token service (`server/`)
+## Token service (`server/`)
 
-A Cloudflare Worker with a D1 database. Only it requests tokens. Keep these protections:
+Cloudflare Worker + D1 database; the only component that requests tokens. Preserve every protection:
 
-- The per-client request caps count every request, including failures.
-- Sign-up requests have their own cap, separate from team renewals, and a combined cap keeps every client within Guesty's five.
-- Only a failure of the same source starts a pause. Requests pause after failures.
-- Each request is recorded before it is sent.
-- The history stays keyed by client fingerprint when a team is deleted.
-- One team per Guesty client.
-- Admin recovery needs Guesty to accept the submitted secret.
-- A lease stops two refreshes running at once.
-- Credentials, tokens and keys are encrypted or hashed with keys derived from `CREDENTIALS_KEY`.
-- No secret appears in a response, log or error.
+- Per-client request caps count every request, including failures.
+- Sign-up requests have their own cap separate from team renewals; a combined cap keeps every client within Guesty's 5/24h limit.
+- Only a failure from the same source starts a pause; requests pause after failures.
+- Record each request before sending it; keep history keyed by client fingerprint even after team deletion.
+- One team per Guesty client; admin recovery requires Guesty to accept the submitted secret.
+- A lease prevents concurrent refreshes.
+- Encrypt or hash credentials, tokens, and keys with keys derived from `CREDENTIALS_KEY`; never emit secrets in responses, logs, or errors.
+- **Invites:** store codes only as keyed hashes, spend once inside a single batch, and expire them (opening the join page never spends a code); rate-limit wrong codes per address; enforce per-team, per-address, and service-wide daily email caps in one statement keyed by Guesty client (surviving team deletion); revoking a key cancels its invites; keep admin-typed names out of email subjects, HTML-escape them, and strip control/zero-width/bidi characters.
+- The CLI validates every key and invite link returned by a token service before saving or printing it (a self-hosted service may be untrusted).
 
-Invites keep these:
+## Hosted MCP server (`crates/guesty-mcp-worker`)
 
-- A code is stored only as a keyed hash, becomes a key once inside one batch, and expires. Opening the join page never uses it.
-- Wrong codes are limited per address.
-- Invite emails have per-team, per-address and service-wide daily caps. Each is checked in one statement and kept by Guesty client, so they survive team deletion.
-- Revoking a key cancels its invites.
-- Admin-typed names stay out of email subjects, are escaped in HTML, and lose control, zero-width and text-direction characters.
+Rust Cloudflare Worker (`guesty-mcp.staykit.ai`, OAuth 2.1 authorization server + MCP server, member of the Cargo workspace but not a default member; details in [crates/guesty-mcp-worker/README.md](crates/guesty-mcp-worker/README.md)):
 
-The CLI validates every key and invite link a service returns before saving or printing it, because a self-hosted service may be untrusted.
+- Guesty data passes through and is never stored or logged. Invocation logs and traces stay off; log only short error codes.
+- Every tool call validates the member key with the token service via the `TOKENS` service binding (no token cache, so revoking a key ends access and sign-in immediately).
+- PKCE `S256` only; exact redirect URI match except loopback `http` port; codes and refresh tokens are bound to client, redirect URI, resource, and grant, spent in one statement, and reuse revokes the grant.
+- Client ID metadata documents are read only from allowed origins; other apps register dynamically.
+- Member keys are sealed and codes/tokens hashed with keys derived from `MCP_KEY` (changing it signs everyone out).
+- Tools come from `guesty-core` with `Limits::HOSTED`, matching `guesty mcp` except instructions text and hosted limits.
 
 ## Release lane
 
-- Merging to `main` releases nothing.
-- A CLI release is a `v*` tag on `main` that matches the version in `package.json` and `Cargo.toml`. `.github/workflows/release.yml` builds the binaries for macOS and Linux (arm64, x64) and Windows (x64), packs them into `guesty-cli-<version>.tgz` (`scripts/pack.mjs`), installs that package on each platform (`scripts/smoke-install.mjs`) and publishes a GitHub release with `RELEASE_NOTES.md` as its notes. It also runs, without publishing, on pull requests that touch the build.
-- The package's `dist/bin.js` is a Node launcher (`npm/launcher.js`). On macOS and Linux its first run copies the native binary over itself, so later runs start the binary directly; npm 12 blocks install scripts, so this can't happen in a postinstall. `dist/cli.js` stays a launcher because 1.x's `guesty update` checks for it.
-- The hosted token service is the `hosted` environment in `server/wrangler.jsonc`, deployed by hand. Its production deploys need Trevor's or Hayden's authorization.
-- The hosted MCP server is `crates/guesty-mcp-worker` (Rust on Workers, `guesty-mcp.staykit.ai`), the `hosted` environment in its `wrangler.toml`, deployed by hand like the token service and with the same authorization. It has its own D1 database (`guesty-mcp`, migrations in the crate) and `MCP_KEY` secret, and reaches the token service only through the `TOKENS` service binding.
-
-## The hosted MCP server (`crates/guesty-mcp-worker`)
-
-It's an OAuth 2.1 authorization server and an MCP server in one Worker, a client of the token service like the CLI. Keep these:
-
-- Guesty data passes through and is never stored or logged. Invocation logs and traces stay off; the Worker logs only short error codes.
-- Every tool call checks the member key with the token service first; there is no token cache, so a revoked key stops working at once and its sign-in is revoked.
-- PKCE S256 only; redirect URIs match exactly, except a loopback `http` URI's port; codes and refresh tokens are bound to their client, redirect URI, resource and grant, spent in one statement, and reuse revokes the grant.
-- Client ID metadata documents are read only from the allowed origins; other apps register.
-- Member keys are sealed and codes and tokens are hashed with keys derived from `MCP_KEY`; changing it signs everyone out.
-- The tools come from `guesty-core` with `Limits::HOSTED`, so they match `guesty mcp` exactly except the instructions text and those limits.
+- **Merging to `main` releases nothing.**
+- **CLI release:** push a `v*` tag on `main` matching `package.json` and `Cargo.toml`. `.github/workflows/release.yml` builds macOS/Linux (arm64, x64) and Windows (x64) binaries, packs `guesty-cli-<version>.tgz` (`scripts/pack.mjs`), smoke-installs on each platform (`scripts/smoke-install.mjs`), and publishes a GitHub release using `RELEASE_NOTES.md`. It also runs (without publishing) on PRs touching build files.
+- `dist/bin.js` is a Node launcher (`npm/launcher.js`) that replaces itself with the native binary on first run on macOS/Linux (npm 12 blocks postinstall scripts). Keep `dist/cli.js` as a launcher because 1.x `guesty update` checks for it.
+- **Hosted Cloudflare Workers:** `server/wrangler.jsonc` (`hosted` env) and `crates/guesty-mcp-worker/wrangler.toml` (`hosted` env, D1 `guesty-mcp`, `MCP_KEY`, `TOKENS` binding) are deployed by hand. Never deploy either or create Cloudflare resources without Trevor's or Hayden's authorization.
 
 ## Code map
 
-- The repository is a Cargo workspace: the CLI is the root package, and `crates/guesty-core` is its I/O-free core (no network, filesystem, environment, terminal or threads; it must build with `cargo build -p guesty-core --target wasm32-unknown-unknown`), shared with a hosted MCP server. The core holds `json`, the request checks and the decisions every request loop makes (`request.rs`: OAuth-path refusal, query and body serialization, retries, 401s, redirects, error text and redaction, response decoding, pagination steps), token-service addresses and invites, and the MCP protocol and five tools (`mcp/`), async over a `Backend` trait. The CLI's `src/client.rs`, `src/token_service.rs` and `src/mcp/mod.rs` do the I/O and call those decisions, so a change to a message or rule belongs in the core. `crates/guesty-core/build/` indexes the operation catalog at compile time from the bundled API documents.
-- `crates/guesty-mcp-worker` is the hosted MCP server (`guesty-mcp.staykit.ai`, a Cloudflare Worker; a workspace member but not a default one). It runs the core's MCP server; `src/hosted.rs` is its `Backend` over Workers `fetch`, and the rest is OAuth, D1 storage and the sign-in page. Its README lists its checks; CI's `worker` job runs them. Never deploy it or create Cloudflare resources without Trevor's or Hayden's authorization.
-- `src/cli.rs` is a commander-13-compatible parser and help renderer (same option syntax, help layout, error text and exit codes as the Node CLI); `src/commands/` defines commands with its commander-like builder; `src/client.rs` sends API requests and keeps rate limits; `crates/guesty-core/src/json.rs` reads and writes JSON exactly as JavaScript did (key order, number formatting); `src/env.rs` loads configuration; `src/mcp/` is `guesty mcp`'s stdio transport and `install`. Check the relevant source before changing behavior.
-- `src/prompt.rs` owns prompts and messages for `setup`, `team` and `mcp install`. At a terminal it uses `cliclack`; with piped input it prints plain prompts and reads one line per question, which tests and scripts rely on. Keep both paths asking the same questions in the same order. Keep results on stdout and everything else on stderr.
-- `src/hooks.rs` holds the test hooks (`--features test-hooks`: requests redirected to a local mock, a fake clock, recorded sleeps). Release builds never include them; the release workflow checks that.
-- For command or option changes, regenerate the machine-readable contract with `npm run generate:cli-spec` (it reads the command tree from `guesty __contract` and each command's requests from `scripts/cli-contract-requests.json`; a new command needs an entry there) and inspect its diff. Keep the README's authentication and setup guidance consistent with the implementation.
+- **Cargo workspace:** root package is the CLI; `crates/guesty-core` is the I/O-free core (no network, fs, env, terminal, or threads; must compile with `cargo build -p guesty-core --target wasm32-unknown-unknown`) holding JSON parity (`json.rs`), request/retry/redaction/pagination rules (`request.rs`), token-service/invite validation, compile-time operation catalog (`build/`), and async MCP protocol/tools (`mcp/` over `Backend`). `src/client.rs`, `src/token_service.rs`, `src/mcp/mod.rs`, and `crates/guesty-mcp-worker/src/hosted.rs` wrap it with I/O — changes to messages or rules belong in `guesty-core`.
+- **CLI:** `src/cli.rs` (commander-13-compatible parser/help/exit codes), `src/commands/` (command definitions), `src/env.rs` (config), `src/prompt.rs` (`cliclack` interactively, one-line plain prompts when piped — keep question order identical; results on stdout, everything else on stderr), `src/hooks.rs` (`--features test-hooks` for local mock redirect, fake clock, recorded sleeps).
+- **Contract:** after command/option changes, run `npm run generate:cli-spec` (reads `guesty __contract` and `scripts/cli-contract-requests.json`; new commands need an entry there) and inspect the diff. Keep `README.md` auth/setup guidance consistent with the code.
 
-## Commands
+## Commands and CI
 
-- Install: `npm ci` (test and tooling dependencies only) and a Rust toolchain (`rustup`, stable).
-- Fast check, before you push: `cargo fmt --check`, `cargo test --features test-hooks -- --test-threads=1`, then `npm run build:test-hooks && node --test <test files>` for the tests your change touches (`test/auth.test.mjs` for authentication), and `npm run check:parity` for any change to output, errors or requests.
-- Full check, which GitHub Actions (`Check`) runs on Node 22, 24 and 26: `npm run check`. It checks formatting, runs the Rust tests, runs the offline tests against a test-hooks build, checks the CLI contract, and replays the recorded 1.x cases in `scripts/parity/cases/` (and the MCP ones) against the binary. No linter is configured.
-- `scripts/parity/` holds those recorded cases: each line is an argv (with stdin and mock replies) and the 1.x CLI's exit code, stdout, stderr and requests. A change that should alter output updates the case's `expected` by hand, with the reason in the PR; never re-record over a difference you didn't intend.
-- For changes to `server/` or to the CLI's setup, team or token-service code, also run `npm ci --prefix server` (once) and `npm run check:server`. CI doesn't run it. It type-checks with tsrs, drives `guesty setup` (the binary) in a pseudo-terminal, and runs the Worker in Miniflare against a mock of Guesty's token endpoint. Never test it against Guesty.
-- Release builds of every platform, the package and its install are checked by `.github/workflows/release.yml` on pull requests that touch the build; `npm run pack` and `npm run smoke:install` run the same steps locally.
+- **Install:** `npm ci` (test/tooling deps) and stable Rust (`rustup`). For token-service checks: `npm ci --prefix server`.
+- **Fast check** (before pushing): `cargo fmt --check`, `cargo test --features test-hooks -- --test-threads=1`, targeted `npm run build:test-hooks && node --test <test files>` (`test/auth.test.mjs` for auth), and `npm run check:parity` when changing output, errors, or requests. For `server/` or setup/team/token-service changes, run `npm run check:server` (tsrs type-check + Miniflare mock of Guesty + PTY `guesty setup`). For `guesty-mcp-worker` changes, run `cargo test -p guesty-mcp-worker` and `npm --prefix crates/guesty-mcp-worker test`.
+- **CI (`.github/workflows/check.yml`, GitHub Actions `ubuntu-latest`):** let CI run the full matrix rather than running full suites repeatedly on shared dev machines:
+  - `check` (Node 22, 24, 26): `npm run check` (`cargo fmt --check`, Rust tests, offline CLI + script tests, `check:cli-spec`, `check:parity`) + `cargo build -p guesty-core --target wasm32-unknown-unknown`.
+  - `worker` (Node 24): `cargo test -p guesty-mcp-worker`, `cargo clippy -p guesty-mcp-worker --no-deps` (both `wasm32-unknown-unknown` and `--tests`, `-D warnings`), `npm --prefix crates/guesty-mcp-worker test`, and `npm run check:server`.
+- **Parity cases (`scripts/parity/cases/`):** recorded 1.x argv/stdin/mock replies and expected exit code, stdout, stderr, and requests. Update `expected` by hand with the reason in the PR for intentional output changes; never re-record over unintended diffs.
+- **Local release smoke:** `npm run pack` and `npm run smoke:install`.
 
 ## Rules for this repository
 
-- Authentication tests must mock all network calls and private-cache reads, and prove zero OAuth requests or cache writes on failures. Never validate a change by retrieving a real token or contacting Guesty's OAuth endpoint.
-- The installed `guesty` may come from a different build than this worktree. Check its resolved path before you rely on it. Install a build on purpose (`cargo install --path .` puts one in `~/.cargo/bin`), and never overwrite another session's checkout or build output.
-- The test hooks (`src/hooks.rs`, `--features test-hooks`) must never reach a release build: they redirect requests and fake the clock. Keep every hook behind that feature.
+- Authentication tests must mock all network calls and private-cache reads, proving zero OAuth requests or cache writes on failure. Never test against Guesty's real OAuth endpoint.
+- Check which `guesty` binary is on `PATH` before relying on it; install deliberately (`cargo install --path .` installs to `~/.cargo/bin`) and never overwrite another session's build output.
+- Test hooks (`src/hooks.rs`, `--features test-hooks`) must never enter a release build; keep every hook behind that feature (`release.yml` verifies release binaries ignore `GUESTY_TEST_REDIRECT`).
